@@ -104,6 +104,9 @@ class Model(BaseModel):
     ):  # type: ignore
         """Adds a an ODE to the model"""
 
+        if any(str(ode.species.name) == species for ode in self.odes):
+            raise ValueError(f"Species {species} already exists in model")
+
         if isinstance(equation, str):
             equation: Expr = sympify(equation)
 
