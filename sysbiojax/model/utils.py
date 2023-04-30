@@ -1,7 +1,7 @@
 import re
-
 from typing import Dict
 
+import pandas as pd
 from sympy import Derivative, Eq
 
 
@@ -11,7 +11,19 @@ def odeprint(y, expr):
     try:
         from IPython.display import display
 
-        display(Eq(Derivative(y, "t"), expr))
+        display(Eq(Derivative(y, "t"), expr, evaluate=False))
+
+    except ImportError:
+        print(f"d{str(y)}_dt' = {str(expr)}")
+
+
+def eqprint(y, expr):
+    """Displays an ODE with a left-hand side derivative"""
+
+    try:
+        from IPython.display import display
+
+        display(Eq(y, expr, evaluate=False))
 
     except ImportError:
         print(f"{str(y)}' = {str(expr)}")
