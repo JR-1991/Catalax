@@ -133,8 +133,8 @@ class Model(BaseModel):
 
     def add_ode(
         self,
-        equation: str,  # type: ignore
         species: str,
+        equation: str,  # type: ignore
         species_map: Optional[Dict[str, str]] = None,
     ):  # type: ignore
         """Adds a an ODE to the model"""
