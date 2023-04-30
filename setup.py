@@ -15,5 +15,6 @@ setup(
         "sympy==1.11.1",
         "diffrax==0.3.1",
         "sympy2jax==0.0.4",
+        "pandas==2.0.1",
     ],
 )
