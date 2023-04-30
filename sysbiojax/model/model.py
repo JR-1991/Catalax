@@ -1,15 +1,18 @@
-import re
+from typing import Dict, List, Optional, Union
 
-from typing import Dict, Optional, Union
-
+import jax.numpy as jnp
+from diffrax import Kvaerno5, ODETerm, PIDController, SaveAt
 from dotted_dict import DottedDict
 from pydantic import BaseModel, Field, validator
-from sympy import Expr, Symbol, symbols, sympify
+from sympy import Expr, Matrix, Symbol, symbols, sympify
+from sympy2jax import SymbolicModule
+
+from sysbiojax.tools.simulation import Stack, simulate
 
 from .ode import ODE
+from .parameter import Parameter, ParameterDict
 from .species import Species
-from .parameter import Parameter
-from .utils import odeprint, parameter_exists, check_symbol
+from .utils import check_symbol, eqprint, odeprint, parameter_exists
 
 
 class Model(BaseModel):
@@ -44,7 +47,7 @@ class Model(BaseModel):
     name: str
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
     species: Dict[str, Species] = Field(default_factory=DottedDict)
-    parameters: Dict[str, Parameter] = Field(default_factory=DottedDict)
+    parameters: Dict[str, Parameter] = Field(default_factory=ParameterDict)
 
     def add_ode(
         self,
@@ -202,11 +205,111 @@ class Model(BaseModel):
         else:
             print("Parameter already exists. Skipping...")
 
+    # ! Simulation methods
+
+    def simulate(
+        self,
+        initial_conditions: Dict[str, float],
+        t0: int,
+        t1: int,
+        dt0: float,
+        solver=Kvaerno5(),
+        nsteps: Optional[int] = None,
+        saveat: Optional[SaveAt] = None,
+        stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5),
+        constants: Dict[str, float] = {},
+    ):
+        """Simulates the given model"""
+
+        if nsteps and saveat:
+            raise ValueError(
+                "Cannot specify both nsteps and saveat. Please choose one."
+            )
+        elif nsteps is None and saveat is None:
+            raise ValueError("Must specify either nsteps or saveat.")
+
+        # Get the order of the species
+        species_order = sorted(self.species.keys())
+
+        # Setup the system
+        term = self._setup_system(species_order)
+        parameters = self._get_parameters()
+
+        # Setup the initial conditions
+        y0 = self._assemble_y0_array(initial_conditions)
+
+        # Setup save points
+        if nsteps is not None:
+            saveat = SaveAt(ts=jnp.linspace(t0, t1, nsteps))  # type: ignore
+        elif saveat is None:
+            raise ValueError("Must specify either nsteps or saveat.")
+
+        return simulate(
+            term=term,
+            y0=y0,
+            t0=t0,
+            t1=t1,
+            dt0=dt0,
+            parameters=parameters,
+            solver=solver,
+            constants=constants,
+            stepsize_controller=stepsize_controller,
+            saveat=saveat,
+            maps=species_order,
+        )
+
+    def _setup_system(self, species_order: List[str]) -> ODETerm:
+        """Converts given SymPy equations into Equinox modules, used for simulation
+
+        In order to keep generality, species are sorted alphabetically by name. This is done to
+        ensure that the order of the equations is the same as the order of the initial conditions.
+
+        """
+
+        system = Stack(
+            modules=[
+                SymbolicModule(self.odes[species].equation) for species in species_order  # type: ignore
+            ]
+        )
+
+        return ODETerm(system)
+
+    def _get_parameters(self) -> Dict[str, float]:
+        """Gets all the parameters for the model"""
+
+        if any(param.value is None for param in self.parameters.values()):
+            raise ValueError("Missing values for parameters")
+
+        return {param.name: param.value for param in self.parameters.values()}  # type: ignore
+
+    def _assemble_y0_array(self, initial_conditions: Dict[str, float]) -> jnp.ndarray:
+        """Assembles the initial conditions into an array"""
+
+        assert all(
+            species in initial_conditions for species in self.species.keys()
+        ), f"Not all species have initial conditions specified. Please specify initial conditions for the following species: {set(self.species.keys()) - set(initial_conditions.keys())}"
+
+        y0 = jnp.array([initial_conditions[species] for species in self.species.keys()])
+
+        return y0
+
     # ! Helper methods
 
     def __repr__(self):
         """Prints a summary of the model"""
 
+        print("# Species")
+        eqprint(
+            Symbol("x"), Matrix([species.symbol for species in self.species.values()]).T
+        )
+
+        print("# Parameters")
+        eqprint(
+            Symbol("theta"),
+            Matrix([param.name for param in self.parameters.values()]).T,
+        )
+
+        print("# Equations")
         for ode in self.odes.values():
             odeprint(y=ode.species.name, expr=ode.equation)
 
