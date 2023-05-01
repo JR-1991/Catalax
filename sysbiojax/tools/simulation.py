@@ -36,16 +36,21 @@ def simulate(
 ):
     """Simulates a given model"""
 
-    sol = diffeqsolve(
-        term,
-        solver,
-        t0=t0,
-        t1=t1,
-        dt0=dt0,
-        y0=y0,
-        args=(maps, parameters, constants),
-        saveat=saveat,
-        stepsize_controller=stepsize_controller,
-    )
+    def solve(y0):
+        sol = diffeqsolve(
+            term,
+            solver,
+            t0=t0,
+            t1=t1,
+            dt0=dt0,
+            y0=y0,
+            args=(maps, parameters, constants),
+            saveat=saveat,
+            stepsize_controller=stepsize_controller,
+        )
 
-    return sol.ts, sol.ys
+        return sol.ts, sol.ys
+
+    ts, ys = jax.vmap(solve)(y0)
+
+    return ts, ys

@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Dict, List, Optional, Union
 
 import jax
@@ -211,7 +212,7 @@ class Model(BaseModel):
 
     def simulate(
         self,
-        initial_conditions: Dict[str, float],
+        initial_conditions: List[Dict[str, float]],
         t0: int,
         t1: int,
         dt0: float,
@@ -229,6 +230,9 @@ class Model(BaseModel):
             )
         elif nsteps is None and saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
+
+        if isinstance(initial_conditions, dict):
+            initial_conditions = [initial_conditions]
 
         # Get the order of the species
         species_order = sorted(self.species.keys())
@@ -286,16 +290,28 @@ class Model(BaseModel):
 
         return {param.name: param.value for param in self.parameters.values()}  # type: ignore
 
-    def _assemble_y0_array(self, initial_conditions: Dict[str, float]) -> jnp.ndarray:
+    def _assemble_y0_array(
+        self, initial_conditions: List[Dict[str, float]]
+    ) -> jnp.ndarray:
         """Assembles the initial conditions into an array"""
 
-        assert all(
-            species in initial_conditions for species in self.species.keys()
-        ), f"Not all species have initial conditions specified. Please specify initial conditions for the following species: {set(self.species.keys()) - set(initial_conditions.keys())}"
+        # Check that all initial conditions are valid
+        deque(map(self._check_initial_condition, initial_conditions))
 
-        y0 = jnp.array([initial_conditions[species] for species in self.species.keys()])
+        return jnp.array(
+            [
+                [initial_condition[species] for species in self.species.keys()]
+                for initial_condition in initial_conditions
+            ]
+        )
 
-        return y0
+    def _check_initial_condition(self, initial_condition: Dict[str, float]) -> None:
+        """Checks that the initial conditions are valid"""
+
+        if not all(species in initial_condition for species in self.species.keys()):
+            raise ValueError(
+                f"Not all species have initial conditions specified. Please specify initial conditions for the following species: {set(self.species.keys()) - set(initial_condition.keys())}"
+            )
 
     # ! Helper methods
 
