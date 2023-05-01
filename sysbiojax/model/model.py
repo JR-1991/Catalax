@@ -276,7 +276,7 @@ class Model(BaseModel):
             ]
         )
 
-        self.term = ODETerm(jax.jit(system))
+        self.term = ODETerm(jax.jit(system.__call__))
 
     def _get_parameters(self) -> Dict[str, float]:
         """Gets all the parameters for the model"""

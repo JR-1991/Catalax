@@ -1,9 +1,9 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from diffrax import Kvaerno5, ODETerm, PIDController, SaveAt, diffeqsolve
+from diffrax import ODETerm, PIDController, SaveAt, diffeqsolve
 from jax import Array
 
 
@@ -16,7 +16,7 @@ class Stack(eqx.Module):
         ys = {symbol: y[..., i] for symbol, i in maps.items()}
 
         return jnp.stack(
-            [jnp.array(module(**ys, **parameters, **constants)) for module in self.modules],  # type: ignore
+            [module(**ys, **parameters, **constants) for module in self.modules],  # type: ignore
             axis=-1,
         )
 
