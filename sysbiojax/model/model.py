@@ -301,18 +301,18 @@ class Model(BaseModel):
     def __repr__(self):
         """Prints a summary of the model"""
 
-        print("# Species")
+        print("# Species", end="\n\n")
         eqprint(
             Symbol("x"), Matrix([species.symbol for species in self.species.values()]).T
         )
 
-        print("# Parameters")
+        print("# Parameters", end="\n\n")
         eqprint(
             Symbol("theta"),
             Matrix([param.name for param in self.parameters.values()]).T,
         )
 
-        print("# Equations")
+        print("# Equations", end="\n\n")
         for ode in self.odes.values():
             odeprint(y=ode.species.name, expr=ode.equation)
 
