@@ -48,6 +48,7 @@ class Model(BaseModel):
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
     species: Dict[str, Species] = Field(default_factory=DottedDict)
     parameters: Dict[str, Parameter] = Field(default_factory=ParameterDict)
+    term: Optional[ODETerm] = Field(default=None)
 
     def add_ode(
         self,
@@ -231,8 +232,10 @@ class Model(BaseModel):
         # Get the order of the species
         species_order = sorted(self.species.keys())
 
-        # Setup the system
-        term = self._setup_system(species_order)
+        if self.term is None:
+            # Setup the jitted system if not done yet
+            self._setup_system(species_order)
+
         parameters = self._get_parameters()
 
         # Setup the initial conditions
@@ -258,7 +261,7 @@ class Model(BaseModel):
             maps=species_order,
         )
 
-    def _setup_system(self, species_order: List[str]) -> ODETerm:
+    def _setup_system(self, species_order: List[str]) -> None:
         """Converts given SymPy equations into Equinox modules, used for simulation
 
         In order to keep generality, species are sorted alphabetically by name. This is done to
@@ -272,7 +275,7 @@ class Model(BaseModel):
             ]
         )
 
-        return ODETerm(system)
+        self.term = ODETerm(system)
 
     def _get_parameters(self) -> Dict[str, float]:
         """Gets all the parameters for the model"""
