@@ -15,8 +15,9 @@ class Stack(eqx.Module):
 
         ys = {symbol: y[..., i] for symbol, i in maps.items()}
 
-        return jnp.array(
-            [module(**ys, **parameters, **constants) for module in self.modules],  # type: ignore
+        return jnp.stack(
+            [jnp.array(module(**ys, **parameters, **constants)) for module in self.modules],  # type: ignore
+            axis=-1,
         )
 
 
