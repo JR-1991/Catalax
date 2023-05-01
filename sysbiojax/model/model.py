@@ -248,7 +248,7 @@ class Model(BaseModel):
             raise ValueError("Must specify either nsteps or saveat.")
 
         return simulate(
-            term=term,
+            term=self.term,
             y0=y0,
             t0=t0,
             t1=t1,
@@ -306,13 +306,13 @@ class Model(BaseModel):
             Symbol("x"), Matrix([species.symbol for species in self.species.values()]).T
         )
 
-        print("# Parameters", end="\n\n")
+        print("\n# Parameters", end="\n\n")
         eqprint(
             Symbol("theta"),
             Matrix([param.name for param in self.parameters.values()]).T,
         )
 
-        print("# Equations", end="\n\n")
+        print("\n# Equations", end="\n\n")
         for ode in self.odes.values():
             odeprint(y=ode.species.name, expr=ode.equation)
 
