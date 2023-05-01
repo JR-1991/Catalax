@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Union
 
+import jax
 import jax.numpy as jnp
 from diffrax import Kvaerno5, ODETerm, PIDController, SaveAt
 from dotted_dict import DottedDict
@@ -258,7 +259,7 @@ class Model(BaseModel):
             constants=constants,
             stepsize_controller=stepsize_controller,
             saveat=saveat,
-            maps=species_order,
+            maps={symbol: i for i, symbol in enumerate(species_order)},
         )
 
     def _setup_system(self, species_order: List[str]) -> None:
@@ -275,7 +276,7 @@ class Model(BaseModel):
             ]
         )
 
-        self.term = ODETerm(system)
+        self.term = ODETerm(jax.jit(system))
 
     def _get_parameters(self) -> Dict[str, float]:
         """Gets all the parameters for the model"""

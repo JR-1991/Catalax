@@ -13,7 +13,7 @@ class Stack(eqx.Module):
     def __call__(self, t, y, args):
         maps, parameters, constants = args
 
-        ys = {symbol: y[..., i] for i, symbol in enumerate(maps)}
+        ys = {symbol: y[..., i] for symbol, i in maps.items()}
 
         return jnp.stack(
             [module(**ys, **parameters, **constants) for module in self.modules],  # type: ignore
@@ -29,7 +29,7 @@ def simulate(
     dt0: float,
     solver,
     parameters: Dict[str, float],
-    maps: List[str],
+    maps: Dict[str, int],
     constants: Dict[str, float],
     saveat: SaveAt,
     stepsize_controller: PIDController,
