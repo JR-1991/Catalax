@@ -280,7 +280,9 @@ class Model(BaseModel):
             ]
         )
 
-        self.term = ODETerm(jax.jit(system.__call__))
+        vmapped_system = jax.vmap(system.__call__, in_axes=(None, 0, None))
+
+        self.term = ODETerm(jax.jit(vmapped_system))
 
     def _get_parameters(self) -> Dict[str, float]:
         """Gets all the parameters for the model"""
@@ -318,18 +320,15 @@ class Model(BaseModel):
     def __repr__(self):
         """Prints a summary of the model"""
 
-        print("# Species", end="\n\n")
         eqprint(
             Symbol("x"), Matrix([species.symbol for species in self.species.values()]).T
         )
 
-        print("\n# Parameters", end="\n\n")
         eqprint(
             Symbol("theta"),
             Matrix([param.name for param in self.parameters.values()]).T,
         )
 
-        print("\n# Equations", end="\n\n")
         for ode in self.odes.values():
             odeprint(y=ode.species.name, expr=ode.equation)
 
