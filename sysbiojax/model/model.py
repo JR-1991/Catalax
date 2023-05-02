@@ -280,9 +280,7 @@ class Model(BaseModel):
             ]
         )
 
-        vmapped_system = jax.vmap(system.__call__, in_axes=(None, 0, None))
-
-        self.term = ODETerm(jax.jit(vmapped_system))
+        self.term = ODETerm(jax.jit(system.__call__))
 
     def _get_parameters(self) -> Dict[str, float]:
         """Gets all the parameters for the model"""
