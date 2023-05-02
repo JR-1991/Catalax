@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -137,7 +137,10 @@ class Model(BaseModel):
 
         if species_string:
             species_map.update(
-                {str(species): str(species) for species in symbols(species_string)}
+                {
+                    str(species): str(species)
+                    for species in self._split_species_string(species_string)
+                }
             )
 
         for symbol, name in species_map.items():
@@ -148,6 +151,15 @@ class Model(BaseModel):
             check_symbol(symbol)
 
             self.species[symbol] = Species(name=name, symbol=Symbol(symbol))
+
+    @staticmethod
+    def _split_species_string(species_string: str) -> List[Symbol]:
+        """Helper method to split a string of species into a list of species"""
+
+        if len(species_string.split(",")) == 1:
+            return [Symbol(species_string)]
+
+        return symbols(species_string)
 
     def _add_single_species(
         self, name: str, species_map: Optional[Dict[str, str]] = None
@@ -220,7 +232,6 @@ class Model(BaseModel):
         nsteps: Optional[int] = None,
         saveat: Optional[SaveAt] = None,
         stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5),
-        constants: Dict[str, float] = {},
     ):
         """Simulates the given model"""
 
@@ -241,7 +252,7 @@ class Model(BaseModel):
             # Setup the jitted system if not done yet
             self._setup_system(species_order)
 
-        parameters = self._get_parameters()
+        parameter_maps, parameters = self._get_parameters()
 
         # Setup the initial conditions
         y0 = self._assemble_y0_array(initial_conditions)
@@ -260,10 +271,10 @@ class Model(BaseModel):
             dt0=dt0,
             parameters=parameters,
             solver=solver,
-            constants=constants,
             stepsize_controller=stepsize_controller,
             saveat=saveat,
-            maps={symbol: i for i, symbol in enumerate(species_order)},
+            species_maps={symbol: i for i, symbol in enumerate(species_order)},
+            parameter_maps={symbol: i for i, symbol in enumerate(parameter_maps)},
         )
 
     def _setup_system(self, species_order: List[str]) -> None:
@@ -280,15 +291,20 @@ class Model(BaseModel):
             ]
         )
 
-        self.term = ODETerm(jax.jit(system.__call__))
+        self.term = ODETerm(jax.vmap(jax.jit(system.__call__), in_axes=(None, 0, None)))
 
-    def _get_parameters(self) -> Dict[str, float]:
+    def _get_parameters(self) -> Tuple[List[str], jax.Array]:
         """Gets all the parameters for the model"""
 
         if any(param.value is None for param in self.parameters.values()):
             raise ValueError("Missing values for parameters")
 
-        return {param.name: param.value for param in self.parameters.values()}  # type: ignore
+        param_order = sorted(self.parameters.keys())
+
+        return (
+            param_order,
+            jnp.array([self.parameters[param].value for param in param_order]),
+        )  # type: ignore
 
     def _assemble_y0_array(
         self, initial_conditions: List[Dict[str, float]]
@@ -318,18 +334,15 @@ class Model(BaseModel):
     def __repr__(self):
         """Prints a summary of the model"""
 
-        print("# Species", end="\n\n")
         eqprint(
             Symbol("x"), Matrix([species.symbol for species in self.species.values()]).T
         )
 
-        print("\n# Parameters", end="\n\n")
         eqprint(
             Symbol("theta"),
             Matrix([param.name for param in self.parameters.values()]).T,
         )
 
-        print("\n# Equations", end="\n\n")
         for ode in self.odes.values():
             odeprint(y=ode.species.name, expr=ode.equation)
 
