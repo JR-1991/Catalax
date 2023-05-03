@@ -17,5 +17,7 @@ setup(
         "diffrax==0.3.1",
         "sympy2jax==0.0.4",
         "pandas",
+        "tqdm",
+        "numpy",
     ],
 )
