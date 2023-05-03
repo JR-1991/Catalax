@@ -55,6 +55,8 @@ class Model(BaseModel):
 
     _sim_func: Optional[Callable] = PrivateAttr(default=None)
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
+    _t0: Optional[int] = PrivateAttr(default=None)
+    _t1: Optional[int] = PrivateAttr(default=None)
 
     def add_ode(
         self,
@@ -265,7 +267,7 @@ class Model(BaseModel):
         elif saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
 
-        if in_axes != self._in_axes or self._sim_func is None:
+        if self._model_changed(t0, t1, in_axes) or self._sim_func is None:
             self._setup_system(
                 in_axes=in_axes,
                 t0=t0,
@@ -277,9 +279,29 @@ class Model(BaseModel):
                 parameter_maps={symbol: i for i, symbol in enumerate(parameter_maps)},
             )
 
+            # Set markers to check whether the conditions have changed
+            # This is done to avoid recompilation of the simulation function
+            self._t0 = t0
+            self._t1 = t1
+            self._in_axes = in_axes
+
             return self._sim_func(y0, parameters, saveat)
 
         return self._sim_func(y0, parameters, saveat)
+
+    def _model_changed(self, t0: int, t1: int, in_axes: Tuple) -> bool:
+        """Checks whether the model has changed since the last simulation"""
+
+        if any(
+            [
+                self._in_axes != in_axes,
+                self._t0 != t0,
+                self._t1 != t1,
+            ]
+        ):
+            return True
+
+        return False
 
     def _get_species_order(self) -> List[str]:
         """Returns the order of the species in the model"""
@@ -309,7 +331,6 @@ class Model(BaseModel):
 
         # Attach to the model to prevent re-modelling
         self._sim_func = simulation_setup._simulation_func
-        self._in_axes = in_axes
 
     def _get_parameters(
         self, parameters: Optional[jax.Array]
@@ -351,6 +372,12 @@ class Model(BaseModel):
             raise ValueError(
                 f"Not all species have initial conditions specified. Please specify initial conditions for the following species: {set(self.species.keys()) - set(initial_condition.keys())}"
             )
+
+    def reset(self):
+        """Resets the model"""
+
+        self._sim_func = None
+        self._in_axes = None
 
     # ! Helper methods
 
