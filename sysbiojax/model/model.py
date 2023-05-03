@@ -1,15 +1,16 @@
 from collections import deque
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
 from diffrax import Kvaerno5, ODETerm, PIDController, SaveAt
 from dotted_dict import DottedDict
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, PrivateAttr, validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 from sympy2jax import SymbolicModule
 
-from sysbiojax.tools.simulation import Stack, simulate
+from sysbiojax.tools import Stack
+from sysbiojax.tools.simulation import Simulation
 
 from .ode import ODE
 from .parameter import Parameter, ParameterDict
@@ -51,6 +52,9 @@ class Model(BaseModel):
     species: Dict[str, Species] = Field(default_factory=DottedDict)
     parameters: Dict[str, Parameter] = Field(default_factory=ParameterDict)
     term: Optional[ODETerm] = Field(default=None)
+
+    _sim_func: Optional[Callable] = PrivateAttr(default=None)
+    _in_axes: Optional[Tuple] = PrivateAttr(default=None)
 
     def add_ode(
         self,
@@ -232,6 +236,8 @@ class Model(BaseModel):
         nsteps: Optional[int] = None,
         saveat: Optional[SaveAt] = None,
         stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5),
+        parameters: Optional[jax.Array] = None,
+        in_axes: Tuple = (0, None, None),
     ):
         """Simulates the given model"""
 
@@ -246,60 +252,77 @@ class Model(BaseModel):
             initial_conditions = [initial_conditions]
 
         # Get the order of the species
-        species_order = sorted(self.species.keys())
+        species_order = self._get_species_order()
 
-        if self.term is None:
-            # Setup the jitted system if not done yet
-            self._setup_system(species_order)
-
-        parameter_maps, parameters = self._get_parameters()
+        parameter_maps, parameters = self._get_parameters(parameters)
 
         # Setup the initial conditions
         y0 = self._assemble_y0_array(initial_conditions)
 
         # Setup save points
         if nsteps is not None:
-            saveat = SaveAt(ts=jnp.linspace(t0, t1, nsteps))  # type: ignore
+            saveat = jnp.linspace(t0, t1, nsteps)  # type: ignore
         elif saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
 
-        return simulate(
-            term=self.term,
-            y0=y0,
-            t0=t0,
-            t1=t1,
-            dt0=dt0,
-            parameters=parameters,
-            solver=solver,
-            stepsize_controller=stepsize_controller,
-            saveat=saveat,
-            species_maps={symbol: i for i, symbol in enumerate(species_order)},
-            parameter_maps={symbol: i for i, symbol in enumerate(parameter_maps)},
-        )
+        if in_axes != self._in_axes or self._sim_func is None:
+            self._setup_system(
+                in_axes=in_axes,
+                t0=t0,
+                t1=t1,
+                dt0=dt0,
+                solver=solver,
+                stepsize_controller=stepsize_controller,
+                species_maps={symbol: i for i, symbol in enumerate(species_order)},
+                parameter_maps={symbol: i for i, symbol in enumerate(parameter_maps)},
+            )
 
-    def _setup_system(self, species_order: List[str]) -> None:
-        """Converts given SymPy equations into Equinox modules, used for simulation
+            return self._sim_func(y0, parameters, saveat)
 
-        In order to keep generality, species are sorted alphabetically by name. This is done to
-        ensure that the order of the equations is the same as the order of the initial conditions.
+        return self._sim_func(y0, parameters, saveat)
 
+    def _get_species_order(self) -> List[str]:
+        """Returns the order of the species in the model"""
+
+        return sorted(self.species.keys())
+
+    def _setup_system(self, in_axes: Tuple = (0, None, None), **kwargs) -> Callable:
+        """Converts given SymPy equations into Equinox modules, used for simulation.
+
+        This method will prepare the simulation function, jit it and vmap it across
+        the initial condition vector by default.
+
+        Args:
+            in_axes: Specifies the axes to map the simulation function across. Defaults to (0, None, None).
         """
 
-        system = Stack(
-            modules=[
-                SymbolicModule(self.odes[species].equation) for species in species_order  # type: ignore
-            ]
+        self.term = ODETerm(
+            Stack(
+                modules=[
+                    SymbolicModule(self.odes[species].equation) for species in self._get_species_order()  # type: ignore
+                ]
+            ).__call__
         )
 
-        self.term = ODETerm(jax.vmap(jax.jit(system.__call__), in_axes=(None, 0, None)))
+        simulation_setup = Simulation(term=self.term, **kwargs)
+        simulation_setup._prepare_func(in_axes=in_axes)
 
-    def _get_parameters(self) -> Tuple[List[str], jax.Array]:
+        # Attach to the model to prevent re-modelling
+        self._sim_func = simulation_setup._simulation_func
+        self._in_axes = in_axes
+
+    def _get_parameters(
+        self, parameters: Optional[jax.Array]
+    ) -> Tuple[List[str], jax.Array]:
         """Gets all the parameters for the model"""
 
         if any(param.value is None for param in self.parameters.values()):
             raise ValueError("Missing values for parameters")
 
         param_order = sorted(self.parameters.keys())
+
+        if parameters is not None:
+            return param_order, parameters
 
         return (
             param_order,
@@ -308,7 +331,7 @@ class Model(BaseModel):
 
     def _assemble_y0_array(
         self, initial_conditions: List[Dict[str, float]]
-    ) -> jnp.ndarray:
+    ) -> jax.Array:
         """Assembles the initial conditions into an array"""
 
         # Check that all initial conditions are valid
