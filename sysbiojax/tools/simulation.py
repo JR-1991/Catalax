@@ -43,7 +43,7 @@ class Simulation(BaseModel):
         """Applies all the necessary transformations to the term and prepares the simulation function"""
 
         def _simulate_system(y0, parameters, time):
-            return simulate(
+            time, states = simulate(
                 y0=y0,
                 parameters=parameters,
                 saveat=SaveAt(ts=time),
@@ -54,6 +54,8 @@ class Simulation(BaseModel):
                 parameter_maps=self.parameter_maps,
                 species_maps=self.species_maps,
             )
+
+            return time, states
 
         if in_axes is not None:
             self._simulation_func = jax.jit(jax.vmap(_simulate_system, in_axes=in_axes))
