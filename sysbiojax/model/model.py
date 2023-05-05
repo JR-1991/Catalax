@@ -216,12 +216,8 @@ class Model(BaseModel):
     ):
         """Adds a parameter to an ODE"""
 
-        parameter = Parameter(
-            name=name, value=value, initial_value=initial_value, equation=equation
-        )
-
         if not parameter_exists(name, self.parameters):
-            self.parameters[parameter.name] = Parameter(
+            self.parameters[name] = Parameter(
                 name=name, value=value, initial_value=initial_value, equation=equation
             )
         else:
