@@ -57,6 +57,7 @@ class Model(BaseModel):
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
     _t0: Optional[int] = PrivateAttr(default=None)
     _t1: Optional[int] = PrivateAttr(default=None)
+    _jacobian: Optional[Callable] = PrivateAttr(default=None)
 
     def add_ode(
         self,
@@ -318,6 +319,15 @@ class Model(BaseModel):
             in_axes: Specifies the axes to map the simulation function across. Defaults to (0, None, None).
         """
 
+        self._setup_term()
+
+        simulation_setup = Simulation(term=self.term, **kwargs)
+        simulation_setup._prepare_func(in_axes=in_axes)
+
+        # Attach to the model to prevent re-modelling
+        self._sim_func = simulation_setup._simulation_func
+
+    def _setup_term(self):
         self.term = ODETerm(
             Stack(
                 modules=[
@@ -325,12 +335,6 @@ class Model(BaseModel):
                 ]
             ).__call__
         )
-
-        simulation_setup = Simulation(term=self.term, **kwargs)
-        simulation_setup._prepare_func(in_axes=in_axes)
-
-        # Attach to the model to prevent re-modelling
-        self._sim_func = simulation_setup._simulation_func
 
     def _get_parameters(
         self, parameters: Optional[jax.Array]
@@ -378,6 +382,36 @@ class Model(BaseModel):
 
         self._sim_func = None
         self._in_axes = None
+
+    # ! Derivatives
+
+    def jacobian_parameters(self, y, parameters):
+        """Sets up and calculates the jacobian of the model with respect to the parameters.
+
+        Args:
+            y (Array): The inital conditions of the model.
+            parameters (Array): The parameters that are inserted into the model.
+
+        Returns:
+            Array: The jacobian of the model with respect to the parameters.
+        """
+
+        if self._jacobian is not None:
+            return self._jacobian(y, parameters)
+        elif self.term is None:
+            self._setup_term()
+
+        species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
+        parameter_maps = {symbol: i for i, symbol in enumerate(self.parameters.keys())}
+
+        def _vector_field(y, parameters):
+            return self.term.vector_field(
+                0, y, (species_maps, parameter_maps, parameters)
+            )
+
+        self._jacobian = jax.jacfwd(_vector_field, argnums=1)
+
+        return self._jacobian(y, parameters)
 
     # ! Helper methods
 
