@@ -52,7 +52,7 @@ class Simulation(BaseModel):
             sol = diffeqsolve(
                 terms=self.term,
                 solver=self.solver(),
-                t0=time[0],
+                t0=0,
                 t1=time[-1],
                 dt0=self.dt0,
                 y0=y0,
