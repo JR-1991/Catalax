@@ -1,9 +1,17 @@
 from collections import deque
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
+import pandas as pd
 import jax
 import jax.numpy as jnp
-from diffrax import Kvaerno5, ODETerm, PIDController, SaveAt
+from diffrax import (
+    Kvaerno5,
+    ODETerm,
+    PIDController,
+    SaveAt,
+    AbstractSolver,
+    AbstractAdaptiveStepSizeController,
+)
 from dotted_dict import DottedDict
 from pydantic import BaseModel, Field, PrivateAttr, validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
@@ -228,13 +236,15 @@ class Model(BaseModel):
     def simulate(
         self,
         initial_conditions: List[Dict[str, float]],
-        t0: int,
-        t1: int,
         dt0: float,
-        solver=Kvaerno5(),
+        solver=Kvaerno5,
+        t0: Optional[int] = None,
+        t1: Optional[int] = None,
         nsteps: Optional[int] = None,
         saveat: Optional[SaveAt] = None,
-        stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5),
+        stepsize_controller: AbstractAdaptiveStepSizeController = PIDController(
+            rtol=1e-5, atol=1e-5
+        ),
         parameters: Optional[jax.Array] = None,
         in_axes: Tuple = (0, None, None),
     ):
@@ -256,46 +266,43 @@ class Model(BaseModel):
         parameter_maps, parameters = self._get_parameters(parameters)
 
         # Setup the initial conditions
-        y0 = self._assemble_y0_array(initial_conditions)
+        y0 = self._assemble_y0_array(initial_conditions, in_axes)
 
         # Setup save points
         if nsteps is not None:
             saveat = jnp.linspace(t0, t1, nsteps)  # type: ignore
+            t0 = saveat[0]
+            t1 = saveat[-1]
         elif saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
 
-        if self._model_changed(t0, t1, in_axes) or self._sim_func is None:
+        if self._model_changed(in_axes) or self._sim_func is None:
             self._setup_system(
                 in_axes=in_axes,
                 t0=t0,
                 t1=t1,
                 dt0=dt0,
                 solver=solver,
-                stepsize_controller=stepsize_controller,
+                # stepsize_controller=stepsize_controller, # TODO Fix Stepsize controller
                 species_maps={symbol: i for i, symbol in enumerate(species_order)},
                 parameter_maps={symbol: i for i, symbol in enumerate(parameter_maps)},
             )
 
             # Set markers to check whether the conditions have changed
             # This is done to avoid recompilation of the simulation function
-            self._t0 = t0
-            self._t1 = t1
             self._in_axes = in_axes
+
+            # Warmup the simulation to make use of jit compilation
+            self._warmup_simulation(y0, parameters, saveat, in_axes)
 
             return self._sim_func(y0, parameters, saveat)
 
         return self._sim_func(y0, parameters, saveat)
 
-    def _model_changed(self, t0: int, t1: int, in_axes: Tuple) -> bool:
+    def _model_changed(self, in_axes: Tuple) -> bool:
         """Checks whether the model has changed since the last simulation"""
 
-        if any(
-            [
-                self._in_axes != in_axes,
-                self._t0 != t0,
-                self._t1 != t1,
-            ]
-        ):
+        if self._in_axes != in_axes:
             return True
 
         return False
@@ -351,27 +358,55 @@ class Model(BaseModel):
         )  # type: ignore
 
     def _assemble_y0_array(
-        self, initial_conditions: List[Dict[str, float]]
+        self, initial_conditions: List[Dict[str, float]], in_axes: Tuple
     ) -> jax.Array:
         """Assembles the initial conditions into an array"""
 
-        # Check that all initial conditions are valid
-        deque(map(self._check_initial_condition, initial_conditions))
+        # Turn initial conditions dict into a dataframe
+        df_inits = pd.DataFrame(initial_conditions)
+
+        # Check whether all species have initial conditions and
+        # if there are more than in the model
+        if not all(species in self.species.keys() for species in df_inits.columns):
+            raise ValueError(
+                f"Not all species have initial conditions specified or there are ones that havent been specified yet. Please specify initial conditions or remove these for the following species: {set(self.species.keys()) - set(df_inits.columns)}"
+            )
+
+        if in_axes is not None and len(initial_conditions) > 1:
+            return jnp.stack(
+                [df_inits[s].values for s in self._get_species_order()], axis=-1  # type: ignore
+            )
+        elif in_axes and len(initial_conditions) > 1:
+            raise ValueError(
+                "If in_axes is set to None, only one initial condition can be specified."
+            )
 
         return jnp.array(
-            [
-                [initial_condition[species] for species in self.species.keys()]
-                for initial_condition in initial_conditions
-            ]
+            [initial_conditions[0][species] for species in self._get_species_order()]
         )
 
-    def _check_initial_condition(self, initial_condition: Dict[str, float]) -> None:
-        """Checks that the initial conditions are valid"""
+    def _warmup_simulation(self, y0, parameters, saveat, in_axes):
+        """Warms up the simulation to make use of jit compilation"""
 
-        if not all(species in initial_condition for species in self.species.keys()):
+        if self._sim_func is None:
             raise ValueError(
-                f"Not all species have initial conditions specified. Please specify initial conditions for the following species: {set(self.species.keys()) - set(initial_condition.keys())}"
+                "Simulation function not found. Please run 'simulate' first."
             )
+
+        if in_axes is None:
+            self._sim_func(y0, parameters, saveat)
+            return
+
+        y0_axis, parameters_axis, saveat_axis = in_axes
+
+        if y0_axis is not None:
+            y0 = jnp.expand_dims(y0[0, :], axis=0)
+        if parameters_axis is not None:
+            parameters = jnp.expand_dims(parameters[0, :], axis=0)
+        if saveat_axis is not None:
+            saveat = jnp.expand_dims(saveat[0, :], axis=0)
+
+        self._sim_func(y0, parameters, saveat)
 
     def reset(self):
         """Resets the model"""
@@ -398,7 +433,9 @@ class Model(BaseModel):
             self._setup_term()
 
         species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
-        parameter_maps = {symbol: i for i, symbol in enumerate(self.parameters.keys())}
+        parameter_maps = {
+            symbol: i for i, symbol in enumerate(self._get_parameters(parameters)[0])
+        }
 
         def _vector_field(y, parameters):
             return self.term.vector_field(

@@ -4,7 +4,15 @@ from functools import partial
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from diffrax import ODETerm, PIDController, SaveAt, diffeqsolve, Kvaerno5
+from diffrax import (
+    ODETerm,
+    PIDController,
+    SaveAt,
+    diffeqsolve,
+    Kvaerno5,
+    Tsit5,
+    AbstractSolver,
+)
 from jax import Array
 from pydantic import BaseModel, PrivateAttr, Field
 
@@ -29,13 +37,11 @@ class Simulation(BaseModel):
         arbitrary_types_allowed = True
 
     term: ODETerm
-    t0: int
-    t1: int
     dt0: float
     parameter_maps: Dict[str, int]
     species_maps: Dict[str, int]
     stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5)
-    solver = Kvaerno5()
+    solver: AbstractSolver = Tsit5
 
     _simulation_func = PrivateAttr(default=None)
 
@@ -43,19 +49,22 @@ class Simulation(BaseModel):
         """Applies all the necessary transformations to the term and prepares the simulation function"""
 
         def _simulate_system(y0, parameters, time):
-            time, states = simulate(
-                y0=y0,
-                parameters=parameters,
-                saveat=SaveAt(ts=time),
-                term=self.term,
-                t0=self.t0,
-                t1=self.t1,
+            sol = diffeqsolve(
+                terms=self.term,
+                solver=self.solver(),
+                t0=time[0],
+                t1=time[-1],
                 dt0=self.dt0,
-                parameter_maps=self.parameter_maps,
-                species_maps=self.species_maps,
+                y0=y0,
+                args=(
+                    self.species_maps,
+                    self.parameter_maps,
+                    parameters,
+                ),
+                saveat=SaveAt(ts=time),
             )
 
-            return time, states
+            return sol.ts, sol.ys
 
         if in_axes is not None:
             self._simulation_func = jax.jit(jax.vmap(_simulate_system, in_axes=in_axes))
