@@ -19,5 +19,7 @@ setup(
         "pandas",
         "tqdm",
         "numpy",
+        "numpyro",
+        "arviz",
     ],
 )
