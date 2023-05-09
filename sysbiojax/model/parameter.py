@@ -12,9 +12,13 @@ class Parameter(BaseModel):
         arbitrary_types_allowed = True
 
     name: str
+    symbol: Expr
     value: Optional[float] = None
     initial_value: Optional[float] = None
     equation: Union[str, Expr, None] = None
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None
+    stdev: Optional[float] = None
 
 
 class ParameterDict(DottedDict):
@@ -23,10 +27,7 @@ class ParameterDict(DottedDict):
 
     def __repr__(self):
         df = pd.DataFrame(
-            {
-                "Name": list(self.keys()),
-                "Value": [entry.value for entry in self.values()],
-            }
+            [param.__dict__ for param in self.values()],
         )
 
         try:
