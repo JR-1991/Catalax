@@ -2,7 +2,7 @@ from typing import Dict, Optional, Union
 
 from dotted_dict import DottedDict
 from pydantic import BaseModel, Field, PrivateAttr, validator
-from sympy import Expr, sympify
+from sympy import Expr, Symbol, sympify
 
 from .species import Species
 from .parameter import Parameter
@@ -54,38 +54,7 @@ class ODE(BaseModel):
                 continue
 
             # Create a new one and add it to the model and ODE
-            parameter = Parameter(name=str(symbol))
+            parameter = Parameter(name=str(symbol), symbol=symbol)  # type: ignore
 
             self.parameters[str(symbol)] = parameter
             self.__model__.parameters[str(symbol)] = parameter
-
-    # def add_parameter(
-    #     self,
-    #     name: str,
-    #     value: Optional[float] = None,
-    #     initial_value: Optional[float] = None,
-    #     equation: Union[str, Expr, None] = None,
-    # ):
-    #     """Adds a parameter to the ODE and model.
-
-    #     This method will add new species to the ODE and the model's parameters dictionary, if given.
-    #     The parameter can be accessed by object dot-notation. For example, if the parameter is named
-    #     'k1' it can be accessed by:
-
-    #         ode = ODE()
-
-    #     Args:
-    #         name (str): _description_
-    #         value (Optional[float], optional): _description_. Defaults to None.
-    #         initial_value (Optional[float], optional): _description_. Defaults to None.
-    #         equation (Union[str, Expr, None], optional): _description_. Defaults to None.
-    #     """
-
-    #     parameter = Parameter(
-    #         name=name, value=value, initial_value=initial_value, equation=equation
-    #     )
-
-    #     if self.__model__ and not parameter_exists(name, self.__model__.parameters):
-    #         self.__model__.parameters[name] = parameter
-
-    #     self.parameters[name] = parameter

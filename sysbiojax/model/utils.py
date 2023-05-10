@@ -51,6 +51,9 @@ def check_symbol(symbol: str) -> None:
     
     """
 
+    # Convert to string to use string methods
+    symbol = str(symbol)
+
     if symbol.endswith("_"):
         raise ValueError(ERROR_MESSAGE)
 

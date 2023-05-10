@@ -63,8 +63,7 @@ class Model(BaseModel):
 
     _sim_func: Optional[Callable] = PrivateAttr(default=None)
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
-    _t0: Optional[int] = PrivateAttr(default=None)
-    _t1: Optional[int] = PrivateAttr(default=None)
+    _dt0: Optional[Tuple] = PrivateAttr(default=None)
     _jacobian: Optional[Callable] = PrivateAttr(default=None)
 
     def add_ode(
@@ -155,7 +154,7 @@ class Model(BaseModel):
                 {
                     str(species): str(species)
                     for species in self._split_species_string(species_string)
-                }
+                }  # type: ignore
             )
 
         for symbol, name in species_map.items():
@@ -243,7 +242,7 @@ class Model(BaseModel):
         nsteps: Optional[int] = None,
         saveat: Optional[SaveAt] = None,
         stepsize_controller: AbstractAdaptiveStepSizeController = PIDController(
-            rtol=1e-5, atol=1e-5
+            rtol=1e-5, atol=1e-5  # type: ignore
         ),
         parameters: Optional[jax.Array] = None,
         in_axes: Tuple = (0, None, None),
@@ -271,26 +270,18 @@ class Model(BaseModel):
         # Setup save points
         if nsteps is not None:
             saveat = jnp.linspace(t0, t1, nsteps)  # type: ignore
-            t0 = saveat[0]
-            t1 = saveat[-1]
+            t0 = saveat[0]  # type: ignore
+            t1 = saveat[-1]  # type: ignore
         elif saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
 
-        if self._model_changed(in_axes) or self._sim_func is None:
-            self._setup_system(
-                in_axes=in_axes,
-                t0=t0,
-                t1=t1,
-                dt0=dt0,
-                solver=solver,
-                # stepsize_controller=stepsize_controller, # TODO Fix Stepsize controller
-                species_maps={symbol: i for i, symbol in enumerate(species_order)},
-                parameter_maps={symbol: i for i, symbol in enumerate(parameter_maps)},
-            )
+        if self._model_changed(in_axes, dt0) or self._sim_func is None:
+            self._setup_system(in_axes=in_axes, t0=t0, t1=t1, dt0=dt0, solver=solver)
 
             # Set markers to check whether the conditions have changed
             # This is done to avoid recompilation of the simulation function
             self._in_axes = in_axes
+            self._dt0 = dt0
 
             # Warmup the simulation to make use of jit compilation
             self._warmup_simulation(y0, parameters, saveat, in_axes)
@@ -299,10 +290,13 @@ class Model(BaseModel):
 
         return self._sim_func(y0, parameters, saveat)
 
-    def _model_changed(self, in_axes: Tuple) -> bool:
+    def _model_changed(self, in_axes: Tuple, dt0) -> bool:
         """Checks whether the model has changed since the last simulation"""
 
         if self._in_axes != in_axes:
+            return True
+
+        if self._dt0 != dt0:
             return True
 
         return False
@@ -324,7 +318,16 @@ class Model(BaseModel):
 
         self._setup_term()
 
-        simulation_setup = Simulation(term=self.term, **kwargs)
+        simulation_setup = Simulation(
+            term=self.term,
+            species_maps={
+                symbol: i for i, symbol in enumerate(self._get_species_order())
+            },
+            parameter_maps={
+                symbol: i for i, symbol in enumerate(self._get_parameter_order())
+            },
+            **kwargs,
+        )
         simulation_setup._prepare_func(in_axes=in_axes)
 
         # Attach to the model to prevent re-modelling
@@ -340,14 +343,18 @@ class Model(BaseModel):
         )
 
     def _get_parameters(
-        self, parameters: Optional[jax.Array]
+        self, parameters: Optional[jax.Array] = None
     ) -> Tuple[List[str], jax.Array]:
         """Gets all the parameters for the model"""
 
-        if any(param.value is None for param in self.parameters.values()):
+        if (
+            any(param.value is None for param in self.parameters.values())
+            and parameters is None
+        ):
+            # If no 'custom' parameters are given, raise an exception
             raise ValueError("Missing values for parameters")
 
-        param_order = sorted(self.parameters.keys())
+        param_order = self._get_parameter_order()
 
         if parameters is not None:
             return param_order, parameters
@@ -356,6 +363,11 @@ class Model(BaseModel):
             param_order,
             jnp.array([self.parameters[param].value for param in param_order]),
         )  # type: ignore
+
+    def _get_parameter_order(self) -> List[str]:
+        """Returns the order of the parameters in the model"""
+
+        return sorted(self.parameters.keys())
 
     def _assemble_y0_array(
         self, initial_conditions: List[Dict[str, float]], in_axes: Tuple
@@ -451,6 +463,8 @@ class Model(BaseModel):
     def __repr__(self):
         """Prints a summary of the model"""
 
+        print("Model summary")
+
         eqprint(
             Symbol("x"), Matrix([species.symbol for species in self.species.values()]).T
         )
@@ -462,6 +476,9 @@ class Model(BaseModel):
 
         for ode in self.odes.values():
             odeprint(y=ode.species.name, expr=ode.equation)
+
+        # Parameter
+        self.parameters.__repr__()
 
         return ""
 

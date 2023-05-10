@@ -21,5 +21,6 @@ setup(
         "numpy",
         "numpyro",
         "arviz",
+        "corner",
     ],
 )
