@@ -15,14 +15,7 @@ class Reactant(Species):
     data: Optional[List[Series]] = None
 
 
-class Catalyst(Species):
-    init_conc: float
-    unit: str
-    data: Optional[List[Series]] = None
-
-
 class Measurement(BaseModel):
-    catalysts: Dict[str, Catalyst]
     reactants: Dict[str, Reactant]
     time: list
     time_unit: str
