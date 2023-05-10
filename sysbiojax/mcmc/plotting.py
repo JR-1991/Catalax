@@ -24,7 +24,6 @@ def plot_corner(mcmc: MCMC, model: Model):
         show_titles=True,
         title_kwargs={"fontsize": 12},
         divergences=True,
-        colot="b",
         labels=[
             r"$sigma$",
             *[
@@ -34,7 +33,7 @@ def plot_corner(mcmc: MCMC, model: Model):
                 for param in model._get_parameter_order()
             ],
         ],
-        use_math_text=True,
+        use_math_text=False,
     )
 
     plt.tight_layout()
