@@ -1,20 +1,21 @@
-from typing import Any, Dict, List
-from functools import partial
+from typing import List, Dict, Any
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 from diffrax import (
+    AbstractSolver,
+    AbstractStepSizeController,
+    ConstantStepSize,
+    Kvaerno5,
     ODETerm,
     PIDController,
     SaveAt,
-    diffeqsolve,
-    Kvaerno5,
     Tsit5,
-    AbstractSolver,
+    diffeqsolve,
 )
 from jax import Array
-from pydantic import BaseModel, PrivateAttr, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class Stack(eqx.Module):
@@ -40,7 +41,7 @@ class Simulation(BaseModel):
     dt0: float
     parameter_maps: Dict[str, int]
     species_maps: Dict[str, int]
-    stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5)
+    stepsize_controller: AbstractStepSizeController = ConstantStepSize()
     solver: AbstractSolver = Tsit5
 
     _simulation_func = PrivateAttr(default=None)
@@ -62,6 +63,7 @@ class Simulation(BaseModel):
                     parameters,
                 ),
                 saveat=SaveAt(ts=time),
+                stepsize_controller=self.stepsize_controller,
             )
 
             return sol.ts, sol.ys
