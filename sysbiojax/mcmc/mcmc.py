@@ -1,4 +1,5 @@
 from typing import Callable, Dict, List, Optional, Tuple, Union
+import jax
 
 import pandas as pd
 import jax.numpy as jnp
@@ -46,10 +47,12 @@ def run_mcmc(
     num_warmup: int,
     num_samples: int,
     dense_mass: bool = True,
+    thinning: int = 1,
+    max_tree_depth: int = 10,
     dt0: float = 0.1,
     chain_method: str = "sequential",
     num_chains: int = 1,
-    seed: int = 0,
+    seed: int = 420,
     progress_bar: bool = True,
     in_axes: Optional[Tuple] = (0, None, 0),
     verbose: int = 1,
@@ -106,16 +109,17 @@ def run_mcmc(
     )
 
     mcmc = MCMC(
-        NUTS(bayes_model, dense_mass=dense_mass),
+        NUTS(bayes_model, dense_mass=dense_mass, max_tree_depth=max_tree_depth),
         num_warmup=num_warmup,
         num_samples=num_samples,
         progress_bar=progress_bar,
         chain_method=chain_method,
         num_chains=num_chains,
+        jit_model_args=True,
+        thinning=thinning,
     )
 
     print("<<< Running MCMC >>>")
-
     mcmc.run(
         PRNGKey(seed),
         data=data,
