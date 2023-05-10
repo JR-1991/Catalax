@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import jax
+import pandas as pd
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
@@ -52,6 +52,7 @@ def run_mcmc(
     seed: int = 0,
     progress_bar: bool = True,
     in_axes: Optional[Tuple] = (0, None, 0),
+    verbose: int = 1,
 ):
     """Runs an MCMC simulation to infer the posterior distribution of parameters.
 
@@ -81,6 +82,10 @@ def run_mcmc(
         MCMC: Result of the MCMC simulation.
     """
 
+    if verbose:
+        print("<<< Priors >>>")
+        _print_priors(model)
+
     # Extract priors from the model
     p_loc, p_lbounds, p_ubounds, p_scales = _assemble_priors(model)
 
@@ -108,6 +113,8 @@ def run_mcmc(
         chain_method=chain_method,
         num_chains=num_chains,
     )
+
+    print("<<< Running MCMC >>>")
 
     mcmc.run(
         PRNGKey(seed),
@@ -204,3 +211,24 @@ def _setup_model(
         numpyro.sample("y", dist.Normal(states, sigma), obs=data)  # type: ignore
 
     return _bayes_model
+
+
+def _print_priors(model: Model):
+    """Prints all priors of the model into a dataframe for an overview"""
+
+    df = pd.DataFrame(
+        [
+            {"name": param, **Prior.from_parameter(model.parameters[param]).dict()}
+            for param in model._get_parameter_order()
+        ]
+    )
+
+    try:
+        from IPython.display import display
+
+        display(df)
+
+        return ""
+
+    except ImportError:
+        return df
