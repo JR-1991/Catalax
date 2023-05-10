@@ -5,12 +5,11 @@ import pandas as pd
 import jax
 import jax.numpy as jnp
 from diffrax import (
-    Kvaerno5,
+    Tsit5,
     ODETerm,
-    PIDController,
+    ConstantStepSize,
     SaveAt,
-    AbstractSolver,
-    AbstractAdaptiveStepSizeController,
+    AbstractStepSizeController,
 )
 from dotted_dict import DottedDict
 from pydantic import BaseModel, Field, PrivateAttr, validator
@@ -236,14 +235,12 @@ class Model(BaseModel):
         self,
         initial_conditions: List[Dict[str, float]],
         dt0: float,
-        solver=Kvaerno5,
+        solver=Tsit5,
         t0: Optional[int] = None,
         t1: Optional[int] = None,
         nsteps: Optional[int] = None,
         saveat: Optional[SaveAt] = None,
-        stepsize_controller: AbstractAdaptiveStepSizeController = PIDController(
-            rtol=1e-5, atol=1e-5  # type: ignore
-        ),
+        stepsize_controller: AbstractStepSizeController = ConstantStepSize(),
         parameters: Optional[jax.Array] = None,
         in_axes: Tuple = (0, None, None),
     ):
@@ -262,7 +259,7 @@ class Model(BaseModel):
         # Get the order of the species
         species_order = self._get_species_order()
 
-        parameter_maps, parameters = self._get_parameters(parameters)
+        parameters = self._get_parameters(parameters)
 
         # Setup the initial conditions
         y0 = self._assemble_y0_array(initial_conditions, in_axes)
@@ -342,9 +339,7 @@ class Model(BaseModel):
             ).__call__
         )
 
-    def _get_parameters(
-        self, parameters: Optional[jax.Array] = None
-    ) -> Tuple[List[str], jax.Array]:
+    def _get_parameters(self, parameters: Optional[jax.Array] = None) -> jax.Array:
         """Gets all the parameters for the model"""
 
         if (
@@ -354,15 +349,10 @@ class Model(BaseModel):
             # If no 'custom' parameters are given, raise an exception
             raise ValueError("Missing values for parameters")
 
-        param_order = self._get_parameter_order()
-
         if parameters is not None:
-            return param_order, parameters
+            return parameters
 
-        return (
-            param_order,
-            jnp.array([self.parameters[param].value for param in param_order]),
-        )  # type: ignore
+        return jnp.array([self.parameters[param].value for param in self._get_parameter_order()])  # type: ignore
 
     def _get_parameter_order(self) -> List[str]:
         """Returns the order of the parameters in the model"""
