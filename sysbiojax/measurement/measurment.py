@@ -24,6 +24,3 @@ class Measurement(BaseModel):
 class Experiment(BaseModel):
     name: str
     measurements: List[Measurement]
-
-    def _init_measurements_as_array(self):
-        pass
