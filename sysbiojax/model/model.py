@@ -239,8 +239,9 @@ class Model(BaseModel):
         t0: Optional[int] = None,
         t1: Optional[int] = None,
         nsteps: Optional[int] = None,
+        rtol: float = 1e-5,
+        atol: float = 1e-5,
         saveat: Optional[SaveAt] = None,
-        stepsize_controller: AbstractStepSizeController = ConstantStepSize(),
         parameters: Optional[jax.Array] = None,
         in_axes: Tuple = (0, None, None),
     ):
@@ -273,7 +274,15 @@ class Model(BaseModel):
             raise ValueError("Must specify either nsteps or saveat.")
 
         if self._model_changed(in_axes, dt0) or self._sim_func is None:
-            self._setup_system(in_axes=in_axes, t0=t0, t1=t1, dt0=dt0, solver=solver)
+            self._setup_system(
+                in_axes=in_axes,
+                t0=t0,
+                t1=t1,
+                dt0=dt0,
+                solver=solver,
+                rtol=rtol,
+                atol=atol,
+            )
 
             # Set markers to check whether the conditions have changed
             # This is done to avoid recompilation of the simulation function

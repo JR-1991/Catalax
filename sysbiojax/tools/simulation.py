@@ -5,8 +5,6 @@ import jax
 import jax.numpy as jnp
 from diffrax import (
     AbstractSolver,
-    AbstractStepSizeController,
-    ConstantStepSize,
     Kvaerno5,
     ODETerm,
     PIDController,
@@ -41,8 +39,9 @@ class Simulation(BaseModel):
     dt0: float
     parameter_maps: Dict[str, int]
     species_maps: Dict[str, int]
-    stepsize_controller: AbstractStepSizeController = ConstantStepSize()
     solver: AbstractSolver = Tsit5
+    rtol: float = 1e-5
+    atol: float = 1e-5
 
     _simulation_func = PrivateAttr(default=None)
 
@@ -51,19 +50,19 @@ class Simulation(BaseModel):
 
         def _simulate_system(y0, parameters, time):
             sol = diffeqsolve(
-                terms=self.term,
-                solver=self.solver(),
+                terms=self.term,  # type: ignore
+                solver=self.solver(),  # type: ignore
                 t0=0,
                 t1=time[-1],
-                dt0=self.dt0,
+                dt0=self.dt0,  # type: ignore
                 y0=y0,
                 args=(
                     self.species_maps,
                     self.parameter_maps,
                     parameters,
-                ),
-                saveat=SaveAt(ts=time),
-                stepsize_controller=self.stepsize_controller,
+                ),  # type: ignore
+                saveat=SaveAt(ts=time),  # type: ignore
+                stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
             )
 
             return sol.ts, sol.ys
