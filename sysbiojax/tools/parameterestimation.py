@@ -14,11 +14,13 @@ class ParameterEstimator:
         data: jax.Array,
         time: jax.Array,
         initial_states: List[Dict[str, float]],
+        observables_mask: jax.Array,
     ):
         self.model = model
         self.data = data
         self.time = time
         self.initial_states = initial_states  # from data
+        self.observables_mask = observables_mask
 
         self.lmfit_params = self._init_lmfit_params()
 
@@ -60,9 +62,9 @@ class ParameterEstimator:
         )
 
         # calculate residuals
-        residuals = sim_data - self.data
+        residuals = sim_data[self.observables_mask] - self.data[self.observables_mask]
 
-        return residuals.flatten()
+        return residuals
 
     def fit(self):
         """Fits data to model with given initial conditions and parameter guesses."""

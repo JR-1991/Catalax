@@ -17,6 +17,7 @@ class Analysis:
         self._unique_species = self._get_unique_species()
         self._data_shape = self._get_dimensions()
         self._data_matrix = self._initialize_data_matrix()
+        self._observables_mask = self._get_observables_mask(self._data_matrix)
         self._initial_condition = self._get_initial_conditions()
         self.time = self._get_time()
 
@@ -69,6 +70,11 @@ class Analysis:
 
         return jnp.array(matrix)
 
+    def _get_observables_mask(self, array: jax.Array):
+        """Checks species dimension (axis=2) for nan values. If axis only constists of nan values, False is
+        returned for the corresponding axis."""
+        return ~jnp.isnan(array).all(axis=1)
+
     def _get_unique_species(self) -> List[str]:
         """Iterates over all measurements and extracts species keys.
         Returns sorted list of keys."""
@@ -77,6 +83,10 @@ class Analysis:
         ]
         unique_species = sorted(list({x for l in species_keys for x in l}))
         return unique_species
+
+    def _get_simulation_array(self) -> jax.Array:
+        """Reduces first two dimentions into single dimention to match shape of 'model.simulate' function."""
+        return self._data_matrix.reshape(-1, *self._data_matrix.shape[-2:])
 
     def _get_initial_conditions(self) -> List[Dict[str, float]]:
         """Extracts initial conditions from data.
@@ -106,9 +116,10 @@ class Analysis:
         """lmfit parameter estiamtion."""
         estimator = ParameterEstimator(
             model=self.model,
-            data=self._data_matrix,
+            data=self._get_simulation_array(),
             time=self.time,
             initial_states=self._initial_condition,
+            observables_mask=self._observables_mask,
         )
 
         return estimator.fit()
