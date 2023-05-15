@@ -1,20 +1,19 @@
-from typing import Any, Dict, List
-from functools import partial
+from typing import List, Dict, Any
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 from diffrax import (
+    AbstractSolver,
+    Kvaerno5,
     ODETerm,
     PIDController,
     SaveAt,
-    diffeqsolve,
-    Kvaerno5,
     Tsit5,
-    AbstractSolver,
+    diffeqsolve,
 )
 from jax import Array
-from pydantic import BaseModel, PrivateAttr, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class Stack(eqx.Module):
@@ -40,8 +39,9 @@ class Simulation(BaseModel):
     dt0: float
     parameter_maps: Dict[str, int]
     species_maps: Dict[str, int]
-    stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5)
     solver: AbstractSolver = Tsit5
+    rtol: float = 1e-5
+    atol: float = 1e-5
 
     _simulation_func = PrivateAttr(default=None)
 
@@ -50,18 +50,19 @@ class Simulation(BaseModel):
 
         def _simulate_system(y0, parameters, time):
             sol = diffeqsolve(
-                terms=self.term,
-                solver=self.solver(),
+                terms=self.term,  # type: ignore
+                solver=self.solver(),  # type: ignore
                 t0=0,
                 t1=time[-1],
-                dt0=self.dt0,
+                dt0=self.dt0,  # type: ignore
                 y0=y0,
                 args=(
                     self.species_maps,
                     self.parameter_maps,
                     parameters,
-                ),
-                saveat=SaveAt(ts=time),
+                ),  # type: ignore
+                saveat=SaveAt(ts=time),  # type: ignore
+                stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
             )
 
             return sol.ts, sol.ys
