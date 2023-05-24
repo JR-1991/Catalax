@@ -45,8 +45,8 @@ class ODE(BaseModel):
             return None
 
         for symbol in self.equation.free_symbols:
-            if str(symbol) in self.__model__.species:
-                # Skip species
+            if str(symbol) in self.__model__.species or str(symbol) == "t":
+                # Skip species and time symbol
                 continue
             elif parameter_exists(str(symbol), self.__model__.parameters):
                 # Assign parameter if it is already present in the model
