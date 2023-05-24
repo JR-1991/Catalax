@@ -26,7 +26,7 @@ class Stack(eqx.Module):
         params = {symbol: parameters[i] for symbol, i in parameter_maps.items()}
 
         return jnp.stack(
-            [module(**ys, **params) for module in self.modules],  # type: ignore
+            [module(t=t, **ys, **params) for module in self.modules],  # type: ignore
             axis=-1,
         )
 
@@ -42,6 +42,7 @@ class Simulation(BaseModel):
     solver: AbstractSolver = Tsit5
     rtol: float = 1e-5
     atol: float = 1e-5
+    max_steps: int = 4096
 
     _simulation_func = PrivateAttr(default=None)
 
@@ -63,6 +64,7 @@ class Simulation(BaseModel):
                 ),  # type: ignore
                 saveat=SaveAt(ts=time),  # type: ignore
                 stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
+                max_steps=self.max_steps,
             )
 
             return sol.ts, sol.ys
@@ -89,6 +91,7 @@ def simulate(
     parameter_maps: Dict[str, int],
     species_maps: Dict[str, int],
     saveat: SaveAt,
+    max_steps: int,
     stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5),
     solver=Kvaerno5(),
 ):
@@ -104,6 +107,7 @@ def simulate(
         args=(species_maps, parameter_maps, parameters),
         saveat=saveat,
         stepsize_controller=stepsize_controller,
+        max_steps=max_steps,
     )
 
     return sol.ts, sol.ys
