@@ -3,6 +3,27 @@ from typing import Dict
 
 import pandas as pd
 from sympy import Derivative, Eq
+from dotted_dict import DottedDict
+
+
+class PrettyDict(DottedDict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        df = pd.DataFrame(
+            [param.__dict__ for param in self.values()],
+        )
+
+        try:
+            from IPython.display import display
+
+            display(df)
+
+            return ""
+
+        except ImportError:
+            return df
 
 
 def odeprint(y, expr):
