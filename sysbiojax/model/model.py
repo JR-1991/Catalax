@@ -7,9 +7,7 @@ import jax.numpy as jnp
 from diffrax import (
     Tsit5,
     ODETerm,
-    ConstantStepSize,
     SaveAt,
-    AbstractStepSizeController,
 )
 from dotted_dict import DottedDict
 from pydantic import BaseModel, Field, PrivateAttr, validator
@@ -20,9 +18,9 @@ from sysbiojax.tools import Stack
 from sysbiojax.tools.simulation import Simulation
 
 from .ode import ODE
-from .parameter import Parameter, ParameterDict
+from .parameter import Parameter
 from .species import Species
-from .utils import check_symbol, eqprint, odeprint, parameter_exists
+from .utils import check_symbol, eqprint, odeprint, parameter_exists, PrettyDict
 
 
 class Model(BaseModel):
@@ -56,14 +54,15 @@ class Model(BaseModel):
 
     name: str
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
-    species: Dict[str, Species] = Field(default_factory=DottedDict)
-    parameters: Dict[str, Parameter] = Field(default_factory=ParameterDict)
+    species: Dict[str, Species] = Field(default_factory=PrettyDict)
+    parameters: Dict[str, Parameter] = Field(default_factory=PrettyDict)
     term: Optional[ODETerm] = Field(default=None)
 
     _sim_func: Optional[Callable] = PrivateAttr(default=None)
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
     _dt0: Optional[Tuple] = PrivateAttr(default=None)
-    _jacobian: Optional[Callable] = PrivateAttr(default=None)
+    _jacobian_parameters: Optional[Callable] = PrivateAttr(default=None)
+    _jacobian_states: Optional[Callable] = PrivateAttr(default=None)
 
     def add_ode(
         self,
@@ -244,6 +243,7 @@ class Model(BaseModel):
         saveat: Optional[SaveAt] = None,
         parameters: Optional[jax.Array] = None,
         in_axes: Tuple = (0, None, None),
+        max_steps: int = 4096,
     ):
         """Simulates the given model"""
 
@@ -282,6 +282,7 @@ class Model(BaseModel):
                 solver=solver,
                 rtol=rtol,
                 atol=atol,
+                max_steps=max_steps,
             )
 
             # Set markers to check whether the conditions have changed
@@ -340,13 +341,17 @@ class Model(BaseModel):
         self._sim_func = simulation_setup._simulation_func
 
     def _setup_term(self):
+        
         self.term = ODETerm(
             Stack(
                 modules=[
-                    SymbolicModule(self.odes[species].equation) for species in self._get_species_order()  # type: ignore
+                    SymbolicModule(self.odes[species].equation)
+                    for species in self._get_species_order()
                 ]
             ).__call__
         )
+
+        return self.term
 
     def _get_parameters(self, parameters: Optional[jax.Array] = None) -> jax.Array:
         """Gets all the parameters for the model"""
@@ -438,14 +443,14 @@ class Model(BaseModel):
             Array: The jacobian of the model with respect to the parameters.
         """
 
-        if self._jacobian is not None:
-            return self._jacobian(y, parameters)
+        if self._jacobian_parameters is not None:
+            return self._jacobian_parameters(y, parameters)
         elif self.term is None:
             self._setup_term()
 
         species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
         parameter_maps = {
-            symbol: i for i, symbol in enumerate(self._get_parameters(parameters)[0])
+            symbol: i for i, symbol in enumerate(self._get_parameter_order())
         }
 
         def _vector_field(y, parameters):
@@ -453,9 +458,39 @@ class Model(BaseModel):
                 0, y, (species_maps, parameter_maps, parameters)
             )
 
-        self._jacobian = jax.jacfwd(_vector_field, argnums=1)
+        self._jacobian_parameters = jax.jacfwd(_vector_field, argnums=1)
 
-        return self._jacobian(y, parameters)
+        return self._jacobian_parameters(y, parameters)
+
+    def jacobian_states(self, y, parameters):
+        """Sets up and calculates the jacobian of the model with respect to the states.
+
+        Args:
+            y (Array): The inital conditions of the model.
+            parameters (Array): The parameters that are inserted into the model.
+
+        Returns:
+            Array: The jacobian of the model with respect to the states.
+        """
+
+        if self._jacobian_states is not None:
+            return self._jacobian_states(y, parameters)
+        elif self.term is None:
+            self._setup_term()
+
+        species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
+        parameter_maps = {
+            symbol: i for i, symbol in enumerate(self._get_parameter_order())
+        }
+
+        def _vector_field(y, parameters):
+            return self.term.vector_field(
+                0, y, (species_maps, parameter_maps, parameters)
+            )
+
+        self._jacobian_states = jax.jacfwd(_vector_field, argnums=0)
+
+        return self._jacobian_states(y, parameters)
 
     # ! Helper methods
 
