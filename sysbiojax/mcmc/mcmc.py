@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sysbiojax.model.model import Model
 from sysbiojax.model.parameter import Parameter
 
-PRIOR_REQUIRED_ATTRS = ["initial_value", "lower_bound", "upper_bound", "stdev"]
+PRIOR_REQUIRED_ATTRS = ["initial_value", "lower_bound", "upper_bound"]
 
 
 class Prior(BaseModel):
@@ -21,7 +21,7 @@ class Prior(BaseModel):
     initial_guess: float
     lower_bound: float
     upper_bound: float
-    stdev: float
+    stdev: Optional[float] = None
 
     @classmethod
     def from_parameter(cls, parameter: Parameter):
@@ -46,6 +46,7 @@ def run_mcmc(
     yerrs: Union[float, Array],
     num_warmup: int,
     num_samples: int,
+    prior_dist: str = "normal",
     dense_mass: bool = True,
     thinning: int = 1,
     max_tree_depth: int = 10,
@@ -53,9 +54,9 @@ def run_mcmc(
     chain_method: str = "sequential",
     num_chains: int = 1,
     seed: int = 420,
-    progress_bar: bool = True,
     in_axes: Optional[Tuple] = (0, None, 0),
     verbose: int = 1,
+    max_steps: int = 4096,
 ):
     """Runs an MCMC simulation to infer the posterior distribution of parameters.
 
@@ -96,7 +97,7 @@ def run_mcmc(
     y0s = model._assemble_y0_array(initial_conditions, in_axes=in_axes)
 
     # Compile the model to obtain the simulation function
-    model._setup_system(in_axes=in_axes, dt0=dt0)
+    model._setup_system(in_axes=in_axes, dt0=dt0, max_steps=max_steps)
 
     # Setup the bayes model
     bayes_model = _setup_model(
@@ -112,14 +113,16 @@ def run_mcmc(
         NUTS(bayes_model, dense_mass=dense_mass, max_tree_depth=max_tree_depth),
         num_warmup=num_warmup,
         num_samples=num_samples,
-        progress_bar=progress_bar,
+        progress_bar=bool(verbose),
         chain_method=chain_method,
         num_chains=num_chains,
         jit_model_args=True,
         thinning=thinning,
     )
 
-    print("<<< Running MCMC >>>")
+    if verbose:
+        print("<<< Running MCMC >>>")
+
     mcmc.run(
         PRNGKey(seed),
         data=data,
@@ -130,7 +133,7 @@ def run_mcmc(
     # Print a nice summary
     mcmc.print_summary()
 
-    return mcmc
+    return mcmc, bayes_model
 
 
 def _assemble_priors(model: Model) -> Tuple[Array, Array, Array, Array]:
@@ -176,9 +179,9 @@ def _setup_model(
     """
 
     def _bayes_model(
-        data: Array,
         y0s: Array,
         times: Array,
+        data: Optional[Array] = None,
     ):
         """Generalized bayesian model to infer the posterior distribution of parameters.
 
@@ -200,11 +203,9 @@ def _setup_model(
 
         theta = numpyro.sample(
             "theta",
-            dist.TruncatedNormal(
-                low=priors_lower_bounds,
-                high=priors_upper_bounds,
-                loc=priors_loc,  # type: ignore
-                scale=priors_scale,  # type: ignore
+            dist.Uniform(
+                low=priors_lower_bounds,  # type: ignore
+                high=priors_upper_bounds,  # type: ignore
             ),
         )
 
