@@ -14,28 +14,9 @@ class Parameter(BaseModel):
     name: str
     symbol: Expr
     value: Optional[float] = None
+    constant: bool = False
     initial_value: Optional[float] = None
     equation: Union[str, Expr, None] = None
     lower_bound: Optional[float] = None
     upper_bound: Optional[float] = None
     stdev: Optional[float] = None
-
-
-class ParameterDict(DottedDict):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __repr__(self):
-        df = pd.DataFrame(
-            [param.__dict__ for param in self.values()],
-        )
-
-        try:
-            from IPython.display import display
-
-            display(df)
-
-            return ""
-
-        except ImportError:
-            return df
