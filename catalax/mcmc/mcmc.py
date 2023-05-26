@@ -9,8 +9,8 @@ from jax import Array
 from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
 from pydantic import BaseModel
-from sysbiojax.model.model import Model
-from sysbiojax.model.parameter import Parameter
+from catalax.model.model import Model
+from catalax.model.parameter import Parameter
 
 PRIOR_REQUIRED_ATTRS = ["initial_value", "lower_bound", "upper_bound"]
 
@@ -212,7 +212,6 @@ def _setup_model(
         _, states = sim_func(y0s, theta, times)
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
-
         numpyro.sample("y", dist.Normal(states, sigma), obs=data)  # type: ignore
 
     return _bayes_model

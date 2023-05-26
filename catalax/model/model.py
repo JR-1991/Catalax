@@ -14,8 +14,8 @@ from pydantic import BaseModel, Field, PrivateAttr, validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 from sympy2jax import SymbolicModule
 
-from sysbiojax.tools import Stack
-from sysbiojax.tools.simulation import Simulation
+from catalax.tools import Stack
+from catalax.tools.simulation import Simulation
 
 from .ode import ODE
 from .parameter import Parameter
@@ -341,7 +341,6 @@ class Model(BaseModel):
         self._sim_func = simulation_setup._simulation_func
 
     def _setup_term(self):
-        
         self.term = ODETerm(
             Stack(
                 modules=[

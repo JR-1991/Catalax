@@ -65,6 +65,7 @@ class Simulation(BaseModel):
                 saveat=SaveAt(ts=time),  # type: ignore
                 stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
                 max_steps=self.max_steps,
+                # throw=False,
             )
 
             return sol.ts, sol.ys

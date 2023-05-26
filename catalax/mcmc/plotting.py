@@ -8,7 +8,7 @@ from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
 from sympy import Symbol
 
-from sysbiojax.model.model import Model
+from catalax.model.model import Model
 
 
 def plot_corner(
