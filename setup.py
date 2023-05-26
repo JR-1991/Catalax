@@ -2,7 +2,7 @@ import setuptools
 from setuptools import setup
 
 setup(
-    name="SysBioJax",
+    name="Catalax",
     version="0.0.0",
     author="Range, Jan",
     author_email="jan.range@simtech.uni-stuttgart.de",
@@ -14,8 +14,8 @@ setup(
         "pydantic==1.10.7",
         "dotted-dict==1.1.3",
         "sympy==1.11.1",
-        "diffrax==0.3.1",
-        "sympy2jax==0.0.4",
+        "diffrax>=0.3.1",
+        "sympy2jax>=0.0.4",
         "pandas",
         "tqdm",
         "numpy",
