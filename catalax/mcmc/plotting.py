@@ -8,11 +8,10 @@ from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
 from sympy import Symbol
 
-from catalax.model.model import Model
-
 
 def plot_corner(
-    mcmc: MCMC, model: Model, quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84)
+    mcmc: MCMC,
+    quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
 ):
     """Plots the correlation between the parameters.
 
@@ -26,58 +25,28 @@ def plot_corner(
         data,
         plot_contours=False,
         quantiles=list(quantiles),
-        title_quantiles=list(quantiles),
         bins=20,
         show_titles=True,
         title_kwargs={"fontsize": 12},
         divergences=True,
-        labels=[
-            r"$sigma$",
-            *[
-                model.parameters[param]
-                .symbol._repr_latex_()
-                .replace("\\displaystyle ", "")
-                for param in model._get_parameter_order()
-            ],
-        ],
         use_math_text=False,
-        truths={"theta": _get_truths(model), "sigma": None},
     )
 
     plt.tight_layout()
 
 
-def _get_truths(model: Model):
-    """Returns the true values of the parameters"""
-
-    return [model.parameters[param].value for param in model._get_parameter_order()]
-
-
 def plot_posterior(
     mcmc,
     model,
-    title: str = "Posterior distribution",
 ) -> None:
     """Plots the posterior distribution of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    ax = az.plot_posterior(inf_data)
-
-    for row in ax:
-        for a in row:
-            title = a.title.get_text()
-
-            if "theta" not in title.lower():
-                continue
-
-            index = int(title.split("\n")[-1])
-            a.title.set_text(
-                Symbol(model._get_parameter_order()[index])
-                ._repr_latex_()
-                .replace("\\displaystyle ", "")
-            )
+    ax = az.plot_posterior(inf_data, var_names=model._get_parameter_order())
 
     plt.tight_layout()
+
+    return ax
 
 
 def plot_credibility_interval(
