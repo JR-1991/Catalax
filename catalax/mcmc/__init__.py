@@ -1,2 +1,3 @@
 from .mcmc import run_mcmc
 from .plotting import plot_corner, plot_posterior
+from . import priors

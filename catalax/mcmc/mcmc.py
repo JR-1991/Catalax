@@ -1,45 +1,17 @@
 from typing import Callable, Dict, List, Optional, Tuple, Union
 import jax
+import numpy as np
 
-import pandas as pd
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax import Array
 from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
-from pydantic import BaseModel
-from catalax.model.model import Model
-from catalax.model.parameter import Parameter
-
-PRIOR_REQUIRED_ATTRS = ["initial_value", "lower_bound", "upper_bound"]
-
-
-class Prior(BaseModel):
-    """Prior distribution of a parameter"""
-
-    initial_guess: float
-    lower_bound: float
-    upper_bound: float
-    stdev: Optional[float] = None
-
-    @classmethod
-    def from_parameter(cls, parameter: Parameter):
-        if any(getattr(parameter, attr) is None for attr in PRIOR_REQUIRED_ATTRS):
-            raise ValueError(
-                f"Parameter {parameter.name} does not have the required attributes {PRIOR_REQUIRED_ATTRS}. Missing attributes: {', '.join([attr for attr in PRIOR_REQUIRED_ATTRS if getattr(parameter, attr) is None])}"
-            )
-
-        return cls(
-            initial_guess=parameter.initial_value,  # type: ignore
-            lower_bound=parameter.lower_bound,  # type: ignore
-            upper_bound=parameter.upper_bound,  # type: ignore
-            stdev=parameter.stdev,  # type: ignore
-        )
 
 
 def run_mcmc(
-    model: Model,
+    model: "Model",
     data: Array,
     initial_conditions: List[Dict[str, float]],
     times: Array,
@@ -86,12 +58,21 @@ def run_mcmc(
         MCMC: Result of the MCMC simulation.
     """
 
-    if verbose:
-        print("<<< Priors >>>")
-        _print_priors(model)
+    # Check if all paramaters have priors
+    assert all(
+        param.prior is not None for param in model.parameters.values()
+    ), f"Parameters {', '.join([param.name for param in model.parameters.values() if param.prior is None])} do not have priors. Please specify priors for all parameters."
 
-    # Extract priors from the model
-    p_loc, p_lbounds, p_ubounds, p_scales = _assemble_priors(model)
+    if verbose:
+        print("<<< Priors >>>\n")
+        for param in model.parameters.values():
+            print(f"{param.name}: {param._prior_str_}")
+
+    if isinstance(data, np.ndarray):
+        data = jnp.array(data)
+
+    if len(data.shape) != 3:
+        data = jnp.expand_dims(data, -1)
 
     # Assemble the initial conditions
     y0s = model._assemble_y0_array(initial_conditions, in_axes=in_axes)
@@ -99,13 +80,16 @@ def run_mcmc(
     # Compile the model to obtain the simulation function
     model._setup_system(in_axes=in_axes, dt0=dt0, max_steps=max_steps)
 
+    # Get all priors
+    priors = [
+        (model.parameters[param].name, model.parameters[param].prior)
+        for param in model._get_parameter_order()
+    ]
+
     # Setup the bayes model
     bayes_model = _setup_model(
         yerrs=yerrs,
-        priors_loc=p_loc,
-        priors_lower_bounds=p_lbounds,
-        priors_upper_bounds=p_ubounds,
-        priors_scale=p_scales,
+        priors=priors,  # type: ignore
         sim_func=model._sim_func,  # type: ignore
     )
 
@@ -121,7 +105,7 @@ def run_mcmc(
     )
 
     if verbose:
-        print("<<< Running MCMC >>>")
+        print("\n<<< Running MCMC >>>\n")
 
     mcmc.run(
         PRNGKey(seed),
@@ -136,53 +120,28 @@ def run_mcmc(
     return mcmc, bayes_model
 
 
-def _assemble_priors(model: Model) -> Tuple[Array, Array, Array, Array]:
-    """Converts the parameters of a model to priors, if all necessary attributes are present.
-
-    Args:
-        model (Model): The model to convert the parameters of.
-
-    Returns:
-        Tuple[Array, Array, Array, Array]: Location, lower bound, upper bound, and scale of the priors.
-    """
-
-    # Convert the parameters to priors
-    priors = [
-        Prior.from_parameter(model.parameters[param])
-        for param in model._get_parameter_order()
-    ]
-
-    prior_loc = jnp.array([prior.initial_guess for prior in priors])
-    prior_scale = jnp.array([prior.stdev for prior in priors])
-    prior_lower_bounds = jnp.array([prior.lower_bound for prior in priors])
-    prior_upper_bounds = jnp.array([prior.upper_bound for prior in priors])
-
-    return (
-        prior_loc,
-        prior_lower_bounds,
-        prior_upper_bounds,
-        prior_scale,
-    )
-
-
 def _setup_model(
     yerrs: Union[float, Array],
-    priors_loc: Array,
-    priors_lower_bounds: Array,
-    priors_upper_bounds: Array,
-    priors_scale: Array,
     sim_func: Callable,
+    priors: List[Tuple[str, dist.Distribution]],
 ):
     """Function to setup the model for the MCMC simulation.
 
     This is done, to not have to pass the priors and the simulation function to the MCMC.
     """
 
-    def _bayes_model(
-        y0s: Array,
-        times: Array,
-        data: Optional[Array] = None,
-    ):
+    # Set up distributions for the priors
+    distributions = lambda: [
+        numpyro.sample(name, distribution) for name, distribution in priors
+    ]
+
+    # Create vmapped function to iterate over multiple paramter sets
+    def param_iter(y0s, params, times):
+        return sim_func(y0s, params, times)
+
+    vmapped_sim_func = jax.vmap(param_iter, in_axes=(None, 0, None))
+
+    def _bayes_model(y0s: Array, times: Array, data: Optional[Array] = None):
         """Generalized bayesian model to infer the posterior distribution of parameters.
 
         This function is used to sample from the posterior distribution of parameters by
@@ -201,38 +160,16 @@ def _setup_model(
             sim_func (Callable): The simulation function of the model.
         """
 
-        theta = numpyro.sample(
-            "theta",
-            dist.Uniform(
-                low=priors_lower_bounds,  # type: ignore
-                high=priors_upper_bounds,  # type: ignore
-            ),
-        )
+        # theta = distributions()
 
-        _, states = sim_func(y0s, theta, times)
+        with numpyro.plate("param_set", 10):
+            theta = jnp.array(distributions()).T
+
+        _, states = vmapped_sim_func(y0s, theta, times)
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
-        numpyro.sample("y", dist.Normal(states, sigma), obs=data)  # type: ignore
+
+        with numpyro.plate("result_set", 10):
+            numpyro.sample("y", dist.TruncatedNormal(states, sigma, low=0.0), obs=data)  # type: ignore
 
     return _bayes_model
-
-
-def _print_priors(model: Model):
-    """Prints all priors of the model into a dataframe for an overview"""
-
-    df = pd.DataFrame(
-        [
-            {"name": param, **Prior.from_parameter(model.parameters[param]).dict()}
-            for param in model._get_parameter_order()
-        ]
-    )
-
-    try:
-        from IPython.display import display
-
-        display(df)
-
-        return ""
-
-    except ImportError:
-        return df
