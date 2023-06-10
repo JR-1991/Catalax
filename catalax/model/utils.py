@@ -1,9 +1,11 @@
 import re
-from typing import Dict
+from typing import Dict, List
 
 import pandas as pd
 from sympy import Derivative, Eq
 from dotted_dict import DottedDict
+
+from catalax.model.base import CatalaxBase
 
 
 class PrettyDict(DottedDict):
@@ -12,7 +14,14 @@ class PrettyDict(DottedDict):
 
     def __repr__(self):
         df = pd.DataFrame(
-            [param.__dict__ for param in self.values()],
+            [
+                {
+                    key: value
+                    for key, value in cls.__dict__.items()
+                    if key in self._fields_to_print(cls)
+                }
+                for cls in self.values()
+            ]
         )
 
         try:
@@ -24,6 +33,13 @@ class PrettyDict(DottedDict):
 
         except ImportError:
             return df
+
+    @staticmethod
+    def _fields_to_print(cls_: CatalaxBase) -> Dict[str, str]:
+        if len(cls_.__repr_fields__) == 1 and cls_.__repr_fields__[0] == "__all__":
+            return {key: key for key in cls_.__dict__}
+
+        return cls_.__repr_fields__
 
 
 def odeprint(y, expr):
