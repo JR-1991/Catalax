@@ -10,9 +10,10 @@ from diffrax import (
     SaveAt,
 )
 from dotted_dict import DottedDict
-from pydantic import BaseModel, Field, PrivateAttr, validator
+from pydantic import Field, PrivateAttr, validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 from sympy2jax import SymbolicModule
+from catalax.model.base import CatalaxBase
 
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
@@ -23,7 +24,7 @@ from .species import Species
 from .utils import check_symbol, eqprint, odeprint, parameter_exists, PrettyDict
 
 
-class Model(BaseModel):
+class Model(CatalaxBase):
 
     """
     Model class for storing ODEs, species, and parameters, which is used
@@ -68,6 +69,7 @@ class Model(BaseModel):
         self,
         species: str,
         equation: str,  # type: ignore
+        observable: bool = True,
         species_map: Optional[Dict[str, str]] = None,
     ):
         """Adds an ODE to the model and converts the equation to a SymPy expression.
@@ -109,8 +111,7 @@ class Model(BaseModel):
             self.add_species(name=species, species_map=species_map)
 
         self.odes[species] = ODE(
-            equation=equation,
-            species=self.species[species],
+            equation=equation, species=self.species[species], observable=observable
         )
 
         self.odes[species].__model__ = self

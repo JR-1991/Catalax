@@ -4,17 +4,20 @@ from dotted_dict import DottedDict
 from pydantic import BaseModel, Field, PrivateAttr, validator
 from sympy import Expr, Symbol, sympify
 
+from catalax.model.base import CatalaxBase
+
 from .species import Species
 from .parameter import Parameter
 from .utils import parameter_exists
 
 
-class ODE(BaseModel):
+class ODE(CatalaxBase):
     class Config:
         arbitrary_types_allowed = True
 
     species: Species
     equation: Expr
+    observable: bool = True
     parameters: Dict[Union[str, Expr], Parameter] = Field(default_factory=DottedDict)
 
     __model__: Optional["Model"] = PrivateAttr(default=None)  # type: ignore
