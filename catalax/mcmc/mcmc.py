@@ -18,6 +18,7 @@ def run_mcmc(
     yerrs: Union[float, Array],
     num_warmup: int,
     num_samples: int,
+    num_sets: int = 1,
     prior_dist: str = "normal",
     dense_mass: bool = True,
     thinning: int = 1,
@@ -91,6 +92,7 @@ def run_mcmc(
         yerrs=yerrs,
         priors=priors,  # type: ignore
         sim_func=model._sim_func,  # type: ignore
+        num_sets=num_sets,
     )
 
     mcmc = MCMC(
@@ -115,7 +117,8 @@ def run_mcmc(
     )
 
     # Print a nice summary
-    mcmc.print_summary()
+    if verbose:
+        mcmc.print_summary()
 
     return mcmc, bayes_model
 
@@ -124,6 +127,7 @@ def _setup_model(
     yerrs: Union[float, Array],
     sim_func: Callable,
     priors: List[Tuple[str, dist.Distribution]],
+    num_sets: int,
 ):
     """Function to setup the model for the MCMC simulation.
 
@@ -162,14 +166,14 @@ def _setup_model(
 
         # theta = distributions()
 
-        with numpyro.plate("param_set", 10):
+        with numpyro.plate("param_set", num_sets):
             theta = jnp.array(distributions()).T
 
         _, states = vmapped_sim_func(y0s, theta, times)
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
 
-        with numpyro.plate("result_set", 10):
+        with numpyro.plate("result_set", num_sets):
             numpyro.sample("y", dist.TruncatedNormal(states, sigma, low=0.0), obs=data)  # type: ignore
 
     return _bayes_model
