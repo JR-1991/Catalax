@@ -18,8 +18,6 @@ def run_mcmc(
     yerrs: Union[float, Array],
     num_warmup: int,
     num_samples: int,
-    num_sets: int = 1,
-    prior_dist: str = "normal",
     dense_mass: bool = True,
     thinning: int = 1,
     max_tree_depth: int = 10,
@@ -92,7 +90,6 @@ def run_mcmc(
         yerrs=yerrs,
         priors=priors,  # type: ignore
         sim_func=model._sim_func,  # type: ignore
-        num_sets=num_sets,
     )
 
     mcmc = MCMC(
@@ -127,7 +124,6 @@ def _setup_model(
     yerrs: Union[float, Array],
     sim_func: Callable,
     priors: List[Tuple[str, dist.Distribution]],
-    num_sets: int,
 ):
     """Function to setup the model for the MCMC simulation.
 
@@ -138,12 +134,6 @@ def _setup_model(
     distributions = lambda: [
         numpyro.sample(name, distribution) for name, distribution in priors
     ]
-
-    # Create vmapped function to iterate over multiple paramter sets
-    def param_iter(y0s, params, times):
-        return sim_func(y0s, params, times)
-
-    vmapped_sim_func = jax.vmap(param_iter, in_axes=(None, 0, None))
 
     def _bayes_model(y0s: Array, times: Array, data: Optional[Array] = None):
         """Generalized bayesian model to infer the posterior distribution of parameters.
@@ -164,16 +154,12 @@ def _setup_model(
             sim_func (Callable): The simulation function of the model.
         """
 
-        # theta = distributions()
+        theta = distributions()
 
-        with numpyro.plate("param_set", num_sets):
-            theta = jnp.array(distributions()).T
-
-        _, states = vmapped_sim_func(y0s, theta, times)
+        _, states = sim_func(y0s, theta, times)
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
 
-        with numpyro.plate("result_set", num_sets):
-            numpyro.sample("y", dist.TruncatedNormal(states, sigma, low=0.0), obs=data)  # type: ignore
+        numpyro.sample("y", dist.TruncatedNormal(states, sigma, low=0.0), obs=data)  # type: ignore
 
     return _bayes_model
