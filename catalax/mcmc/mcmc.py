@@ -167,10 +167,10 @@ def _setup_model(
 
         theta = distributions()
 
-        states = sim_func(y0s, theta, times)[-1][..., observables]
+        _, states = sim_func(y0s, theta, times)
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
 
-        numpyro.sample("y", dist.TruncatedNormal(states, sigma, low=0.0), obs=data)  # type: ignore
+        numpyro.sample("y", dist.TruncatedNormal(states[..., observables], sigma, low=0.0), obs=data)  # type: ignore
 
     return _bayes_model
