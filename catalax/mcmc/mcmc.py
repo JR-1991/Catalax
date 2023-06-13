@@ -90,6 +90,7 @@ def run_mcmc(
         yerrs=yerrs,
         priors=priors,  # type: ignore
         sim_func=model._sim_func,  # type: ignore
+        model=model,
     )
 
     mcmc = MCMC(
@@ -124,6 +125,7 @@ def _setup_model(
     yerrs: Union[float, Array],
     sim_func: Callable,
     priors: List[Tuple[str, dist.Distribution]],
+    model: "Model",
 ):
     """Function to setup the model for the MCMC simulation.
 
@@ -134,6 +136,15 @@ def _setup_model(
     distributions = lambda: [
         numpyro.sample(name, distribution) for name, distribution in priors
     ]
+
+    # Set up the observables to extract from the simulation
+    observables = jnp.array(
+        [
+            i
+            for i, species in enumerate(model._get_species_order())
+            if model.odes[species].observable
+        ]
+    )
 
     def _bayes_model(y0s: Array, times: Array, data: Optional[Array] = None):
         """Generalized bayesian model to infer the posterior distribution of parameters.
@@ -156,7 +167,7 @@ def _setup_model(
 
         theta = distributions()
 
-        _, states = sim_func(y0s, theta, times)
+        states = sim_func(y0s, theta, times)[-1][..., observables]
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
 
