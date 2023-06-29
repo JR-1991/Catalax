@@ -46,7 +46,7 @@ class TruncatedNormal(Prior):
             ), "low must be greater than 0. Otherwise the integration will probably fail"
 
         self._distribution_fun = distributions.TruncatedNormal(
-            self.mu, self.sigma, low=self.low, high=self.high
+            loc=self.mu, scale=self.sigma, low=self.low, high=self.high
         )
         self._print_str = (
             f"N(μ={self.mu}, σ={self.sigma}, high={self.high} low={self.low})"
