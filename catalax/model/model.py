@@ -1,27 +1,25 @@
-from collections import deque
+import json
+import os
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import pandas as pd
 import jax
 import jax.numpy as jnp
-from diffrax import (
-    Tsit5,
-    ODETerm,
-    SaveAt,
-)
+import pandas as pd
+from diffrax import ODETerm, SaveAt, Tsit5
 from dotted_dict import DottedDict
 from pydantic import Field, PrivateAttr, validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 from sympy2jax import SymbolicModule
-from catalax.model.base import CatalaxBase
 
+from catalax.model.base import CatalaxBase
+from catalax.mcmc import priors
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
 
 from .ode import ODE
 from .parameter import Parameter
 from .species import Species
-from .utils import check_symbol, eqprint, odeprint, parameter_exists, PrettyDict
+from .utils import PrettyDict, check_symbol, eqprint, odeprint, parameter_exists
 
 
 class Model(CatalaxBase):
@@ -52,6 +50,9 @@ class Model(CatalaxBase):
 
     class Config:
         arbitrary_types_allowed = True
+        fields = {
+            "term": {"exclude": True},
+        }
 
     name: str
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
@@ -226,6 +227,7 @@ class Model(CatalaxBase):
             self.parameters[name] = Parameter(
                 name=name, value=value, initial_value=initial_value, equation=equation
             )
+
         else:
             print("Parameter already exists. Skipping...")
 
@@ -234,7 +236,7 @@ class Model(CatalaxBase):
     def simulate(
         self,
         initial_conditions: List[Dict[str, float]],
-        dt0: float,
+        dt0: float = 0.1,
         solver=Tsit5,
         t0: Optional[int] = None,
         t1: Optional[int] = None,
@@ -243,7 +245,7 @@ class Model(CatalaxBase):
         atol: float = 1e-5,
         saveat: Optional[SaveAt] = None,
         parameters: Optional[jax.Array] = None,
-        in_axes: Tuple = (0, None, None),
+        in_axes: Optional[Tuple] = None,
         max_steps: int = 4096,
     ):
         """Simulates the given model"""
@@ -257,9 +259,6 @@ class Model(CatalaxBase):
 
         if isinstance(initial_conditions, dict):
             initial_conditions = [initial_conditions]
-
-        # Get the order of the species
-        species_order = self._get_species_order()
 
         parameters = self._get_parameters(parameters)
 
@@ -298,6 +297,25 @@ class Model(CatalaxBase):
 
         return self._sim_func(y0, parameters, saveat)
 
+    def _get_stoich_mat(self) -> jax.Array:
+        """Creates the stoichiometry matrx based on the given model.
+
+        Models can be defined in both ways - First by using plain ODE models where each species
+        has a single assigned equation. Here, the resulting stoichiometry matrx is a unity matrix.
+        In the case of a model, that is defined by reactions, the stoichioemtry matrix accordingly
+        is constructed per species and reaction.
+        """
+
+        if hasattr(self, "reactions"):
+            raise NotImplementedError(
+                f"So far stoichioemtry matrxis construction is exclusive to ODE models and not implemented yet."
+            )
+
+        stoich_mat = jnp.zeros((len(self.odes), len(self.odes)))
+        diag_indices = jnp.diag_indices_from(stoich_mat)
+
+        return stoich_mat.at[diag_indices].set(1)
+
     def _model_changed(self, in_axes: Tuple, dt0) -> bool:
         """Checks whether the model has changed since the last simulation"""
 
@@ -334,6 +352,7 @@ class Model(CatalaxBase):
             parameter_maps={
                 symbol: i for i, symbol in enumerate(self._get_parameter_order())
             },
+            stoich_mat=self._get_stoich_mat(),
             **kwargs,
         )
         simulation_setup._prepare_func(in_axes=in_axes)
@@ -448,6 +467,7 @@ class Model(CatalaxBase):
         elif self.term is None:
             self._setup_term()
 
+        stoich_mat = self._get_stoich_mat()
         species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
         parameter_maps = {
             symbol: i for i, symbol in enumerate(self._get_parameter_order())
@@ -455,7 +475,7 @@ class Model(CatalaxBase):
 
         def _vector_field(y, parameters):
             return self.term.vector_field(
-                0, y, (species_maps, parameter_maps, parameters)
+                0, y, (species_maps, parameter_maps, parameters, stoich_mat)
             )
 
         self._jacobian_parameters = jax.jacfwd(_vector_field, argnums=1)
@@ -529,3 +549,79 @@ class Model(CatalaxBase):
             symbols_ += list(symbol)
 
         return symbols_
+
+    # ! Exporters
+    def save(self, path: str, name: Optional[str] = None, **json_kwargs):
+        """Saves a model to a JSON file.
+
+        Args:
+            path (str): Path to which the model will be serialized
+        """
+
+        if name is None:
+            name = self.name.replace(" ", "_")
+
+        fpath = os.path.join(path, f"{name}.yaml")
+        model_dict = DottedDict(self.dict(exclude_none=True))
+
+        with open(fpath, "w") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "name": model_dict.name,
+                        "species": list(model_dict.species.values()),
+                        "odes": [
+                            {**ode, "species": species}
+                            for species, ode in model_dict.odes.items()
+                        ],
+                        "parameters": list(model_dict.parameters.values()),
+                    },
+                    default=str,
+                    sort_keys=False,
+                    **json_kwargs,
+                )
+            )
+
+    # ! Importers
+    @classmethod
+    def load(cls, path: str):
+        """Loads a model from a JSON file and initializes a model.
+
+        Args:
+            path (str): Path to the model JSON file.
+
+        Raises:
+            ValueError: If parameters given in the JSON file are not present in the model.
+
+        Returns:
+            Model: Resulting model instance.
+        """
+
+        with open(path, "r") as f:
+            data = DottedDict(json.load(f))
+
+        # Initialize the model
+        model = cls(name=data.name)
+
+        # Add Species
+        model.add_species(*{sp.symbol: sp.name for sp in data.species})
+
+        # Add ODEs
+        for ode in data.odes:
+            model.add_ode(**ode)
+
+        # Update given parameters
+        for parameter in data.parameters:
+            if parameter.symbol not in model.parameters:
+                raise ValueError(
+                    f"Parameter [symbol: {parameter.symbol}, name: {parameter.name}] not found in the model and thus inconsistent with the given model. Please check the JSON file you are trying to load."
+                )
+
+            if "prior" in parameter:
+                prior = parameter.pop("prior")
+                prior_cls = priors.__dict__[prior.pop("type")]
+                model.parameters[parameter.symbol].prior = prior_cls(**prior)
+
+            model.parameters[parameter.symbol].__dict__.update(parameter)
+
+        return model
