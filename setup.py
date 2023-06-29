@@ -23,4 +23,7 @@ setup(
         "arviz",
         "corner",
     ],
+    extras_require={
+        "dvc": ["dvc", "zntrack"],
+    },
 )
