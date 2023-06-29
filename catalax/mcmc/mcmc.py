@@ -65,7 +65,7 @@ def run_mcmc(
     if verbose:
         print("<<< Priors >>>\n")
         for param in model.parameters.values():
-            print(f"{param.name}: {param._prior_str_}")
+            print(f"{param.name}: {param.prior._print_str}")
 
     if isinstance(data, np.ndarray):
         data = jnp.array(data)
@@ -77,11 +77,15 @@ def run_mcmc(
     y0s = model._assemble_y0_array(initial_conditions, in_axes=in_axes)
 
     # Compile the model to obtain the simulation function
-    model._setup_system(in_axes=in_axes, dt0=dt0, max_steps=max_steps)
+    model._setup_system(
+        in_axes=in_axes,
+        dt0=dt0,
+        max_steps=max_steps,
+    )
 
     # Get all priors
     priors = [
-        (model.parameters[param].name, model.parameters[param].prior)
+        (model.parameters[param].name, model.parameters[param].prior._distribution_fun)
         for param in model._get_parameter_order()
     ]
 
@@ -132,11 +136,6 @@ def _setup_model(
     This is done, to not have to pass the priors and the simulation function to the MCMC.
     """
 
-    # Set up distributions for the priors
-    distributions = lambda: [
-        numpyro.sample(name, distribution) for name, distribution in priors
-    ]
-
     # Set up the observables to extract from the simulation
     observables = jnp.array(
         [
@@ -165,12 +164,14 @@ def _setup_model(
             sim_func (Callable): The simulation function of the model.
         """
 
-        theta = distributions()
+        theta = jnp.array(
+            [numpyro.sample(name, distribution) for name, distribution in priors]
+        )
 
         _, states = sim_func(y0s, theta, times)
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
 
-        numpyro.sample("y", dist.TruncatedNormal(states[..., observables], sigma, low=0.0), obs=data)  # type: ignore
+        numpyro.sample("y", dist.Normal(states[..., observables], sigma), obs=data)  # type: ignore
 
     return _bayes_model
