@@ -561,7 +561,7 @@ class Model(CatalaxBase):
         if name is None:
             name = self.name.replace(" ", "_")
 
-        fpath = os.path.join(path, f"{name}.yaml")
+        fpath = os.path.join(path, f"{name}.json")
         model_dict = DottedDict(self.dict(exclude_none=True))
 
         with open(fpath, "w") as f:
