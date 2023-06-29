@@ -1,8 +1,10 @@
 from pydantic import BaseModel, validator
 from sympy import Expr, symbols
 
+from catalax.model.base import CatalaxBase
 
-class Species(BaseModel):
+
+class Species(CatalaxBase):
     class Config:
         arbitrary_types_allowed = True
 
