@@ -14,6 +14,10 @@ from .utils import parameter_exists
 class ODE(CatalaxBase):
     class Config:
         arbitrary_types_allowed = True
+        fields = {
+            "parameters": {"exclude": True},
+            "species": {"exclude": True},
+        }
 
     species: Species
     equation: Expr
