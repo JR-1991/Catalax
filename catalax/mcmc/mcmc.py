@@ -27,7 +27,7 @@ def run_mcmc(
     seed: int = 420,
     in_axes: Optional[Tuple] = (0, None, 0),
     verbose: int = 1,
-    max_steps: int = 4096,
+    max_steps: int = 64**4,
 ):
     """Runs an MCMC simulation to infer the posterior distribution of parameters.
 
