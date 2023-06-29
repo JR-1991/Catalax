@@ -578,6 +578,7 @@ class Model(CatalaxBase):
                     },
                     default=str,
                     sort_keys=False,
+                    indent=2,
                     **json_kwargs,
                 )
             )
