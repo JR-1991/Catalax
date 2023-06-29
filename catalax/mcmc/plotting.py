@@ -21,7 +21,7 @@ def plot_corner(
     """
 
     data = az.from_numpyro(mcmc)
-    _ = corner.corner(
+    fig = corner.corner(
         data,
         plot_contours=False,
         quantiles=list(quantiles),
@@ -30,9 +30,12 @@ def plot_corner(
         title_kwargs={"fontsize": 12},
         divergences=True,
         use_math_text=False,
+        var_names=[var for var in mcmc.get_samples().keys() if var != "sigma"],
     )
 
-    plt.tight_layout()
+    fig.tight_layout()
+
+    return fig
 
 
 def plot_posterior(
@@ -42,11 +45,9 @@ def plot_posterior(
     """Plots the posterior distribution of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    ax = az.plot_posterior(inf_data, var_names=model._get_parameter_order())
+    fig = az.plot_posterior(inf_data, var_names=model._get_parameter_order())
 
-    plt.tight_layout()
-
-    return ax
+    return fig
 
 
 def plot_credibility_interval(
