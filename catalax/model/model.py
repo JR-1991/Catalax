@@ -332,7 +332,7 @@ class Model(CatalaxBase):
 
         return sorted(self.species.keys())
 
-    def _setup_system(self, in_axes: Tuple = (0, None, None), **kwargs) -> Callable:
+    def _setup_system(self, in_axes: Tuple = (0, None, None), **kwargs):
         """Converts given SymPy equations into Equinox modules, used for simulation.
 
         This method will prepare the simulation function, jit it and vmap it across
