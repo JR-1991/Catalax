@@ -13,22 +13,23 @@ from diffrax import (
     diffeqsolve,
 )
 from jax import Array
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, PrivateAttr
 
 
 class Stack(eqx.Module):
     modules: List[eqx.Module]
 
     def __call__(self, t, y, args):
-        species_maps, parameter_maps, parameters = args
+        species_maps, parameter_maps, parameters, stoich_mat = args
 
         ys = {symbol: y[..., i] for symbol, i in species_maps.items()}
         params = {symbol: parameters[i] for symbol, i in parameter_maps.items()}
-
-        return jnp.stack(
+        laws = jnp.stack(
             [module(t=t, **ys, **params) for module in self.modules],  # type: ignore
             axis=-1,
         )
+
+        return stoich_mat @ laws
 
 
 class Simulation(BaseModel):
@@ -39,6 +40,7 @@ class Simulation(BaseModel):
     dt0: float
     parameter_maps: Dict[str, int]
     species_maps: Dict[str, int]
+    stoich_mat: jax.Array
     solver: AbstractSolver = Tsit5
     rtol: float = 1e-5
     atol: float = 1e-5
@@ -61,6 +63,7 @@ class Simulation(BaseModel):
                     self.species_maps,
                     self.parameter_maps,
                     parameters,
+                    self.stoich_mat,
                 ),  # type: ignore
                 saveat=SaveAt(ts=time),  # type: ignore
                 stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
@@ -91,6 +94,7 @@ def simulate(
     parameters: Array,
     parameter_maps: Dict[str, int],
     species_maps: Dict[str, int],
+    stoich_mat: Array,
     saveat: SaveAt,
     max_steps: int,
     stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5),
@@ -105,7 +109,7 @@ def simulate(
         t1=t1,
         dt0=dt0,
         y0=y0,
-        args=(species_maps, parameter_maps, parameters),
+        args=(species_maps, parameter_maps, parameters, stoich_mat),
         saveat=saveat,
         stepsize_controller=stepsize_controller,
         max_steps=max_steps,
