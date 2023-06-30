@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import tqdm
 import equinox as eqx
@@ -19,6 +19,7 @@ def train_neural_ode(
     length_strategy: Tuple[float, ...],
     optimizer=optax.adabelief,
     print_every: int = 100,
+    log: Optional[str] = None,
 ):
     # Set up PRNG keys
     key = jrandom.PRNGKey(420)
@@ -32,6 +33,10 @@ def train_neural_ode(
         print(
             f"<< Strategy #{strat_index+1}: Learning rate: {lr} | Steps: {steps} Length: {length*100}% >>\n"
         )
+
+        if log is not None:
+            log_file = open(log, "w")
+            log_file.close()
 
         # Prepare optimizer per strategy
         optimizer = optax.adabelief(lr)
@@ -71,6 +76,9 @@ def train_neural_ode(
 
                 pbar.update(print_every)
                 pbar.set_description(f"loss: {loss:.4f}")
+
+                with open(log, "a") as log_file:
+                    log_file.write(f"Strategy {strat_index+1} - Mean loss: {loss}\n")
 
         pbar.close()
         print("\n")
