@@ -7,11 +7,9 @@ import jax.numpy as jnp
 import jax.random as jrandom
 import optax
 
-from neuralode import NeuralODE
-
 
 def train_neural_ode(
-    model: NeuralODE,
+    model: "NeuralODE",
     data: jax.Array,
     times: jax.Array,
     inital_conditions: jax.Array,
@@ -81,7 +79,7 @@ def train_neural_ode(
 
 
 @eqx.filter_value_and_grad
-def grad_loss(model: NeuralODE, ti: jax.Array, yi: jax.Array, y0i: jax.Array):
+def grad_loss(model: "NeuralODE", ti: jax.Array, yi: jax.Array, y0i: jax.Array):
     """Calculates the L2 loss of the model.
 
     Args:
