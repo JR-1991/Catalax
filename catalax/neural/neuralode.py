@@ -1,3 +1,5 @@
+from typing import List
+
 import diffrax
 import equinox as eqx
 import jax.nn as jnn
@@ -34,7 +36,7 @@ class MLP(eqx.Module):
 
 class NeuralODE(eqx.Module):
     func: MLP
-    observable_indices: list[int]
+    observable_indices: List[int]
     solver: diffrax.AbstractSolver = diffrax.Tsit5
 
     def __init__(
@@ -42,7 +44,7 @@ class NeuralODE(eqx.Module):
         data_size: int,
         width_size: int,
         depth: int,
-        observable_indices: list[int],
+        observable_indices: List[int],
         solver=diffrax.Tsit5,
         *,
         key,
