@@ -30,6 +30,7 @@ def train_neural_ode(
     # Set up logger
     if log is not None:
         log_file = open(log, "w")
+        log_file.write("Strategy\tMean loss\n")
         log_file.close()
 
     for strat_index, (lr, steps, length) in enumerate(
@@ -78,8 +79,9 @@ def train_neural_ode(
                 pbar.update(print_every)
                 pbar.set_description(f"loss: {loss:.4f}")
 
-                with open(log, "a") as log_file:
-                    log_file.write(f"Strategy {strat_index+1} - Mean loss: {loss}\n")
+                if log is not None:
+                    with open(log, "a") as log_file:
+                        log_file.write(f"{strat_index+1}\t{loss}\n")
 
         pbar.close()
         print("\n")
