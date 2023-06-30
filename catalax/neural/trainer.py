@@ -1,4 +1,6 @@
-from typing import Optional, Tuple
+from datetime import datetime
+import os
+from typing import Dict, Optional, Tuple
 
 import tqdm
 import equinox as eqx
@@ -6,6 +8,8 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 import optax
+
+from .utils import save
 
 
 def train_neural_ode(
@@ -20,18 +24,23 @@ def train_neural_ode(
     optimizer=optax.adabelief,
     print_every: int = 100,
     log: Optional[str] = None,
+    save_milestones: bool = False,
+    milestone_dir: str = "./milestones",
 ):
     # Set up PRNG keys
     key = jrandom.PRNGKey(420)
     _, _, loader_key = jrandom.split(key, 3)
-
     _, length_size, _ = data.shape
 
     # Set up logger
     if log is not None:
         log_file = open(log, "w")
-        log_file.write("Strategy\tMean loss\n")
+        log_file.write("strategy\tstep\tmean_loss\n")
         log_file.close()
+
+    # Set up milestone directory
+    if save_milestones:
+        os.makedirs(milestone_dir, exist_ok=True)
 
     for strat_index, (lr, steps, length) in enumerate(
         zip(lr_strategy, steps_strategy, length_strategy)
@@ -81,12 +90,42 @@ def train_neural_ode(
 
                 if log is not None:
                     with open(log, "a") as log_file:
-                        log_file.write(f"{strat_index+1}\t{loss}\n")
+                        log_file.write(f"{strat_index+1}\t{step}\t{loss}\n")
 
         pbar.close()
         print("\n")
 
+        if save_milestones:
+            # Save milestone
+            _serialize_milestone(
+                model,
+                milestone_dir,
+                strat_index,
+                {"lr": lr, "steps": steps, "length": length},
+            )
+
     return model
+
+
+def _serialize_milestone(
+    model: "NeuralODE",
+    milestone_dir: str,
+    strat_index: int,
+    strategy: Dict,
+):
+    """Serializes a NeuralODE model.
+
+    Args:
+        model (NeuralODE): Model to serialize.
+
+    Returns:
+        Dict: Serialized model.
+    """
+
+    path = os.path.join(
+        milestone_dir, f"run_{str(datetime.now())}_strategy_{strat_index+1}.eqx"
+    )
+    save(path, {"hyperparameters": model.hyperparams, "strategy": strategy}, model)
 
 
 @eqx.filter_value_and_grad

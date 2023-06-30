@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 
 import diffrax
 import equinox as eqx
@@ -37,6 +37,7 @@ class MLP(eqx.Module):
 class NeuralODE(eqx.Module):
     func: MLP
     observable_indices: List[int]
+    hyperparams: Dict
     solver: diffrax.AbstractSolver = diffrax.Tsit5
 
     def __init__(
@@ -51,9 +52,19 @@ class NeuralODE(eqx.Module):
         **kwargs
     ):
         super().__init__(**kwargs)
+
+        # Save solver and MLP
         self.func = MLP(data_size, width_size, depth, key=key)  # type: ignore
         self.solver = solver
         self.observable_indices = observable_indices
+
+        # Keep hyperparams for serialisation
+        self.hyperparams = {
+            "data_size": data_size,
+            "width_size": width_size,
+            "depth": depth,
+            "observable_indices": observable_indices,
+        }
 
     def __call__(self, ts, y0):
         solution = diffrax.diffeqsolve(
