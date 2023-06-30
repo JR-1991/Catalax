@@ -22,5 +22,7 @@ setup(
         "numpyro",
         "arviz",
         "corner",
+        "optax",
+        "equinox",
     ],
 )
