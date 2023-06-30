@@ -605,7 +605,7 @@ class Model(CatalaxBase):
         model = cls(name=data.name)
 
         # Add Species
-        model.add_species(*{sp.symbol: sp.name for sp in data.species})
+        model.add_species(**{sp.symbol: sp.name for sp in data.species})
 
         # Add ODEs
         for ode in data.odes:
