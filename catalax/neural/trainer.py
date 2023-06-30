@@ -27,16 +27,17 @@ def train_neural_ode(
 
     _, length_size, _ = data.shape
 
+    # Set up logger
+    if log is not None:
+        log_file = open(log, "w")
+        log_file.close()
+
     for strat_index, (lr, steps, length) in enumerate(
         zip(lr_strategy, steps_strategy, length_strategy)
     ):
         print(
             f"<< Strategy #{strat_index+1}: Learning rate: {lr} | Steps: {steps} Length: {length*100}% >>\n"
         )
-
-        if log is not None:
-            log_file = open(log, "w")
-            log_file.close()
 
         # Prepare optimizer per strategy
         optimizer = optax.adabelief(lr)
