@@ -35,7 +35,7 @@ def train_neural_ode(
     # Set up logger
     if log is not None:
         log_file = open(log, "w")
-        log_file.write("strategy\tstep\tmean_loss\n")
+        log_file.write("strategy\tstep\tmean_loss\nmae\n")
         log_file.close()
 
     # Set up milestone directory
@@ -84,13 +84,15 @@ def train_neural_ode(
             if (step % print_every) == 0 or step == steps - 1:
                 # Calculate mean loss over data
                 loss, _ = grad_loss(model, _times, _data, inital_conditions)
+                preds = jax.vmap(model, in_axes=(0, 0))(_times, inital_conditions)
+                mae = jnp.mean(jnp.abs(_data - preds))
 
                 pbar.update(print_every)
-                pbar.set_description(f"loss: {loss:.4f}")
+                pbar.set_description(f"MSE: {loss:.4f} MAE: {mae:.4f}")
 
                 if log is not None:
                     with open(log, "a") as log_file:
-                        log_file.write(f"{strat_index+1}\t{step}\t{loss}\n")
+                        log_file.write(f"{strat_index+1}\t{step}\t{loss}\n{mae}\n")
 
         pbar.close()
         print("\n")
