@@ -35,7 +35,7 @@ def train_neural_ode(
     # Set up logger
     if log is not None:
         log_file = open(log, "w")
-        log_file.write("strategy\tstep\tmean_loss\nmae\n")
+        log_file.write("strategy\tstep\tmean_loss\tmae\n")
         log_file.close()
 
     # Set up milestone directory
@@ -92,7 +92,7 @@ def train_neural_ode(
 
                 if log is not None:
                     with open(log, "a") as log_file:
-                        log_file.write(f"{strat_index+1}\t{step}\t{loss}\n{mae}\n")
+                        log_file.write(f"{strat_index+1}\t{step}\t{loss}\t{mae}\n")
 
         pbar.close()
         print("\n")
