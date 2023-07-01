@@ -1,8 +1,11 @@
+import json
+import os
 from typing import Dict, List
 
 import diffrax
 import equinox as eqx
 import jax.nn as jnn
+import jax.random as jrandom
 
 from catalax import Model
 
@@ -103,3 +106,35 @@ class NeuralODE(eqx.Module):
             observable_indices=observable_indices,
             key=key,
         )
+
+    @classmethod
+    def from_eqx(cls, path):
+        """Loads a NeuralODE from an eqx file
+
+        Args:
+            path (str): Path to the eqx file
+
+        Returns:
+            NeuralODE: Trained NeuralODE model.
+        """
+
+        with open(path, "rb") as f:
+            hyperparams = json.loads(f.readline().decode())["hyperparameters"]
+            model = cls(**hyperparams, key=jrandom.PRNGKey(0))
+            model = eqx.tree_deserialise_leaves(f, model)
+
+        return model
+
+    def save_to_eqx(self, path: str, name: str):
+        """Saves a NeuralODE to an eqx file
+
+        Args:
+            path (str): Path to the directory to save the eqx file
+            name (str): Name of the eqx file
+        """
+        
+        filename = os.path.join(path, name + ".eqx")
+        with open(filename, "wb") as f:
+            hyperparam_str = json.dumps(self.hyperparams)
+            f.write((hyperparam_str + "\n").encode())
+            eqx.tree_serialise_leaves(f, self)
