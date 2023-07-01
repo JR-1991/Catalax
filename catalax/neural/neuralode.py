@@ -63,7 +63,6 @@ class NeuralODE(eqx.Module):
             "data_size": data_size,
             "width_size": width_size,
             "depth": depth,
-            "observable_indices": observable_indices,
         }
 
     def __call__(self, ts, y0):
