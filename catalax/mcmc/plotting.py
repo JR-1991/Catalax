@@ -92,3 +92,14 @@ def plot_credibility_interval(
 
     plt.grid(alpha=0.3, linestyle="--")
     plt.legend()
+
+
+def plot_trace(mcmc, model) -> None:
+    """Plots the trace of the given bayes analysis"""
+
+    inf_data = az.from_numpyro(mcmc)
+    f = az.plot_trace(inf_data, var_names=model._get_parameter_order())
+
+    plt.tight_layout()
+
+    return f
