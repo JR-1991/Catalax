@@ -6,7 +6,6 @@ import jax
 import matplotlib.pyplot as plt
 from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
-from sympy import Symbol
 
 
 def plot_corner(
@@ -38,14 +37,11 @@ def plot_corner(
     return fig
 
 
-def plot_posterior(
-    mcmc,
-    model,
-) -> None:
+def plot_posterior(mcmc, model, **kwargs) -> None:
     """Plots the posterior distribution of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    fig = az.plot_posterior(inf_data, var_names=model._get_parameter_order())
+    fig = az.plot_posterior(inf_data, var_names=model._get_parameter_order(), **kwargs)
 
     return fig
 
@@ -94,11 +90,22 @@ def plot_credibility_interval(
     plt.legend()
 
 
-def plot_trace(mcmc, model) -> None:
+def plot_trace(mcmc, model, **kwargs) -> None:
     """Plots the trace of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    f = az.plot_trace(inf_data, var_names=model._get_parameter_order())
+    f = az.plot_trace(inf_data, var_names=model._get_parameter_order(), **kwargs)
+
+    plt.tight_layout()
+
+    return f
+
+
+def plot_forest(mcmc, model, **kwargs) -> None:
+    """Plots a forest plot of the given bayes analysis"""
+
+    inf_data = az.from_numpyro(mcmc)
+    f = az.plot_forest(inf_data, var_names=model._get_parameter_order(), **kwargs)
 
     plt.tight_layout()
 
