@@ -443,6 +443,48 @@ class Model(CatalaxBase):
 
         self._sim_func(y0, parameters, saveat)
 
+    def _setup_rate_function(self, in_axes=None):
+        """Prepares a function to evaluate the rates of the vector field.
+
+        This method in particualar is useful to fit rates to the neural ODE and
+        thus connect an abstract neural ODE to a physical model. Mainly, this is
+        a very efficient approach that mitigates the performance issues of MCMC
+        sampling that necessitates full simulations. Thus, by obtaining the rates
+        predicted by the neural ODE fitting these to the physical model is faster
+        and can be done in parallel.
+
+        Args:
+            model (Model): Catalax model to prepare the rate function for.
+        """
+
+        assert (
+            in_axes is None or len(in_axes) == 3
+        ), "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
+
+        species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
+        parameter_maps = {
+            symbol: i for i, symbol in enumerate(self._get_parameter_order())
+        }
+        stoich_mat = self._get_stoich_mat()
+        modules = [
+            SymbolicModule(self.odes[species].equation)
+            for species in self._get_species_order()
+        ]
+
+        fun = jax.jit(
+            Stack.prepare_function(
+                modules=modules,
+                species_maps=species_maps,
+                parameter_maps=parameter_maps,
+                stoich_mat=stoich_mat,
+            )
+        )
+
+        if in_axes is None:
+            return fun
+
+        return jax.vmap(fun, in_axes=in_axes)
+
     def reset(self):
         """Resets the model"""
 
