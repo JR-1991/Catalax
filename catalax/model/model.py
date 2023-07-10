@@ -243,7 +243,7 @@ class Model(CatalaxBase):
         nsteps: Optional[int] = None,
         rtol: float = 1e-5,
         atol: float = 1e-5,
-        saveat: Optional[SaveAt] = None,
+        saveat: Union[SaveAt, jax.Array] = None,
         parameters: Optional[jax.Array] = None,
         in_axes: Optional[Tuple] = None,
         max_steps: int = 4096,
@@ -604,26 +604,32 @@ class Model(CatalaxBase):
             name = self.name.replace(" ", "_")
 
         fpath = os.path.join(path, f"{name}.json")
-        model_dict = DottedDict(self.dict(exclude_none=True))
 
         with open(fpath, "w") as f:
             f.write(
                 json.dumps(
-                    {
-                        "name": model_dict.name,
-                        "species": list(model_dict.species.values()),
-                        "odes": [
-                            {**ode, "species": species}
-                            for species, ode in model_dict.odes.items()
-                        ],
-                        "parameters": list(model_dict.parameters.values()),
-                    },
+                    self.to_dict(),
                     default=str,
                     sort_keys=False,
                     indent=2,
                     **json_kwargs,
                 )
             )
+
+    def to_dict(self):
+        """Converts the model into a serializable dictionary."""
+        model_dict = DottedDict(self.dict(exclude_none=True))
+        return {
+            "name": model_dict.name,
+            "species": [species.to_dict() for species in model_dict.species.values()],
+            "odes": [
+                {**ode.to_dict(), "species": species}
+                for species, ode in model_dict.odes.items()
+            ],
+            "parameters": [
+                parameter.to_dict() for parameter in model_dict.parameters.values()
+            ],
+        }
 
     # ! Importers
     @classmethod
@@ -642,19 +648,27 @@ class Model(CatalaxBase):
 
         with open(path, "r") as f:
             data = DottedDict(json.load(f))
+            return cls.from_dict(data)
+
+    @classmethod
+    def from_dict(cls, model_dict: Dict):
+        """Initializes a model from a dictionary."""
+
+        if not isinstance(model_dict, DottedDict):
+            model_dict = DottedDict(model_dict)
 
         # Initialize the model
-        model = cls(name=data.name)
+        model = cls(name=model_dict.name)
 
         # Add Species
-        model.add_species(**{sp.symbol: sp.name for sp in data.species})
+        model.add_species(**{sp.symbol: sp.name for sp in model_dict.species})
 
         # Add ODEs
-        for ode in data.odes:
+        for ode in model_dict.odes:
             model.add_ode(**ode)
 
         # Update given parameters
-        for parameter in data.parameters:
+        for parameter in model_dict.parameters:
             if parameter.symbol not in model.parameters:
                 raise ValueError(
                     f"Parameter [symbol: {parameter.symbol}, name: {parameter.name}] not found in the model and thus inconsistent with the given model. Please check the JSON file you are trying to load."
