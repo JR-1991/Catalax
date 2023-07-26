@@ -21,6 +21,7 @@ def train_neural_ode(
     steps_strategy: Tuple[int, ...],
     lr_strategy: Tuple[float, ...],
     length_strategy: Tuple[float, ...],
+    l2_reg: float = 0.0,
     optimizer=optax.adabelief,
     print_every: int = 100,
     log: Optional[str] = None,
@@ -124,14 +125,20 @@ def _serialize_milestone(
         Dict: Serialized model.
     """
 
-    path = os.path.join(
-        milestone_dir, f"run_{str(datetime.now())}_strategy_{strat_index+1}.eqx"
+    model.save_to_eqx(
+        path=milestone_dir,
+        name=f"run_{str(datetime.now())}_strategy_{strat_index+1}",
+        **{"strategy": strategy},
     )
-    save(path, {"hyperparameters": model.hyperparams, "strategy": strategy}, model)
 
 
 @eqx.filter_value_and_grad
-def grad_loss(model: "NeuralODE", ti: jax.Array, yi: jax.Array, y0i: jax.Array):
+def grad_loss(
+    model: "NeuralODE",
+    ti: jax.Array,
+    yi: jax.Array,
+    y0i: jax.Array,
+):
     """Calculates the L2 loss of the model.
 
     Args:
@@ -144,6 +151,7 @@ def grad_loss(model: "NeuralODE", ti: jax.Array, yi: jax.Array, y0i: jax.Array):
         float: Average L2 loss.
     """
     y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
+
     return jnp.mean((yi - y_pred) ** 2)
 
 
