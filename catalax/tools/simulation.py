@@ -22,8 +22,18 @@ class Stack(eqx.Module):
     def __call__(self, t, y, args):
         species_maps, parameter_maps, parameters, stoich_mat = args
 
-        ys = {symbol: y[..., i] for symbol, i in species_maps.items()}
-        params = {symbol: parameters[i] for symbol, i in parameter_maps.items()}
+        ys, params = self._map_values(y, species_maps, parameter_maps, parameters)
+        return self._calculate_rates(t, ys, params, stoich_mat)
+
+    @eqx.filter_jit
+    def _map_values(self, y, species_maps, parameter_maps, parameters):
+        return (
+            {symbol: y[..., i] for symbol, i in species_maps.items()},
+            {symbol: parameters[i] for symbol, i in parameter_maps.items()},
+        )
+
+    @eqx.filter_jit
+    def _calculate_rates(self, t, ys, params, stoich_mat):
         laws = jnp.stack(
             [module(t=t, **ys, **params) for module in self.modules],  # type: ignore
             axis=-1,
@@ -44,7 +54,7 @@ class Simulation(BaseModel):
     solver: AbstractSolver = Tsit5
     rtol: float = 1e-5
     atol: float = 1e-5
-    max_steps: int = 4096
+    max_steps: int = 64**4
 
     _simulation_func = PrivateAttr(default=None)
 
