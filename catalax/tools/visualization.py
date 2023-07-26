@@ -15,6 +15,7 @@ def visualize(
     times: jax.Array,
     initial_conditions: Optional[List[Dict[str, float]]] = None,
     n_cols: int = 2,
+    title: Optional[str] = None,
     colors: Optional[Dict] = None,
     use_names=True,
     time_unit: str = "s",
@@ -107,6 +108,9 @@ def visualize(
             row += 1
 
     ax[0, n_cols - 1].legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
+    if title:
+        f.suptitle(title, fontsize=16)
 
     if save:
         if not save.endswith(".png"):
