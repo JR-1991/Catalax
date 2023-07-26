@@ -1,5 +1,4 @@
 from typing import Callable, Dict, List, Optional, Tuple, Union
-import jax
 import numpy as np
 
 import jax.numpy as jnp

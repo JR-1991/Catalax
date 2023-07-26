@@ -1,9 +1,6 @@
-import pandas as pd
+from typing import Any, List, Optional, Union
 
-from typing import Any, List, Optional, Tuple, Union
-from numpyro.distributions import Distribution
-
-from pydantic import PrivateAttr, root_validator, validator
+from pydantic import PrivateAttr, root_validator
 from sympy import Expr
 
 from catalax.model.base import CatalaxBase
