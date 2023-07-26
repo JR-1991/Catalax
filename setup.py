@@ -22,7 +22,11 @@ setup(
         "numpyro",
         "arviz",
         "corner",
+<<<<<<< Updated upstream
         "optax",
         "equinox",
+=======
+        "lmfit",
+>>>>>>> Stashed changes
     ],
 )
