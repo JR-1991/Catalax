@@ -243,7 +243,7 @@ class Model(CatalaxBase):
         nsteps: Optional[int] = None,
         rtol: float = 1e-5,
         atol: float = 1e-5,
-        saveat: Optional[SaveAt] = None,
+        saveat: Union[SaveAt, jax.Array] = None,
         parameters: Optional[jax.Array] = None,
         in_axes: Optional[Tuple] = None,
         max_steps: int = 4096,
@@ -443,6 +443,48 @@ class Model(CatalaxBase):
 
         self._sim_func(y0, parameters, saveat)
 
+    def _setup_rate_function(self, in_axes=None):
+        """Prepares a function to evaluate the rates of the vector field.
+
+        This method in particualar is useful to fit rates to the neural ODE and
+        thus connect an abstract neural ODE to a physical model. Mainly, this is
+        a very efficient approach that mitigates the performance issues of MCMC
+        sampling that necessitates full simulations. Thus, by obtaining the rates
+        predicted by the neural ODE fitting these to the physical model is faster
+        and can be done in parallel.
+
+        Args:
+            model (Model): Catalax model to prepare the rate function for.
+        """
+
+        assert (
+            in_axes is None or len(in_axes) == 3
+        ), "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
+
+        species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
+        parameter_maps = {
+            symbol: i for i, symbol in enumerate(self._get_parameter_order())
+        }
+        stoich_mat = self._get_stoich_mat()
+        modules = [
+            SymbolicModule(self.odes[species].equation)
+            for species in self._get_species_order()
+        ]
+
+        fun = jax.jit(
+            Stack.prepare_function(
+                modules=modules,
+                species_maps=species_maps,
+                parameter_maps=parameter_maps,
+                stoich_mat=stoich_mat,
+            )
+        )
+
+        if in_axes is None:
+            return fun
+
+        return jax.vmap(fun, in_axes=in_axes)
+
     def reset(self):
         """Resets the model"""
 
@@ -562,26 +604,32 @@ class Model(CatalaxBase):
             name = self.name.replace(" ", "_")
 
         fpath = os.path.join(path, f"{name}.json")
-        model_dict = DottedDict(self.dict(exclude_none=True))
 
         with open(fpath, "w") as f:
             f.write(
                 json.dumps(
-                    {
-                        "name": model_dict.name,
-                        "species": list(model_dict.species.values()),
-                        "odes": [
-                            {**ode, "species": species}
-                            for species, ode in model_dict.odes.items()
-                        ],
-                        "parameters": list(model_dict.parameters.values()),
-                    },
+                    self.to_dict(),
                     default=str,
                     sort_keys=False,
                     indent=2,
                     **json_kwargs,
                 )
             )
+
+    def to_dict(self):
+        """Converts the model into a serializable dictionary."""
+        model_dict = DottedDict(self.dict(exclude_none=True))
+        return {
+            "name": model_dict.name,
+            "species": [species.to_dict() for species in model_dict.species.values()],
+            "odes": [
+                {**ode.to_dict(), "species": species}
+                for species, ode in model_dict.odes.items()
+            ],
+            "parameters": [
+                parameter.to_dict() for parameter in model_dict.parameters.values()
+            ],
+        }
 
     # ! Importers
     @classmethod
@@ -600,19 +648,27 @@ class Model(CatalaxBase):
 
         with open(path, "r") as f:
             data = DottedDict(json.load(f))
+            return cls.from_dict(data)
+
+    @classmethod
+    def from_dict(cls, model_dict: Dict):
+        """Initializes a model from a dictionary."""
+
+        if not isinstance(model_dict, DottedDict):
+            model_dict = DottedDict(model_dict)
 
         # Initialize the model
-        model = cls(name=data.name)
+        model = cls(name=model_dict.name)
 
         # Add Species
-        model.add_species(**{sp.symbol: sp.name for sp in data.species})
+        model.add_species(**{sp.symbol: sp.name for sp in model_dict.species})
 
         # Add ODEs
-        for ode in data.odes:
+        for ode in model_dict.odes:
             model.add_ode(**ode)
 
         # Update given parameters
-        for parameter in data.parameters:
+        for parameter in model_dict.parameters:
             if parameter.symbol not in model.parameters:
                 raise ValueError(
                     f"Parameter [symbol: {parameter.symbol}, name: {parameter.name}] not found in the model and thus inconsistent with the given model. Please check the JSON file you are trying to load."

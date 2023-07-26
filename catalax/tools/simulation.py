@@ -41,16 +41,30 @@ class Stack(eqx.Module):
 
         return stoich_mat @ laws
 
+    @classmethod
+    def prepare_function(
+        cls,
+        modules: List[eqx.Module],
+        species_maps: Dict[str, int],
+        parameter_maps: Dict[str, int],
+        stoich_mat: jax.Array,
+    ):
+        stack = cls(modules=modules)
+
+        return lambda t, y, parameters: stack(
+            t, y, (species_maps, parameter_maps, parameters, stoich_mat)
+        )
+
 
 class Simulation(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
     term: ODETerm
-    dt0: float
     parameter_maps: Dict[str, int]
     species_maps: Dict[str, int]
     stoich_mat: jax.Array
+    dt0: float = 0.1
     solver: AbstractSolver = Tsit5
     rtol: float = 1e-5
     atol: float = 1e-5
