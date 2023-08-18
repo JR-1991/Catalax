@@ -32,7 +32,7 @@ model = Model(name="My Model")
 # Define the species of the model
 model.add_species(s1="Substrate", e1="Enzyme")
 
-# Now add an ODE for this species
+# Now add an ODE for each species
 model.add_ode("s1", "k_cat * e1 * s1 / (K_m + s1)")
 model.add_ode("e1", "0", observable=False)
 
