@@ -22,7 +22,7 @@ python -m pip install git+https://github.com/JR-1991/Catalax.git
 
 ## Quickstart
 
-To develop a model, Catalax offers a user-friendly interface that comprises two core components: 'Species' and 'ODE'. The former is utilized to specify the species of the model, while the latter is used to define its dynamics. Through the integration of these components, a robust model is created, which can be employed for inference purposes. Notably, Catalax automatically generates 'Parameter' objects from the extracted parameters, which can be leveraged to define priors and constraints for the model.
+To develop a model, Catalax offers a user-friendly interface that comprises two core components: `Species` and `ODE`. The former is utilized to specify the species of the model, while the latter is used to define its dynamics. Through the integration of these components, a robust model is created, which can be employed for inference purposes. Notably, Catalax automatically generates `Parameter` objects from the extracted parameters, which can be leveraged to define priors and constraints for the model.
 
 ```python
 from catalax import Model
