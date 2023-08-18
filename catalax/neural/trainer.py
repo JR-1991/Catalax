@@ -28,6 +28,11 @@ def train_neural_ode(
     save_milestones: bool = False,
     milestone_dir: str = "./milestones",
 ):
+    if batch_size >= data.shape[0]:
+        raise ValueError(
+            f"Batch size ({batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
+        )
+
     # Set up PRNG keys
     key = jrandom.PRNGKey(420)
     _, _, loader_key = jrandom.split(key, 3)
