@@ -1,5 +1,6 @@
 import equinox as eqx
 import jax.nn as jnn
+import jax.numpy as jnp
 
 
 class MLP(eqx.Module):
@@ -17,7 +18,7 @@ class MLP(eqx.Module):
     ):
         super().__init__(**kwargs)
         self.mlp = eqx.nn.MLP(
-            in_size=data_size,
+            in_size=data_size + 1,
             out_size=data_size,
             width_size=width_size,
             depth=depth,
@@ -26,4 +27,5 @@ class MLP(eqx.Module):
         )  # type: ignore
 
     def __call__(self, t, y, args):
+        y = jnp.concatenate((y, jnp.array([t])), axis=-1)
         return self.mlp(y)
