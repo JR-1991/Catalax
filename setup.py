@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="Catalax",
-    version="0.0.0",
+    version="0.0.1",
     author="Range, Jan",
     author_email="jan.range@simtech.uni-stuttgart.de",
     license="MIT License",
