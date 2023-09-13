@@ -447,7 +447,7 @@ class Model(CatalaxBase):
         if in_axes is None:
             return fun
 
-        return jax.vmap(fun, in_axes=in_axes)
+        return jax.jit(jax.vmap(fun, in_axes=in_axes))
 
     def reset(self):
         """Resets the model"""
@@ -457,7 +457,7 @@ class Model(CatalaxBase):
 
     # ! Derivatives
 
-    def jacobian_parameters(self, y, parameters):
+    def jacobian_parameters(self, y, parameters, t=0):
         """Sets up and calculates the jacobian of the model with respect to the parameters.
 
         Args:
@@ -469,24 +469,16 @@ class Model(CatalaxBase):
         """
 
         if self._jacobian_parameters is not None:
-            return self._jacobian_parameters(y, parameters)
-        elif self.term is None:
-            self._setup_term()
+            return self._jacobian_parameters(t, y, parameters)
 
         stoich_mat = self._get_stoich_mat()
-        species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
-        parameter_maps = {
-            symbol: i for i, symbol in enumerate(self._get_parameter_order())
-        }
 
-        def _vector_field(y, parameters):
-            return self.term.vector_field(
-                0, y, (species_maps, parameter_maps, parameters, stoich_mat)
-            )
+        def _vector_field(t, y, parameters):
+            return self._setup_rate_function()(t, y, (parameters, stoich_mat))
 
-        self._jacobian_parameters = jax.jacfwd(_vector_field, argnums=1)
+        self._jacobian_parameters = jax.jacfwd(_vector_field, argnums=2)
 
-        return self._jacobian_parameters(y, parameters)
+        return self._jacobian_parameters(t, y, parameters)
 
     def jacobian_states(self, y, parameters):
         """Sets up and calculates the jacobian of the model with respect to the states.
