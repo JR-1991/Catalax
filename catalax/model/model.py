@@ -9,7 +9,6 @@ from diffrax import ODETerm, SaveAt, Tsit5
 from dotted_dict import DottedDict
 from pydantic import Field, PrivateAttr, validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
-from sympy2jax import SymbolicModule
 
 from catalax.model.base import CatalaxBase
 from catalax.mcmc import priors
@@ -213,23 +212,6 @@ class Model(CatalaxBase):
             raise ValueError(f"Species {name} not found in species map")
 
         return str(inverse_dict[name])
-
-    def add_parameter(
-        self,
-        name: str,
-        value: Optional[float] = None,
-        initial_value: Optional[float] = None,
-        equation: Union[str, Expr, None] = None,
-    ):
-        """Adds a parameter to an ODE"""
-
-        if not parameter_exists(name, self.parameters):
-            self.parameters[name] = Parameter(
-                name=name, value=value, initial_value=initial_value, equation=equation
-            )
-
-        else:
-            print("Parameter already exists. Skipping...")
 
     # ! Simulation methods
 

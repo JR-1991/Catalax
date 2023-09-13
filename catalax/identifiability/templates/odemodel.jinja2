@@ -1,0 +1,11 @@
+using {{package}}
+
+@ODEmodel(
+{% for species, equation in odes.items() %}
+    {{species}}'(t) = {{equation}},
+{% endfor %}
+
+{% for index, species in observables %}
+    y{{index}}(t) = {{species}},
+{% endfor %}
+) 
