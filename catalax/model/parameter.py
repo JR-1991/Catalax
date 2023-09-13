@@ -6,11 +6,18 @@ from sympy import Expr
 from catalax.model.base import CatalaxBase
 
 
+class Identifiability(CatalaxBase):
+    result: str
+    method: str
+    package: str
+
+
 class Parameter(CatalaxBase):
     name: str
     symbol: Expr
     value: Optional[float] = None
     constant: bool = False
+    identifiability: Optional[Identifiability] = None
     initial_value: Optional[float] = None
     equation: Union[str, Expr, None] = None
     lower_bound: Optional[float] = None
