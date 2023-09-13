@@ -1,3 +1,9 @@
+# This module has been taken from https://github.com/google/sympy2jax
+# and modified to work with positional inputs in compliance with the
+# below given license.
+#
+###########################################################################
+#
 # Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
