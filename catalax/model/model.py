@@ -308,7 +308,7 @@ class Model(CatalaxBase):
 
         if hasattr(self, "reactions"):
             raise NotImplementedError(
-                f"So far stoichioemtry matrxis construction is exclusive to ODE models and not implemented yet."
+                f"So far stoichioemtry matrix construction is exclusive to ODE models and not implemented yet."
             )
 
         stoich_mat = jnp.zeros((len(self.odes), len(self.odes)))
@@ -327,11 +327,6 @@ class Model(CatalaxBase):
 
         return False
 
-    def _get_species_order(self) -> List[str]:
-        """Returns the order of the species in the model"""
-
-        return sorted(self.species.keys())
-
     def _setup_system(self, in_axes: Tuple = (0, None, None), **kwargs):
         """Converts given SymPy equations into Equinox modules, used for simulation.
 
@@ -339,38 +334,20 @@ class Model(CatalaxBase):
         the initial condition vector by default.
 
         Args:
-            in_axes: Specifies the axes to map the simulation function across. Defaults to (0, None, None).
+            in_axes: Specifies the axes to map the simulation function across.
+                     Defaults to (0, None, None).
         """
 
-        self._setup_term()
-
+        # Retrieve ODEs based on species order
+        odes = [self.odes[species] for species in self._get_species_order()]
         simulation_setup = Simulation(
-            term=self.term,
-            species_maps={
-                symbol: i for i, symbol in enumerate(self._get_species_order())
-            },
-            parameter_maps={
-                symbol: i for i, symbol in enumerate(self._get_parameter_order())
-            },
+            odes=odes,
+            parameters=self._get_parameter_order(),
             stoich_mat=self._get_stoich_mat(),
             **kwargs,
         )
-        simulation_setup._prepare_func(in_axes=in_axes)
 
-        # Attach to the model to prevent re-modelling
-        self._sim_func = simulation_setup._simulation_func
-
-    def _setup_term(self):
-        self.term = ODETerm(
-            Stack(
-                modules=[
-                    SymbolicModule(self.odes[species].equation)
-                    for species in self._get_species_order()
-                ]
-            ).__call__
-        )
-
-        return self.term
+        self._sim_func = simulation_setup._prepare_func(in_axes=in_axes)
 
     def _get_parameters(self, parameters: Optional[jax.Array] = None) -> jax.Array:
         """Gets all the parameters for the model"""
@@ -389,8 +366,11 @@ class Model(CatalaxBase):
 
     def _get_parameter_order(self) -> List[str]:
         """Returns the order of the parameters in the model"""
-
         return sorted(self.parameters.keys())
+
+    def _get_species_order(self) -> List[str]:
+        """Returns the order of the species in the model"""
+        return sorted(self.species.keys())
 
     def _assemble_y0_array(
         self, initial_conditions: List[Dict[str, float]], in_axes: Tuple
@@ -461,24 +441,8 @@ class Model(CatalaxBase):
             in_axes is None or len(in_axes) == 3
         ), "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
 
-        species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
-        parameter_maps = {
-            symbol: i for i, symbol in enumerate(self._get_parameter_order())
-        }
-        stoich_mat = self._get_stoich_mat()
-        modules = [
-            SymbolicModule(self.odes[species].equation)
-            for species in self._get_species_order()
-        ]
-
-        fun = jax.jit(
-            Stack.prepare_function(
-                modules=modules,
-                species_maps=species_maps,
-                parameter_maps=parameter_maps,
-                stoich_mat=stoich_mat,
-            )
-        )
+        odes = [self.odes[species] for species in self._get_species_order()]
+        fun = Stack(odes=odes, parameters=self._get_parameter_order())
 
         if in_axes is None:
             return fun

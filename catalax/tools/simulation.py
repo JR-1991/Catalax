@@ -3,66 +3,57 @@ from typing import List, Dict, Any
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+
 from diffrax import (
     AbstractSolver,
-    Kvaerno5,
     ODETerm,
     PIDController,
     SaveAt,
     Tsit5,
     diffeqsolve,
 )
-from jax import Array
+
 from pydantic import BaseModel, PrivateAttr
+
+from .symbolicmodule import SymbolicModule
+from catalax.model.ode import ODE
 
 
 class Stack(eqx.Module):
     modules: List[eqx.Module]
 
+    def __init__(
+        self,
+        parameters: List[str],
+        odes: List[ODE],
+        **kwargs,
+    ):
+        positionals = {
+            "parameters": parameters,
+            "states": [str(ode.species.symbol) for ode in odes],
+        }
+
+        self.modules = [
+            SymbolicModule(ode.equation, positionals=positionals)  # type: ignore
+            for ode in odes
+        ]
+
     def __call__(self, t, y, args):
-        species_maps, parameter_maps, parameters, stoich_mat = args
-
-        ys, params = self._map_values(y, species_maps, parameter_maps, parameters)
-        return self._calculate_rates(t, ys, params, stoich_mat)
-
-    @eqx.filter_jit
-    def _map_values(self, y, species_maps, parameter_maps, parameters):
-        return (
-            {symbol: y[..., i] for symbol, i in species_maps.items()},
-            {symbol: parameters[i] for symbol, i in parameter_maps.items()},
-        )
-
-    @eqx.filter_jit
-    def _calculate_rates(self, t, ys, params, stoich_mat):
-        laws = jnp.stack(
-            [module(t=t, **ys, **params) for module in self.modules],  # type: ignore
+        parameters, stoich_mat = args
+        rates = jnp.stack(
+            [module(t=t, parameters=parameters, states=y) for module in self.modules],  # type: ignore
             axis=-1,
         )
 
-        return stoich_mat @ laws
-
-    @classmethod
-    def prepare_function(
-        cls,
-        modules: List[eqx.Module],
-        species_maps: Dict[str, int],
-        parameter_maps: Dict[str, int],
-        stoich_mat: jax.Array,
-    ):
-        stack = cls(modules=modules)
-
-        return lambda t, y, parameters: stack(
-            t, y, (species_maps, parameter_maps, parameters, stoich_mat)
-        )
+        return stoich_mat @ rates
 
 
 class Simulation(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    term: ODETerm
-    parameter_maps: Dict[str, int]
-    species_maps: Dict[str, int]
+    odes: List[ODE]
+    parameters: List[str]
     stoich_mat: jax.Array
     dt0: float = 0.1
     solver: AbstractSolver = Tsit5
@@ -75,17 +66,17 @@ class Simulation(BaseModel):
     def _prepare_func(self, in_axes=None):
         """Applies all the necessary transformations to the term and prepares the simulation function"""
 
+        stack = Stack(parameters=self.parameters, odes=self.odes)
+
         def _simulate_system(y0, parameters, time):
             sol = diffeqsolve(
-                terms=self.term,  # type: ignore
+                terms=ODETerm(stack),  # type: ignore
                 solver=self.solver(),  # type: ignore
                 t0=0,
                 t1=time[-1],
                 dt0=self.dt0,  # type: ignore
                 y0=y0,
                 args=(
-                    self.species_maps,
-                    self.parameter_maps,
                     parameters,
                     self.stoich_mat,
                 ),  # type: ignore
@@ -98,45 +89,12 @@ class Simulation(BaseModel):
             return sol.ts, sol.ys
 
         if in_axes is not None:
-            self._simulation_func = jax.jit(jax.vmap(_simulate_system, in_axes=in_axes))
+            return jax.jit(jax.vmap(_simulate_system, in_axes=in_axes))
         else:
-            self._simulation_func = jax.jit(_simulate_system)
+            return jax.jit(_simulate_system)
 
     def __call__(self, y0, parameters, time) -> Any:
         if self._simulation_func is None:
             raise ValueError("Simulation function not initialized")
 
         return self._simulation_func(y0, parameters, time)
-
-
-def simulate(
-    term: ODETerm,
-    y0: Array,
-    t0: int,
-    t1: int,
-    dt0: float,
-    parameters: Array,
-    parameter_maps: Dict[str, int],
-    species_maps: Dict[str, int],
-    stoich_mat: Array,
-    saveat: SaveAt,
-    max_steps: int,
-    stepsize_controller: PIDController = PIDController(rtol=1e-5, atol=1e-5),
-    solver=Kvaerno5(),
-):
-    """Simulates a given model"""
-
-    sol = diffeqsolve(
-        term,
-        solver,
-        t0=t0,
-        t1=t1,
-        dt0=dt0,
-        y0=y0,
-        args=(species_maps, parameter_maps, parameters, stoich_mat),
-        saveat=saveat,
-        stepsize_controller=stepsize_controller,
-        max_steps=max_steps,
-    )
-
-    return sol.ts, sol.ys
