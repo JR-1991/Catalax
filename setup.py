@@ -26,4 +26,7 @@ setup(
         "equinox",
         "lmfit",
     ],
+    extra_requires={
+        "identifiability": ["julia", "jinja2"],
+    },
 )
