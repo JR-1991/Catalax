@@ -52,12 +52,14 @@ class NeuralODE(NeuralBase):
     def predict(
         self,
         y0s: jax.Array,
-        t1: int,
         t0: int = 0,
+        t1: Optional[int] = None,
         nsteps: int = 1000,
         times: Optional[jax.Array] = None,
     ):
         if times is None:
+            assert t1 is not None, "Either times or t1 must be given."
+
             # Generate time points, if not explicitly given
             times = jnp.linspace(t0, t1, nsteps)
 
