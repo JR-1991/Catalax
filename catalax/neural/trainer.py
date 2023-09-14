@@ -51,7 +51,7 @@ def train_neural_ode(
         make_step, grad_loss = _prepare_step_and_loss(strat.loss)
 
         # Apply training strategy
-        max_time = min(int(length_size * strat.length) + 1, 2)
+        max_time = max(int(length_size * strat.length) + 1, 2)
 
         # Truncate data and times
         _times = times[:, :max_time]
