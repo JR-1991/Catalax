@@ -20,7 +20,6 @@ class Step(CatalaxBase):
     length: float = Field(default=1.0, le=1.0, gt=0.0)
     alpha: float = Field(default=0.0, le=1.0, ge=0.0)
     loss: Any = optax.l2_loss
-    optimizer = optax.adabelief
     train_weights: str = "both"
 
 
@@ -28,8 +27,27 @@ class Strategy(CatalaxBase):
     steps: List[Step] = []
     _step: int = PrivateAttr(0)
 
-    def add_step(self, **kwargs):
-        self.steps.append(Step(**kwargs))
+    def add_step(
+        self,
+        lr: float,
+        steps: int,
+        batch_size: int,
+        length: float = 1.0,
+        alpha: float = 0.0,
+        loss: Any = optax.l2_loss,
+        train_weights: str = "both",
+    ):
+        self.steps.append(
+            Step(
+                lr=lr,
+                steps=steps,
+                batch_size=batch_size,
+                length=length,
+                alpha=alpha,
+                loss=loss,
+                train_weights=train_weights,
+            )
+        )
 
     def __iter__(self):
         self._step = 0
@@ -51,12 +69,3 @@ class Strategy(CatalaxBase):
         print(
             f"<< Strategy #{index+1}: Learning rate: {step.lr} | Steps: {step.steps} Length: {step.length*100}% >>\n"
         )
-
-
-if __name__ == "__main__":
-    strat = Strategy()
-    strat.add_step(lr=1e-3, steps=100, batch_size=100, length=1.0, alpha=0.0)
-    strat.add_step(lr=1e-3, steps=100, batch_size=100, length=0.5, alpha=0.0)
-
-    for step in strat:
-        pass
