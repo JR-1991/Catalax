@@ -20,7 +20,7 @@ class Step(CatalaxBase):
     length: float = Field(default=1.0, le=1.0, gt=0.0)
     alpha: float = Field(default=0.0, le=1.0, ge=0.0)
     loss: Any = optax.l2_loss
-    train_weights: str = "both"
+    train_weights: Modes = Modes.BOTH
 
 
 class Strategy(CatalaxBase):
