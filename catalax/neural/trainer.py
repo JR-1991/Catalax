@@ -18,6 +18,7 @@ def train_neural_ode(
     times: jax.Array,
     inital_conditions: jax.Array,
     strategy: Strategy,
+    optimizer=optax.adabelief,
     print_every: int = 100,
     log: Optional[str] = None,
     save_milestones: bool = False,
@@ -44,8 +45,8 @@ def train_neural_ode(
         ), f"Batch size of strategy #{strat_index} ({strat.batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
 
         # Prepare optimizer per strategy
-        optimizer = optax.adabelief(0.0001)
-        opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
+        optim = optimizer(strat.lr)
+        opt_state = optim.init(eqx.filter(model, eqx.is_inexact_array))
 
         # Prepare step and loss function per strategy
         make_step, grad_loss = _prepare_step_and_loss(strat.loss)
@@ -74,7 +75,7 @@ def train_neural_ode(
                 y0i=y0i,
                 model=model,
                 opt_state=opt_state,
-                optimizer=optimizer,
+                optimizer=optim,
             )
 
             if (step % print_every) == 0 or step == strat.steps - 1:
