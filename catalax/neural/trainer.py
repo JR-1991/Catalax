@@ -1,15 +1,15 @@
-from datetime import datetime
 import os
+from datetime import datetime
 from typing import Dict, Optional, Tuple
 
-import tqdm
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 import optax
+import tqdm
 
-from .utils import save
+from catalax.neural.strategy import Strategy
 
 
 def train_neural_ode(
@@ -17,22 +17,12 @@ def train_neural_ode(
     data: jax.Array,
     times: jax.Array,
     inital_conditions: jax.Array,
-    batch_size: int,
-    steps_strategy: Tuple[int, ...],
-    lr_strategy: Tuple[float, ...],
-    length_strategy: Tuple[float, ...],
-    l2_reg: float = 0.0,
-    optimizer=optax.adabelief,
+    strategy: Strategy,
     print_every: int = 100,
     log: Optional[str] = None,
     save_milestones: bool = False,
     milestone_dir: str = "./milestones",
 ):
-    if batch_size >= data.shape[0]:
-        raise ValueError(
-            f"Batch size ({batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
-        )
-
     # Set up PRNG keys
     key = jrandom.PRNGKey(420)
     _, _, loader_key = jrandom.split(key, 3)
@@ -48,36 +38,36 @@ def train_neural_ode(
     if save_milestones:
         os.makedirs(milestone_dir, exist_ok=True)
 
-    for strat_index, (lr, steps, length) in enumerate(
-        zip(lr_strategy, steps_strategy, length_strategy)
-    ):
-        print(
-            f"<< Strategy #{strat_index+1}: Learning rate: {lr} | Steps: {steps} Length: {length*100}% >>\n"
-        )
+    for strat_index, strat in enumerate(strategy):
+        assert (
+            strat.batch_size < data.shape[0]
+        ), f"Batch size of strategy #{strat_index} ({strat.batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
 
         # Prepare optimizer per strategy
-        optimizer = optax.adabelief(lr)
+        optimizer = optax.adabelief(0.0001)
         opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
 
+        # Prepare step and loss function per strategy
+        make_step, grad_loss = _prepare_step_and_loss(strat.loss)
+
         # Apply training strategy
-        max_time = int(length_size * length) + 1
+        max_time = min(int(length_size * strat.length) + 1, 2)
 
-        if max_time == 1:
-            # Make sure that at least two steps are taken
-            max_time = 2
-
+        # Truncate data and times
         _times = times[:, :max_time]
         _data = data[:, :max_time, :]
 
         # Prepare data generator
         batches = dataloader(
-            (_data, inital_conditions, _times), batch_size, key=loader_key
+            (_data, inital_conditions, _times),
+            strat.batch_size,
+            key=loader_key,
         )
 
         # Set up progress bar
-        pbar = tqdm.tqdm(total=steps, desc=f"Startup")
+        pbar = tqdm.tqdm(total=strat.steps, desc=f"Startup")
 
-        for step, (yi, y0i, ti) in zip(range(steps), batches):
+        for step, (yi, y0i, ti) in zip(range(strat.steps), batches):
             loss, model, opt_state = make_step(
                 ti=ti,
                 yi=yi,
@@ -87,18 +77,16 @@ def train_neural_ode(
                 optimizer=optimizer,
             )
 
-            if (step % print_every) == 0 or step == steps - 1:
+            if (step % print_every) == 0 or step == strat.steps - 1:
                 # Calculate mean loss over data
                 loss, _ = grad_loss(model, _times, _data, inital_conditions)
                 preds = jax.vmap(model, in_axes=(0, 0))(_times, inital_conditions)
                 mae = jnp.mean(jnp.abs(_data - preds))
 
                 pbar.update(print_every)
-                pbar.set_description(f"MSE: {loss:.4f} MAE: {mae:.4f}")
+                pbar.set_description(f"Loss: {loss:.4f} MAE: {mae:.4f}")
 
-                if log is not None:
-                    with open(log, "a") as log_file:
-                        log_file.write(f"{strat_index+1}\t{step}\t{loss}\t{mae}\n")
+                _log_progress(strat_index, step, loss, mae, log)
 
         pbar.close()
         print("\n")
@@ -109,74 +97,73 @@ def train_neural_ode(
                 model,
                 milestone_dir,
                 strat_index,
-                {"lr": lr, "steps": steps, "length": length},
+                {"lr": strat.lr, "steps": strat.steps, "length": strat.length},
             )
 
     return model
 
 
-def _serialize_milestone(
-    model: "NeuralODE",
-    milestone_dir: str,
-    strat_index: int,
-    strategy: Dict,
-):
-    """Serializes a NeuralODE model.
+def _prepare_step_and_loss(loss):
+    """Based on a strategy, prepares the step and loss function.
+
+    This function is meant to prepare the step and loss function based on a
+    strategy. The strategy is defined by the loss function that is used for
+    training. The loss function can be any type of loss function that is
+    compatible with JAX. The requirement is to have a function that takes the
+    predicted values and the ground truth values as input and returns a scalar.
 
     Args:
-        model (NeuralODE): Model to serialize.
-
-    Returns:
-        Dict: Serialized model.
+        loss (Callable): Loss function that is used for training.
     """
 
-    model.save_to_eqx(
-        path=milestone_dir,
-        name=f"run_{str(datetime.now())}_strategy_{strat_index+1}",
-        **{"strategy": strategy},
-    )
+    @eqx.filter_value_and_grad
+    def grad_loss(
+        model: "NeuralODE",
+        ti: jax.Array,
+        yi: jax.Array,
+        y0i: jax.Array,
+        loss=optax.l2_loss,
+    ):
+        """Calculates the L2 loss of the model.
+
+        Args:
+            model (NeuralODE): NeuralODE model to train.
+            ti (jax.Array): Batch of times.
+            yi (jax.Array): Batch of data.
+            y0i (jax.Array): Batch of initial conditions.
+
+        Returns:
+            float: Average L2 loss.
+        """
+        y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
+
+        return jnp.mean(loss(y_pred, yi))
+
+    @eqx.filter_jit
+    def make_step(ti, yi, y0i, model, opt_state, optimizer):
+        """Calculates the loss, gradient and updates the model.
+
+        Args:
+            ti (jax.Array): Batch of times.
+            yi (jax.Array): Batch of data.
+            y0i (jax.Array): Batch of initial conditions.
+            model (NeuralODE): NeuralODE model to train.
+            opt_state (...): State of the optimizer.
+            optimizer (...): Optimizer of this session.
+        """
+
+        loss, grads = grad_loss(model, ti, yi, y0i)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        model = eqx.apply_updates(model, updates)
+        return loss, model, opt_state
+
+    return make_step, grad_loss
 
 
-@eqx.filter_value_and_grad
-def grad_loss(
-    model: "NeuralODE",
-    ti: jax.Array,
-    yi: jax.Array,
-    y0i: jax.Array,
-):
-    """Calculates the L2 loss of the model.
-
-    Args:
-        model (NeuralODE): NeuralODE model to train.
-        ti (jax.Array): Batch of times.
-        yi (jax.Array): Batch of data.
-        y0i (jax.Array): Batch of initial conditions.
-
-    Returns:
-        float: Average L2 loss.
-    """
-    y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
-
-    return jnp.mean((yi - y_pred) ** 2)
-
-
-@eqx.filter_jit
-def make_step(ti, yi, y0i, model, opt_state, optimizer):
-    """Calculates the loss, gradient and updates the model.
-
-    Args:
-        ti (jax.Array): Batch of times.
-        yi (jax.Array): Batch of data.
-        y0i (jax.Array): Batch of initial conditions.
-        model (NeuralODE): NeuralODE model to train.
-        opt_state (...): State of the optimizer.
-        optimizer (...): Optimizer of this session.
-    """
-
-    loss, grads = grad_loss(model, ti, yi, y0i)
-    updates, opt_state = optimizer.update(grads, opt_state)
-    model = eqx.apply_updates(model, updates)
-    return loss, model, opt_state
+def _log_progress(strat_index, step, loss, mae, log):
+    if log is not None:
+        with open(log, "a") as log_file:
+            log_file.write(f"{strat_index+1}\t{step}\t{loss}\t{mae}\n")
 
 
 def dataloader(arrays, batch_size, *, key):
@@ -205,3 +192,25 @@ def dataloader(arrays, batch_size, *, key):
             yield tuple(array[batch_perm] for array in arrays)
             start = end
             end = start + batch_size
+
+
+def _serialize_milestone(
+    model: "NeuralODE",
+    milestone_dir: str,
+    strat_index: int,
+    strategy: Dict,
+):
+    """Serializes a NeuralODE model.
+
+    Args:
+        model (NeuralODE): Model to serialize.
+
+    Returns:
+        Dict: Serialized model.
+    """
+
+    model.save_to_eqx(
+        path=milestone_dir,
+        name=f"run_{str(datetime.now())}_strategy_{strat_index+1}",
+        **{"strategy": strategy},
+    )
