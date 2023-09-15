@@ -9,7 +9,7 @@ import jax.random as jrandom
 import optax
 import tqdm
 
-from catalax.neural.strategy import Strategy
+from catalax.neural.strategy import Step, Strategy
 
 
 def train_neural_ode(
@@ -76,11 +76,20 @@ def train_neural_ode(
                 model=model,
                 opt_state=opt_state,
                 optimizer=optim,
+                partitioned_model=strat._partition_model(model),
             )
 
             if (step % print_every) == 0 or step == strat.steps - 1:
                 # Calculate mean loss over data
-                loss, _ = grad_loss(model, _times, _data, inital_conditions)
+                diff_model, static_model = strat._partition_model(model)
+                loss, _ = grad_loss(
+                    diff_model,
+                    static_model,
+                    _times,
+                    _data,
+                    inital_conditions,
+                )
+
                 preds = jax.vmap(model, in_axes=(0, 0))(_times, inital_conditions)
                 mae = jnp.mean(jnp.abs(_data - preds))
 
@@ -119,11 +128,11 @@ def _prepare_step_and_loss(loss):
 
     @eqx.filter_value_and_grad
     def grad_loss(
-        model: "NeuralODE",
+        diff_model,
+        static_model,
         ti: jax.Array,
         yi: jax.Array,
         y0i: jax.Array,
-        loss=optax.l2_loss,
     ):
         """Calculates the L2 loss of the model.
 
@@ -136,12 +145,22 @@ def _prepare_step_and_loss(loss):
         Returns:
             float: Average L2 loss.
         """
+
+        model = eqx.combine(diff_model, static_model)
         y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
 
         return jnp.mean(loss(y_pred, yi))
 
     @eqx.filter_jit
-    def make_step(ti, yi, y0i, model, opt_state, optimizer):
+    def make_step(
+        ti,
+        yi,
+        y0i,
+        model,
+        opt_state,
+        optimizer,
+        partitioned_model,
+    ):
         """Calculates the loss, gradient and updates the model.
 
         Args:
@@ -153,9 +172,11 @@ def _prepare_step_and_loss(loss):
             optimizer (...): Optimizer of this session.
         """
 
-        loss, grads = grad_loss(model, ti, yi, y0i)
+        diff_model, static_model = partitioned_model
+        loss, grads = grad_loss(diff_model, static_model, ti, yi, y0i)
         updates, opt_state = optimizer.update(grads, opt_state)
         model = eqx.apply_updates(model, updates)
+
         return loss, model, opt_state
 
     return make_step, grad_loss
