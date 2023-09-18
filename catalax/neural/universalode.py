@@ -1,5 +1,4 @@
-from functools import partial
-from typing import Callable, List, Optional
+from typing import List
 
 import jax
 import diffrax
@@ -12,7 +11,7 @@ from .mlp import MLP
 from .neuralbase import NeuralBase
 
 
-class ClosureODE(NeuralBase):
+class UniversalODE(NeuralBase):
     parameters: jax.Array
     vector_field: Stack
 
