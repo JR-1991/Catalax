@@ -1,11 +1,8 @@
-from typing import List, Optional
+from typing import List
 
-import jax
-import jax.numpy as jnp
 import diffrax
 
 from catalax import Model
-
 from .mlp import MLP
 from .neuralbase import NeuralBase
 
@@ -48,36 +45,3 @@ class NeuralODE(NeuralBase):
             saveat=diffrax.SaveAt(ts=ts),
         )
         return solution.ys
-
-    def predict(
-        self,
-        y0s: jax.Array,
-        t0: int = 0,
-        t1: Optional[int] = None,
-        nsteps: int = 1000,
-        times: Optional[jax.Array] = None,
-    ):
-        if times is None:
-            assert t1 is not None, "Either times or t1 must be given."
-
-            # Generate time points, if not explicitly given
-            times = jnp.linspace(t0, t1, nsteps)
-
-        if y0s.shape[0] > 1 and len(times.shape) == 1:
-            # If multiple initial conditions are given, repeat time points
-            times = jnp.stack([times] * y0s.shape[0], axis=0)
-
-        # Single simulation case
-        if len(times.shape) == 1 and len(y0s.shape) == 1:
-            return times, self(times, y0s)
-
-        # Batch simulation case
-        assert (
-            len(times.shape) == 2 and len(y0s.shape) == 2
-        ), f"Incompatible shapes: time shape = {times.shape}, y0 shape = {y0s.shape}. Both must be 2D."
-
-        assert (
-            times.shape[0] == y0s.shape[0]
-        ), f"Incompatible shapes: time shape = {times.shape}, y0.shape = {y0s.shape}. First dimension must be equal in case of batches."
-
-        return times, jax.vmap(self, in_axes=(0, 0))(times, y0s)
