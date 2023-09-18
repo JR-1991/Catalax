@@ -569,6 +569,41 @@ class Model(CatalaxBase):
             ],
         }
 
+    # ! Metrics
+
+    def calculate_aic(
+        self,
+        data: jax.Array,
+        initial_conditions: List[Dict[str, float]],
+        times: jax.Array,
+    ):
+        """Calculates the AIC value to the given data if parameters have values.
+
+        Args:
+            data (jax.Array): Data to check against.
+            initial_conditions (List[Dict[str, float]]): Initial conditions to perform the integration.
+            times (jax.Array): Time points to evaluate
+
+        Returns:
+            float: AIC criterion of the model given the data.
+        """
+
+        assert self.parameters and all(
+            parameter.value is not None for parameter in self.parameters.values()
+        ), "Cannot calculate AIC, because this model hasnt been fitted yet."
+
+        _, states = self.simulate(
+            initial_conditions=initial_conditions, saveat=times, in_axes=(0, None, 0)
+        )
+
+        residual = states - data
+        chisqr = (residual**2).sum()
+        ndata = len(residual.ravel())
+        _neg2_log_likel = ndata * jnp.log(chisqr / ndata)
+        aic = _neg2_log_likel + 2 * len(self.parameters)
+
+        return aic
+
     # ! Importers
     @classmethod
     def load(cls, path: str):
