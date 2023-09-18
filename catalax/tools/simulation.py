@@ -39,13 +39,13 @@ class Stack(eqx.Module):
         ]
 
     def __call__(self, t, y, args):
-        parameters, stoich_mat = args
+        parameters = args
         rates = jnp.stack(
             [module(t=t, parameters=parameters, states=y) for module in self.modules],  # type: ignore
             axis=-1,
         )
 
-        return stoich_mat @ rates
+        return rates
 
 
 class Simulation(BaseModel):
@@ -76,10 +76,7 @@ class Simulation(BaseModel):
                 t1=time[-1],
                 dt0=self.dt0,  # type: ignore
                 y0=y0,
-                args=(
-                    parameters,
-                    self.stoich_mat,
-                ),  # type: ignore
+                args=parameters,  # type: ignore
                 saveat=SaveAt(ts=time),  # type: ignore
                 stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
                 max_steps=self.max_steps,
@@ -89,9 +86,9 @@ class Simulation(BaseModel):
             return sol.ts, sol.ys
 
         if in_axes is not None:
-            return jax.jit(jax.vmap(_simulate_system, in_axes=in_axes))
+            return eqx.filter_jit(jax.vmap(_simulate_system, in_axes=in_axes))
         else:
-            return jax.jit(_simulate_system)
+            return eqx.filter_jit(_simulate_system)
 
     def __call__(self, y0, parameters, time) -> Any:
         if self._simulation_func is None:
