@@ -35,13 +35,13 @@ class NeuralODE(NeuralBase):
 
     def __call__(self, ts, y0):
         solution = diffrax.diffeqsolve(
-            diffrax.ODETerm(self.func),
+            diffrax.ODETerm(self.func),  # type: ignore
             self.solver(),  # type: ignore
             t0=0.0,  # type: ignore
             t1=ts[-1],
             dt0=ts[1] - ts[0],
             y0=y0,
-            stepsize_controller=diffrax.PIDController(rtol=1e-3, atol=1e-6),
-            saveat=diffrax.SaveAt(ts=ts),
+            stepsize_controller=diffrax.PIDController(rtol=1e-3, atol=1e-6),  # type: ignore
+            saveat=diffrax.SaveAt(ts=ts),  # type: ignore
         )
         return solution.ys
