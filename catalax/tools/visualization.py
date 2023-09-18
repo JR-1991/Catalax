@@ -1,5 +1,5 @@
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -9,12 +9,14 @@ from numpyro.infer import MCMC
 from numpyro.diagnostics import hpdi
 
 from catalax.model.model import Model
+from catalax.neural.neuralbase import NeuralBase
 
 
 def visualize(
     model: Model,
     data: jax.Array,
     times: jax.Array,
+    neural_ode: Optional[NeuralBase] = None,
     initial_conditions: Optional[List[Dict[str, float]]] = None,
     mcmc: Optional[MCMC] = None,
     n_cols: int = 2,
@@ -34,25 +36,49 @@ def visualize(
         color_iter = iter(mcolors.TABLEAU_COLORS)  # type: ignore
         colors = {species: next(color_iter) for species in model._get_species_order()}
 
-    # Check if this mode has a fit already
-    has_fit = model.parameters and all(
+    has_fit = all(
         parameter.value is not None for parameter in model.parameters.values()
     )
+
+    if not neural_ode and initial_conditions:
+        # Check if this mode has a fit already
+        assert model.parameters and all(
+            parameter.value is not None for parameter in model.parameters.values()
+        ), f"Model has an incomplete parameter value set. Cant simulate!"
+
+        func = lambda: (
+            model.simulate(
+                initial_conditions=initial_conditions,  # type: ignore
+                dt0=0.01,
+                in_axes=(0, None, None),
+                saveat=jnp.linspace(0, times.max(), resolution),
+                max_steps=max_steps,
+            )
+        )
+    elif neural_ode and initial_conditions:
+        y0s = jnp.stack(
+            [
+                jnp.array(
+                    [float(init[species]) for species in sorted(list(init.keys()))]
+                )
+                for init in initial_conditions
+            ]
+        )
+        func = lambda: (
+            neural_ode.predict(  # type: ignore
+                y0s=y0s,
+                times=jnp.linspace(0, times.max(), resolution),
+            )
+        )
+    else:
+        func = None
 
     # Get the number of rows
     n_rows = math.ceil(data.shape[0] / 2)
 
     # Simulate the model
-    if has_fit and initial_conditions:
-        times_, states = model.simulate(
-            initial_conditions=initial_conditions,  # type: ignore
-            dt0=0.01,
-            in_axes=(0, None, None),
-            saveat=jnp.linspace(0, times.max(), resolution),
-            max_steps=max_steps,
-        )
-    elif has_fit and not initial_conditions:
-        raise ValueError(f"Cannot plot fit without 'initial_conditions'.")
+    if func and initial_conditions:
+        times_, states = func()
     else:
         times_, states = None, None
 
