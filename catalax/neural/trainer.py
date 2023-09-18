@@ -9,11 +9,12 @@ import jax.random as jrandom
 import optax
 import tqdm
 
+from catalax.neural.neuralbase import NeuralBase
 from catalax.neural.strategy import Step, Strategy
 
 
 def train_neural_ode(
-    model: "NeuralODE",
+    model: NeuralBase,
     data: jax.Array,
     times: jax.Array,
     inital_conditions: jax.Array,
@@ -77,6 +78,7 @@ def train_neural_ode(
                 opt_state=opt_state,
                 optimizer=optim,
                 partitioned_model=strat._partition_model(model),
+                alpha=strat.alpha,
             )
 
             if (step % print_every) == 0 or step == strat.steps - 1:
@@ -88,6 +90,7 @@ def train_neural_ode(
                     _times,
                     _data,
                     inital_conditions,
+                    alpha=0.0,
                 )
 
                 preds = jax.vmap(model, in_axes=(0, 0))(_times, inital_conditions)
@@ -133,6 +136,7 @@ def _prepare_step_and_loss(loss):
         ti: jax.Array,
         yi: jax.Array,
         y0i: jax.Array,
+        alpha: float,
     ):
         """Calculates the L2 loss of the model.
 
@@ -149,7 +153,7 @@ def _prepare_step_and_loss(loss):
         model = eqx.combine(diff_model, static_model)
         y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
 
-        return jnp.mean(loss(y_pred, yi))
+        return jnp.mean(loss(y_pred, yi)) + _l2_regularisation(model, alpha)
 
     @eqx.filter_jit
     def make_step(
@@ -160,6 +164,7 @@ def _prepare_step_and_loss(loss):
         opt_state,
         optimizer,
         partitioned_model,
+        alpha,
     ):
         """Calculates the loss, gradient and updates the model.
 
@@ -173,7 +178,7 @@ def _prepare_step_and_loss(loss):
         """
 
         diff_model, static_model = partitioned_model
-        loss, grads = grad_loss(diff_model, static_model, ti, yi, y0i)
+        loss, grads = grad_loss(diff_model, static_model, ti, yi, y0i, alpha)
         updates, opt_state = optimizer.update(grads, opt_state)
         model = eqx.apply_updates(model, updates)
 
@@ -236,3 +241,14 @@ def _serialize_milestone(
         name=f"run_{str(datetime.now())}_strategy_{strat_index+1}",
         **{"strategy": strategy},
     )
+
+
+@eqx.filter_jit
+def _l2_regularisation(model: NeuralBase, alpha: float):
+    """Performs L2 regularization to control weights of an MLP"""
+
+    # biases = jnp.array([layer.bias.sum() for layer in model.func.mlp.layers[:-1]]).sum()
+
+    weights = jnp.array([layer.weight.sum() for layer in model.func.mlp.layers]).sum()
+
+    return alpha * jnp.power(weights, 2)
