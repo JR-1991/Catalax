@@ -25,7 +25,7 @@ class Step(CatalaxBase):
     length: float = Field(default=1.0, le=1.0, gt=0.0)
     alpha: float = Field(default=0.0, le=1.0, ge=0.0)
     loss: Any = optax.l2_loss
-    mode: Modes = Modes.MLP
+    train: Modes = Modes.MLP
 
     def _partition_model(self, model: NeuralBase) -> Tuple[NeuralBase, NeuralBase]:
         """
@@ -43,19 +43,19 @@ class Step(CatalaxBase):
             type(model), NeuralBase
         ), "Model must be a subclass of NeuralBase."
 
-        if isinstance(self.mode, Modes):
-            mode = self.mode.value
+        if isinstance(self.train, Modes):
+            train = self.train.value
         else:
-            mode = self.mode
+            train = self.train
 
         filter_spec = jtu.tree_map(lambda _: False, model)
         mlp_filter = jtu.tree_map(lambda _: True, model.func)
         vfield_filter = jtu.tree_map(lambda _: True, model.vector_field)  # type: ignore
 
-        if mode == Modes.BOTH.value:
+        if train == Modes.BOTH.value:
             filter_spec = jtu.tree_map(lambda _: True, model)
 
-        elif mode == Modes.MLP.value:
+        elif train == Modes.MLP.value:
             assert hasattr(
                 model, "func"
             ), "Mode is set to MLP, but the model does not have an MLP."
@@ -66,7 +66,7 @@ class Step(CatalaxBase):
                 replace=mlp_filter,
             )
 
-        elif mode == Modes.VECTOR_FIELD.value:
+        elif train == Modes.VECTOR_FIELD.value:
             assert hasattr(
                 model, "vector_field"
             ), "Mode is set to vector field, but the model does not have a vector field."
@@ -79,7 +79,7 @@ class Step(CatalaxBase):
 
         else:
             raise ValueError(
-                f"Mode {self.mode} is not supported. Please choose one of the following\n {list(Modes.__members__.values())}"
+                f"Mode {self.train} is not supported. Please choose one of the following\n {list(Modes.__members__.values())}"
             )
 
         return eqx.partition(model, filter_spec)
@@ -97,7 +97,7 @@ class Strategy(CatalaxBase):
         length: float = 1.0,
         alpha: float = 0.0,
         loss: Any = optax.l2_loss,
-        train_weights: Modes = Modes.BOTH,
+        train: Modes = Modes.MLP,
     ):
         self.steps.append(
             Step(
@@ -107,7 +107,7 @@ class Strategy(CatalaxBase):
                 length=length,
                 alpha=alpha,
                 loss=loss,
-                train_weights=train_weights,
+                train=train,
             )
         )
 
@@ -128,5 +128,5 @@ class Strategy(CatalaxBase):
     @staticmethod
     def _print_step(index: int, step: Step):
         print(
-            f"<< Strategy #{index+1}: Learning rate: {step.lr} | Steps: {step.steps} Length: {step.length*100}% >>\n"
+            f"<< Strategy #{index}: lr: {step.lr} | Length: {step.length*100}% | Train: {step.train} >>\n"
         )
