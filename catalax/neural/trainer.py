@@ -6,6 +6,8 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
+import jax.tree_util as jtn
+import numpy as np
 import optax
 import tqdm
 
@@ -24,6 +26,8 @@ def train_neural_ode(
     log: Optional[str] = None,
     save_milestones: bool = False,
     milestone_dir: str = "./milestones",
+    n_augmentations: int = 0,
+    sigma: float = 0.0,
 ):
     # Set up PRNG keys
     key = jrandom.PRNGKey(420)
@@ -39,6 +43,20 @@ def train_neural_ode(
     # Set up milestone directory
     if save_milestones:
         os.makedirs(milestone_dir, exist_ok=True)
+
+    # Augment data
+    if n_augmentations > 0:
+        rng = np.random.default_rng()
+        data, times, inital_conditions = _augment_data(
+            data,
+            times,
+            inital_conditions,
+            n_augmentations,
+            sigma,
+            rng,
+        )
+
+    print(f"\n🚀 Training {model.__class__.__name__}...\n")
 
     for strat_index, strat in enumerate(strategy):
         assert (
@@ -67,7 +85,7 @@ def train_neural_ode(
         )
 
         # Set up progress bar
-        pbar = tqdm.tqdm(total=strat.steps, desc=f"Startup")
+        pbar = tqdm.tqdm(total=strat.steps, desc=f"╰── startup")
 
         for step, (yi, y0i, ti) in zip(range(strat.steps), batches):
             loss, model, opt_state = make_step(
@@ -83,21 +101,17 @@ def train_neural_ode(
 
             if (step % print_every) == 0 or step == strat.steps - 1:
                 # Calculate mean loss over data
-                diff_model, static_model = strat._partition_model(model)
-                loss, _ = grad_loss(
-                    diff_model,
-                    static_model,
+                loss, mae = _calculate_metrics(
+                    strat,
+                    model,
                     _times,
                     _data,
                     inital_conditions,
-                    alpha=0.0,
+                    grad_loss,
                 )
 
-                preds = jax.vmap(model, in_axes=(0, 0))(_times, inital_conditions)
-                mae = jnp.mean(jnp.abs(_data - preds))
-
                 pbar.update(print_every)
-                pbar.set_description(f"Loss: {loss:.4f} MAE: {mae:.4f}")
+                pbar.set_description(f"╰── loss: {loss:.4f} mae: {mae:.4f}")
 
                 _log_progress(strat_index, step, loss, mae, log)
 
@@ -193,6 +207,44 @@ def _log_progress(strat_index, step, loss, mae, log):
             log_file.write(f"{strat_index+1}\t{step}\t{loss}\t{mae}\n")
 
 
+def _calculate_metrics(
+    strat: Step,
+    model: NeuralBase,
+    times: jax.Array,
+    data: jax.Array,
+    inital_conditions: jax.Array,
+    grad_loss,
+) -> Tuple[jax.Array, jax.Array]:
+    """
+    Calculates the loss and mean absolute error (MAE) of a neural model on a given dataset.
+
+    Args:
+        strat (Step): The differentiation strategy to use.
+        model (NeuralBase): The neural model to evaluate.
+        times (jax.Array): The time points of the dataset.
+        _data (jax.Array): The data points of the dataset.
+        inital_conditions (jax.Array): The initial conditions of the model.
+        grad_loss: The gradient of the loss function to use.
+
+    Returns:
+        Tuple[jax.Array, jax.Array]: The loss and MAE of the model on the dataset.
+    """
+    diff_model, static_model = strat._partition_model(model)
+    loss, _ = grad_loss(
+        diff_model,
+        static_model,
+        times,
+        data,
+        inital_conditions,
+        alpha=0.0,
+    )
+
+    preds = jax.vmap(model, in_axes=(0, 0))(times, inital_conditions)
+    mae = jnp.mean(jnp.abs(data - preds))
+
+    return loss, mae
+
+
 def dataloader(arrays, batch_size, *, key):
     """Dataloader for training.
 
@@ -243,12 +295,30 @@ def _serialize_milestone(
     )
 
 
-@eqx.filter_jit
 def _l2_regularisation(model: NeuralBase, alpha: float):
     """Performs L2 regularization to control weights of an MLP"""
+    return alpha * _sum_of_squared_weights(model)
 
-    # biases = jnp.array([layer.bias.sum() for layer in model.func.mlp.layers[:-1]]).sum()
 
-    weights = jnp.array([layer.weight.sum() for layer in model.func.mlp.layers]).sum()
+def _sum_of_squared_weights(model):
+    return sum(
+        jnp.sum(layer**2)
+        for layer in jtn.tree_flatten(model)[0]
+        if isinstance(layer, jax.Array)
+    )
 
-    return alpha * jnp.power(weights, 2)
+
+def _augment_data(data, times, y0s, n_augmentations, sigma, rng):
+    """Augments the data by adding noise to it."""
+    return (
+        jnp.concatenate(
+            [_jitter_data(data, sigma, rng) for _ in range(n_augmentations)],
+            axis=0,
+        ),
+        jnp.concatenate([times] * n_augmentations, axis=0),
+        jnp.concatenate([y0s] * n_augmentations, axis=0),
+    )
+
+
+def _jitter_data(x, sigma, rng):
+    return x + jnp.array(rng.normal(loc=0.0, scale=sigma, size=x.shape))
