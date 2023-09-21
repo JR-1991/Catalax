@@ -85,8 +85,10 @@ class NeuralBase(eqx.Module):
         model: Model,
         width_size: int,
         depth: int,
-        key,
+        seed: int = 0,
+        use_final_bias: bool = True,
         solver=diffrax.Tsit5,
+        activation=jax.nn.softplus,
         **kwargs,
     ):
         """Intializes a NeuralODE from a catalax.Model
@@ -94,6 +96,8 @@ class NeuralBase(eqx.Module):
         Args:
             model (Model): Model to initialize NeuralODE from
         """
+
+        key = jrandom.PRNGKey(seed)
 
         # Get observable indices
         observable_indices = [
@@ -110,6 +114,8 @@ class NeuralBase(eqx.Module):
             observable_indices=observable_indices,
             key=key,
             model=model,
+            use_final_bias=use_final_bias,
+            activation=activation,
             **kwargs,
         )
 
@@ -127,16 +133,21 @@ class NeuralBase(eqx.Module):
         with open(path, "rb") as f:
             hyperparams = json.loads(f.readline().decode())["hyperparameters"]
 
-            if "model" not in hyperparams:
-                model = Model(name="NO MODEL AVAILABLE")
+            if "model" in hyperparams:
+                _model = hyperparams.pop("model")
             else:
-                model = Model.from_dict(hyperparams.pop("model"))
+                _model = None
+
+            model = Model(name="NO MODEL AVAILABLE")
 
             if "observable_indices" not in hyperparams:
                 hyperparams["observable_indices"] = [0]
 
             neuralode = cls(**hyperparams, model=model, key=jrandom.PRNGKey(0))
             neuralode = eqx.tree_deserialise_leaves(f, neuralode)
+
+            if _model is not None:
+                neuralode.hyperparams["model"] = _model
 
         return neuralode
 
