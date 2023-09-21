@@ -13,6 +13,7 @@ class PrettyDict(DottedDict):
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
+        sorted_items = sorted(self.items(), key=lambda x: x[0])
         df = pd.DataFrame(
             [
                 {
@@ -20,7 +21,7 @@ class PrettyDict(DottedDict):
                     for key, value in cls.__dict__.items()
                     if key in self._fields_to_print(cls)
                 }
-                for cls in self.values()
+                for _, cls in sorted_items
             ]
         )
 

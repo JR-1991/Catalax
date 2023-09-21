@@ -127,6 +127,18 @@ class Strategy(CatalaxBase):
 
     @staticmethod
     def _print_step(index: int, step: Step):
-        print(
-            f"<< Strategy #{index}: lr: {step.lr} | Length: {step.length*100}% | Train: {step.train} >>\n"
-        )
+        statements = [
+            f"🔸 Step #{index}",
+        ]
+        fun = lambda name, value: f"├── \033[1m{name}\033[0m: {value}"
+
+        statements += [
+            fun("lr", step.lr),
+            fun("batch size", step.batch_size),
+            fun("length", f"{step.length*100}%"),
+            fun("l2 reg", step.alpha),
+            fun("train", step.train),
+            "│",
+        ]
+
+        print("\n".join(statements))
