@@ -1,5 +1,6 @@
 from typing import List
 
+import jax
 import diffrax
 
 from catalax import Model
@@ -16,6 +17,8 @@ class NeuralODE(NeuralBase):
         model: Model,
         observable_indices: List[int],
         solver=diffrax.Tsit5,
+        activation=jax.nn.softplus,
+        use_final_bias: bool = True,
         *,
         key,
         **kwargs,
@@ -31,7 +34,14 @@ class NeuralODE(NeuralBase):
         )
 
         # Save solver and MLP
-        self.func = MLP(data_size, width_size, depth, key=key)  # type: ignore
+        self.func = MLP(
+            data_size,
+            width_size,
+            depth,
+            activation=activation,
+            key=key,
+            use_final_bias=use_final_bias,
+        )  # type: ignore
 
     def __call__(self, ts, y0):
         solution = diffrax.diffeqsolve(

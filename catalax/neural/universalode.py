@@ -23,6 +23,8 @@ class UniversalODE(NeuralBase):
         model: Model,
         observable_indices: List[int],
         solver=diffrax.Tsit5,
+        use_final_bias: bool = False,
+        activation=jax.nn.softplus,
         *,
         key,
         **kwargs,
@@ -43,6 +45,8 @@ class UniversalODE(NeuralBase):
             width_size,
             depth,
             key=key,
+            use_final_bias=use_final_bias,
+            activation=activation,
         )  # type: ignore
 
         # Get the term of the model and define the closure
