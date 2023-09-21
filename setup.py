@@ -12,10 +12,9 @@ setup(
     install_requires=[
         "matplotlib",
         "pydantic==1.10.7",
-        "dotted-dict==1.1.3",
-        "sympy==1.11.1",
+        "dotted-dict>=1.1.3",
+        "sympy>=1.11.1",
         "diffrax>=0.3.1",
-        "sympy2jax>=0.0.4",
         "pandas",
         "tqdm",
         "numpy",
