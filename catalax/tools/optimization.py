@@ -52,11 +52,19 @@ def optimize(
     """
 
     params = _initialize_params(model, global_upper_bound, global_lower_bound)
+    observables = jnp.array(
+        [
+            index
+            for index, ode in enumerate(model.odes.values())
+            if ode.observable == True
+        ]
+    )
     minimize_args = (
         model,
         initial_conditions,
         data,
         times,
+        observables,
         dt0,
         max_steps,
     )
@@ -156,6 +164,7 @@ def _residual(
     y0s: List[Dict[str, float]],
     data: jax.Array,
     times: jax.Array,
+    observables: jax.Array,
     dt0: float = 0.01,
     max_steps: int = 64**4,
 ):
@@ -187,4 +196,4 @@ def _residual(
         parameters=parameters,
     )
 
-    return data - states
+    return data - states[:, :, observables]
