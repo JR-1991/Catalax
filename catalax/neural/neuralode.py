@@ -6,6 +6,7 @@ import diffrax
 from catalax import Model
 from .mlp import MLP
 from .neuralbase import NeuralBase
+from .rbf import RBFLayer
 
 
 class NeuralODE(NeuralBase):
@@ -30,8 +31,10 @@ class NeuralODE(NeuralBase):
             observable_indices=observable_indices,
             solver=solver,
             model=model,
+            activation=activation,
             **kwargs,
         )
+            
 
         # Save solver and MLP
         self.func = MLP(

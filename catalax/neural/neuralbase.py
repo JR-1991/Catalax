@@ -9,6 +9,7 @@ import jax.random as jrandom
 import jax.numpy as jnp
 
 from catalax import Model
+from catalax.neural.rbf import RBFLayer
 from catalax.tools.simulation import Stack
 
 from .mlp import MLP
@@ -28,6 +29,7 @@ class NeuralBase(eqx.Module):
         depth: int,
         model: Model,
         observable_indices: List[int],
+        activation=jax.nn.softplus,
         solver=diffrax.Tsit5,
         **kwargs,
     ):
@@ -44,6 +46,7 @@ class NeuralBase(eqx.Module):
             "width_size": width_size,
             "depth": depth,
             "model": model.to_dict(),
+            "rbf": isinstance(activation, RBFLayer),
         }
 
     def predict(
@@ -134,20 +137,20 @@ class NeuralBase(eqx.Module):
             hyperparams = json.loads(f.readline().decode())["hyperparameters"]
 
             if "model" in hyperparams:
-                _model = hyperparams.pop("model")
+                model = Model.from_dict(hyperparams.pop("model"))
             else:
-                _model = None
-
-            model = Model(name="NO MODEL AVAILABLE")
+                model = Model(name="NO MODEL AVAILABLE")
 
             if "observable_indices" not in hyperparams:
                 hyperparams["observable_indices"] = [0]
+            if hyperparams["rbf"] is True:
+                hyperparams["activation"] = RBFLayer(0.4)
 
+            # Remove rbf from hyperparams
+            del hyperparams["rbf"]
+            
             neuralode = cls(**hyperparams, model=model, key=jrandom.PRNGKey(0))
             neuralode = eqx.tree_deserialise_leaves(f, neuralode)
-
-            if _model is not None:
-                neuralode.hyperparams["model"] = _model
 
         return neuralode
 
