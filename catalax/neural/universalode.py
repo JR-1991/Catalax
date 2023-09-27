@@ -36,6 +36,7 @@ class UniversalODE(NeuralBase):
             observable_indices=observable_indices,
             solver=solver,
             model=model,
+            activation=activation,
             **kwargs,
         )
 
