@@ -28,11 +28,15 @@ def train_neural_ode(
     milestone_dir: str = "./milestones",
     n_augmentations: int = 0,
     sigma: float = 0.0,
+    weight_scale: float = 1e-2,
 ):
     # Set up PRNG keys
     key = jrandom.PRNGKey(420)
     _, _, loader_key = jrandom.split(key, 3)
     _, length_size, _ = data.shape
+    
+    # Scale weights
+    model = _scale_weights(model, weight_scale)
 
     # Set up logger
     if log is not None:
@@ -322,3 +326,34 @@ def _augment_data(data, times, y0s, n_augmentations, sigma, rng):
 
 def _jitter_data(x, sigma, rng):
     return x + jnp.array(rng.normal(loc=0.0, scale=sigma, size=x.shape))
+
+def _scale_weights(model: NeuralBase, scale: float) -> NeuralBase:
+    """Rescales weights and biases for models with small rates"""
+
+    num_layers = len(model.func.mlp.layers)
+    scaled_weights = [
+        layer.weight * scale
+        for layer in model.func.mlp.layers
+        if hasattr(layer, "weight")
+    ]
+    scaled_biases = [
+        layer.bias * scale
+        for layer in model.func.mlp.layers[:-1]
+        if hasattr(layer, "bias")
+    ]
+    replacements = tuple(scaled_weights + scaled_biases)
+
+    loc_fun = lambda tree: tuple(
+        [
+            tree.func.mlp.layers[i].weight
+            for i in range(num_layers)
+            if hasattr(tree.func.mlp.layers[i], "weight")
+        ]
+        + [
+            tree.func.mlp.layers[i].bias
+            for i in range(num_layers - 1)
+            if hasattr(tree.func.mlp.layers[i], "bias")
+        ]
+    )
+
+    return eqx.tree_at(loc_fun, model, replace=replacements)
