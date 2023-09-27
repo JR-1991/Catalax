@@ -19,7 +19,7 @@ class NeuralODE(NeuralBase):
         observable_indices: List[int],
         solver=diffrax.Tsit5,
         activation=jax.nn.softplus,
-        use_final_bias: bool = True,
+        use_final_bias: bool = False,
         *,
         key,
         **kwargs,
@@ -32,19 +32,10 @@ class NeuralODE(NeuralBase):
             solver=solver,
             model=model,
             activation=activation,
-            **kwargs,
-        )
-            
-
-        # Save solver and MLP
-        self.func = MLP(
-            data_size,
-            width_size,
-            depth,
-            activation=activation,
             key=key,
             use_final_bias=use_final_bias,
-        )  # type: ignore
+            **kwargs,
+        )
 
     def __call__(self, ts, y0):
         solution = diffrax.diffeqsolve(

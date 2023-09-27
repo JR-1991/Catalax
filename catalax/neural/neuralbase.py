@@ -31,6 +31,9 @@ class NeuralBase(eqx.Module):
         observable_indices: List[int],
         activation=jax.nn.softplus,
         solver=diffrax.Tsit5,
+        use_final_bias: bool = False,
+        *,
+        key,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -48,6 +51,16 @@ class NeuralBase(eqx.Module):
             "model": model.to_dict(),
             "rbf": isinstance(activation, RBFLayer),
         }
+
+        # Save solver and MLP
+        self.func = MLP(
+            data_size,
+            width_size,
+            depth,
+            activation=activation,
+            key=key,
+            use_final_bias=use_final_bias,
+        )  # type: ignore
 
     def predict(
         self,
@@ -148,7 +161,7 @@ class NeuralBase(eqx.Module):
 
             # Remove rbf from hyperparams
             del hyperparams["rbf"]
-            
+
             neuralode = cls(**hyperparams, model=model, key=jrandom.PRNGKey(0))
             neuralode = eqx.tree_deserialise_leaves(f, neuralode)
 
