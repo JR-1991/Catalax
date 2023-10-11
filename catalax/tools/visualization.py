@@ -32,6 +32,9 @@ def visualize(
     mass: float = 0.9,
     save: Optional[str] = None,
 ):
+    # Reset simulation function due to varying vmaps
+    model.reset()
+
     if colors is None:
         color_iter = iter(mcolors.TABLEAU_COLORS)  # type: ignore
         colors = {species: next(color_iter) for species in model._get_species_order()}
