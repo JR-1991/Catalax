@@ -37,6 +37,7 @@ class UniversalODE(NeuralBase):
             solver=solver,
             model=model,
             activation=activation,
+            key=key,
             **kwargs,
         )
 
