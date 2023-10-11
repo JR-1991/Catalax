@@ -4,9 +4,12 @@ import numpy as np
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
+
 from jax import Array
 from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
+
+from catalax.model.parameter import Parameter
 
 
 def run_mcmc(
@@ -62,9 +65,7 @@ def run_mcmc(
     ), f"Parameters {', '.join([param.name for param in model.parameters.values() if param.prior is None])} do not have priors. Please specify priors for all parameters."
 
     if verbose:
-        print("<<< Priors >>>\n")
-        for param in model.parameters.values():
-            print(f"{param.name}: {param.prior._print_str}")
+        _print_priors(model.parameters.values())
 
     if isinstance(data, np.ndarray):
         data = jnp.array(data)
@@ -108,7 +109,7 @@ def run_mcmc(
     )
 
     if verbose:
-        print("\n<<< Running MCMC >>>\n")
+        print("\n🚀 Running MCMC\n")
 
     mcmc.run(
         PRNGKey(seed),
@@ -119,6 +120,7 @@ def run_mcmc(
 
     # Print a nice summary
     if verbose:
+        print("\n🎉 Finished")
         mcmc.print_summary()
 
     return mcmc, bayes_model
@@ -174,3 +176,13 @@ def _setup_model(
         numpyro.sample("y", dist.Normal(states[..., observables], sigma), obs=data)  # type: ignore
 
     return _bayes_model
+
+
+def _print_priors(parameters: List[Parameter]):
+    fun = lambda name, value: f"├── \033[1m{name}\033[0m: {value}"
+    statements = [
+        f"🔸 Priors",
+        *[fun(param.name, param.prior._print_str) for param in parameters],
+    ]
+
+    print("\n".join(statements))
