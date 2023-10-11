@@ -50,6 +50,8 @@ class NeuralBase(eqx.Module):
             "depth": depth,
             "model": model.to_dict(),
             "rbf": isinstance(activation, RBFLayer),
+            "use_final_bias": use_final_bias,
+            "observable_indices": observable_indices,
         }
 
         # Save solver and MLP
@@ -148,11 +150,7 @@ class NeuralBase(eqx.Module):
 
         with open(path, "rb") as f:
             hyperparams = json.loads(f.readline().decode())["hyperparameters"]
-
-            if "model" in hyperparams:
-                model = Model.from_dict(hyperparams.pop("model"))
-            else:
-                model = Model(name="NO MODEL AVAILABLE")
+            model = Model.from_dict(hyperparams.pop("model"))
 
             if "observable_indices" not in hyperparams:
                 hyperparams["observable_indices"] = [0]
