@@ -5,6 +5,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 
+import jax
 from jax import Array
 from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
@@ -20,6 +21,7 @@ def run_mcmc(
     yerrs: Union[float, Array],
     num_warmup: int,
     num_samples: int,
+    neuralode: Optional["NeuralBase"] = None,
     dense_mass: bool = True,
     thinning: int = 1,
     max_tree_depth: int = 10,
@@ -89,11 +91,25 @@ def run_mcmc(
         for param in model._get_parameter_order()
     ]
 
+    if neuralode is not None:
+        rate_fun = model._setup_rate_function(in_axes=(0, 0, None))
+        sim_func = lambda y0s, theta, times: (None, rate_fun(times, y0s, theta))
+        times = times.ravel()
+        y0s = data.reshape(data.shape[0] * data.shape[1], -1)
+        data = _predict_rates_using_neural_ode(
+            neuralode=neuralode,
+            y0s=y0s,
+            data=data,
+            time=times,
+        )
+    else:
+        sim_func = model._sim_func
+
     # Setup the bayes model
     bayes_model = _setup_model(
         yerrs=yerrs,
         priors=priors,  # type: ignore
-        sim_func=model._sim_func,  # type: ignore
+        sim_func=sim_func,  # type: ignore
         model=model,
     )
 
@@ -178,7 +194,40 @@ def _setup_model(
     return _bayes_model
 
 
+def _predict_rates_using_neural_ode(
+    neuralode: "NeuralBase",
+    y0s: Array,
+    data: Array,
+    time: Array,
+) -> Array:
+    """
+    Predicts the rates of a given system using a Neural ODE model.
+
+    Args:
+        neuralode: A NeuralBase object representing the Neural ODE model.
+        y0s: An array of initial conditions for the system.
+        data: An array of data points for the system.
+        time: An array of time points for the system.
+
+    Returns:
+        An array of predicted rates for the system.
+    """
+    dataset_size, length_size, _ = data.shape
+    ins = data.reshape(dataset_size * length_size, -1)
+
+    return jax.vmap(neuralode.func, in_axes=(0, 0, None))(time.ravel(), ins, 0.0)
+
+
 def _print_priors(parameters: List[Parameter]):
+    """
+    Prints the prior distributions for each parameter in the list of parameters.
+
+    Args:
+        parameters: A list of Parameter objects.
+
+    Returns:
+        None
+    """
     fun = lambda name, value: f"├── \033[1m{name}\033[0m: {value}"
     statements = [
         f"🔸 Priors",
