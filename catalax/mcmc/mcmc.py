@@ -136,7 +136,7 @@ def run_mcmc(
 
     # Print a nice summary
     if verbose:
-        print("\n🎉 Finished")
+        print("\n\n🎉 Finished")
         mcmc.print_summary()
 
     return mcmc, bayes_model
