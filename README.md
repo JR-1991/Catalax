@@ -6,18 +6,17 @@ Catalax is a JAX-based framework that facilitates simulation and parameter infer
 
 ## Getting started
 
-To get started with Catalax, you can install it via pip:
-
-**MacOS / Linux**
+To get started with Catalax, you can install it via pip
 
 ```bash
-python3 -m pip install git+https://github.com/JR-1991/Catalax.git
+pip install catalax
 ```
-
-**Windows**
+or by source
 
 ```bash
-python -m pip install git+https://github.com/JR-1991/Catalax.git
+git clone https://github.com/JR-1991/Catalax.git
+cd Catalax
+pip install .
 ```
 
 ## Quickstart
