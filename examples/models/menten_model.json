@@ -1,0 +1,30 @@
+{
+  "name": "Simple menten model",
+  "species": [
+    {
+      "name": "s1",
+      "symbol": "s1"
+    }
+  ],
+  "odes": [
+    {
+      "equation": "-s1*v_max/(K_m + s1)",
+      "observable": true,
+      "species": "s1"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "K_m",
+      "symbol": "K_m",
+      "value": 100.0,
+      "constant": false
+    },
+    {
+      "name": "v_max",
+      "symbol": "v_max",
+      "value": 7.0,
+      "constant": false
+    }
+  ]
+}
