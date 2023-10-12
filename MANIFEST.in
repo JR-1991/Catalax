@@ -1,1 +1,1 @@
-include catalax/tools/templates/*
+include catalax/tools/templates/odemodel.jinja2
