@@ -1,8 +1,13 @@
 from .model import Model
+from .model import InAxes
 from .tools.optimization import optimize
 from .tools.visualization import visualize
 
 __version__ = "0.2.0"
+
+PARAMETERS = InAxes.PARAMETERS
+TIME = InAxes.TIME
+INITS = InAxes.Y0
 
 
 def set_host_count(n: int = 1):
