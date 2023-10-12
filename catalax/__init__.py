@@ -3,7 +3,7 @@ from .model import InAxes
 from .tools.optimization import optimize
 from .tools.visualization import visualize
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 PARAMETERS = InAxes.PARAMETERS
 TIME = InAxes.TIME

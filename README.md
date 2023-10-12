@@ -25,9 +25,9 @@ python -m pip install git+https://github.com/JR-1991/Catalax.git
 To develop a model, Catalax offers a user-friendly interface that comprises two core components: `Species` and `ODE`. The former is utilized to specify the species of the model, while the latter is used to define its dynamics. Through the integration of these components, a robust model is created, which can be employed for inference purposes. Notably, Catalax automatically generates `Parameter` objects from the extracted parameters, which can be leveraged to define priors and constraints for the model.
 
 ```python
-from catalax import Model
+import catalax as ctx
 
-model = Model(name="My Model")
+model = ctx.Model(name="My Model")
 
 # Define the species of the model
 model.add_species(s1="Substrate", e1="Enzyme")
@@ -61,4 +61,11 @@ f = visualize(
 
 ### Give it a try!
 
-To get a better understanding of Catalax, we recommend that you try out the examples found in the `examples` directory. These examples are designed to showcase the capabilities of Catalax and provide a starting point for your own projects.
+To get a better understanding of Catalax, we recommend that you try out the examples found in the `examples` directory. These examples are designed to showcase the capabilities of Catalax and provide a starting point for your own projects:
+
+* [Basic functions](/examples/Basics.ipynb) - An overview to models and integration
+* [Optimization](/examples/Optimization.ipynb) - How to perform parameter estimation using Catalax
+* [Non observable species](/examples/Optimization.ipynb) - How to deal with non-observable species
+* [Hamiltonian MC](/examples/HMC.ipynb) - How to perform parameter inference using Hamiltonian Monte Carlo
+* [Neural Ordinary Differential Equations](/examples/Neural_ODE.ipynb) - How to use neural ODEs to model system dynamics
+* [Neural ODEs and HMC](/examples/SurrogateHMC.ipynb) - How to perform parameter inference using surrogate HMC
