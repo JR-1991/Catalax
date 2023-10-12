@@ -6,18 +6,17 @@ Catalax is a JAX-based framework that facilitates simulation and parameter infer
 
 ## Getting started
 
-To get started with Catalax, you can install it via pip:
-
-**MacOS / Linux**
+To get started with Catalax, you can install it via pip
 
 ```bash
-python3 -m pip install git+https://github.com/JR-1991/Catalax.git
+pip install catalax
 ```
-
-**Windows**
+or by source
 
 ```bash
-python -m pip install git+https://github.com/JR-1991/Catalax.git
+git clone https://github.com/JR-1991/Catalax.git
+cd Catalax
+pip install .
 ```
 
 ## Quickstart
@@ -67,5 +66,5 @@ To get a better understanding of Catalax, we recommend that you try out the exam
 * [Optimization](/examples/Optimization.ipynb) - How to perform parameter estimation using Catalax
 * [Non observable species](/examples/Optimization.ipynb) - How to deal with non-observable species
 * [Hamiltonian MC](/examples/HMC.ipynb) - How to perform parameter inference using Hamiltonian Monte Carlo
-* [Neural Ordinary Differential Equations](/examples/Neural_ODE.ipynb) - How to use neural ODEs to model system dynamics
+* [Neural Ordinary Differential Equations](/examples/NeuralODE.ipynb) - How to use neural ODEs to model system dynamics
 * [Neural ODEs and HMC](/examples/SurrogateHMC.ipynb) - How to perform parameter inference using surrogate HMC
