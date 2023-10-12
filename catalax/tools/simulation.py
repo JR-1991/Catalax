@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Optional, Any
 
 import equinox as eqx
 import jax
@@ -16,6 +16,7 @@ from diffrax import (
 from pydantic import BaseModel, PrivateAttr
 
 from .symbolicmodule import SymbolicModule
+from catalax.model.inaxes import InAxes
 from catalax.model.ode import ODE
 
 
@@ -60,6 +61,7 @@ class Simulation(BaseModel):
     rtol: float = 1e-5
     atol: float = 1e-5
     max_steps: int = 64**4
+    sensitivity: Optional[InAxes] = None
 
     _simulation_func = PrivateAttr(default=None)
 
@@ -80,10 +82,29 @@ class Simulation(BaseModel):
                 saveat=SaveAt(ts=time),  # type: ignore
                 stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
                 max_steps=self.max_steps,
-                # throw=False,
             )
 
             return sol.ts, sol.ys
+
+        if self.sensitivity is not None:
+            assert isinstance(
+                self.sensitivity, InAxes
+            ), "Expected sensitivity to be an instance of 'InAxes'"
+
+            sens_fun = lambda y0s, parameters, time: _simulate_system(
+                y0s,
+                parameters,
+                time,
+            )[1]
+
+            index = self.sensitivity.value.index(0)
+
+            if in_axes is not None:
+                return eqx.filter_jit(
+                    jax.vmap(jax.jacobian(sens_fun, argnums=index), in_axes=in_axes)
+                )
+
+            return eqx.filter_jit(jax.jacobian(sens_fun, argnums=int(index)))
 
         if in_axes is not None:
             return eqx.filter_jit(jax.vmap(_simulate_system, in_axes=in_axes))

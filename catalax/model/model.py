@@ -18,7 +18,8 @@ from catalax.tools.simulation import Simulation
 from .ode import ODE
 from .parameter import Parameter
 from .species import Species
-from .utils import PrettyDict, check_symbol, eqprint, odeprint, parameter_exists
+from .utils import PrettyDict, check_symbol, eqprint, odeprint
+from .inaxes import InAxes
 
 
 class Model(CatalaxBase):
@@ -64,6 +65,7 @@ class Model(CatalaxBase):
     _dt0: Optional[Tuple] = PrivateAttr(default=None)
     _jacobian_parameters: Optional[Callable] = PrivateAttr(default=None)
     _jacobian_states: Optional[Callable] = PrivateAttr(default=None)
+    _sensitivity: Optional[InAxes] = PrivateAttr(default=None)
 
     def add_ode(
         self,
@@ -229,8 +231,12 @@ class Model(CatalaxBase):
         parameters: Optional[jax.Array] = None,
         in_axes: Optional[Tuple] = None,
         max_steps: int = 4096,
+        sensitivity: Optional[InAxes] = None,
     ):
         """Simulates the given model"""
+
+        if isinstance(in_axes, InAxes):
+            in_axes = in_axes.value
 
         if nsteps and saveat:
             raise ValueError(
@@ -255,7 +261,7 @@ class Model(CatalaxBase):
         elif saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
 
-        if self._model_changed(in_axes, dt0) or self._sim_func is None:
+        if self._model_changed(in_axes, dt0, sensitivity) or self._sim_func is None:
             self._setup_system(
                 in_axes=in_axes,
                 t0=t0,
@@ -265,12 +271,14 @@ class Model(CatalaxBase):
                 rtol=rtol,
                 atol=atol,
                 max_steps=max_steps,
+                sensitivity=sensitivity,
             )
 
             # Set markers to check whether the conditions have changed
             # This is done to avoid recompilation of the simulation function
             self._in_axes = in_axes
             self._dt0 = dt0
+            self._sensitivity = sensitivity
 
             # Warmup the simulation to make use of jit compilation
             self._warmup_simulation(y0, parameters, saveat, in_axes)
@@ -298,13 +306,16 @@ class Model(CatalaxBase):
 
         return stoich_mat.at[diag_indices].set(1)
 
-    def _model_changed(self, in_axes: Tuple, dt0) -> bool:
+    def _model_changed(self, in_axes: Tuple, dt0, sensitivity: InAxes) -> bool:
         """Checks whether the model has changed since the last simulation"""
 
         if self._in_axes != in_axes:
             return True
 
         if self._dt0 != dt0:
+            return True
+
+        if self._sensitivity != sensitivity:
             return True
 
         return False
