@@ -19,7 +19,7 @@ def set_host_count(n: int = 1):
     """
     import numpyro
 
-    numpyro.set_host_count(n)
+    numpyro.set_host_device_count(n)
 
 
 def set_platform(platform: str = "cpu"):
