@@ -44,11 +44,11 @@ model.parameters.K_m.value = 100.0
 initial_condition = {"s1": 100.0, "s2": 0.0}
 time, states = model.simulate(
     initial_conditions=initial_condition,
-    t0=0, t1=100, dt0=0.1, nsteps=1000, in_axes=None
+    t0=0, t1=100, dt0=0.1, nsteps=1000, in_axes=ctx.INITS
 )
 
 # Visualize the results
-f = visualize(
+f = ctx.visualize(
     model=model,
     data=states, # Replace this with actual data
     times=time,
