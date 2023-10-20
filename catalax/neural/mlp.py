@@ -8,6 +8,7 @@ from .rbf import RBFLayer
 
 class MLP(eqx.Module):
     mlp: eqx.nn.MLP
+    max_time: float
 
     def __init__(
         self,
@@ -16,12 +17,13 @@ class MLP(eqx.Module):
         depth: int,
         use_final_bias: bool,
         activation=jnn.softplus,
+        max_time: float = 1.0,
         *,
         key,
         **kwargs
     ):
         super().__init__(**kwargs)
-
+        self.max_time = max_time
         self.mlp = eqx.nn.MLP(
             in_size=data_size + 1,
             out_size=data_size,
@@ -36,6 +38,7 @@ class MLP(eqx.Module):
             self.mlp = self._mutate_to_rbf(key, activation)
 
     def __call__(self, t, y, args):
+        t = t / self.max_time
         y = jnp.concatenate((y, jnp.array([t])), axis=-1)
         return self.mlp(y)
 

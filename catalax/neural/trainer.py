@@ -34,9 +34,14 @@ def train_neural_ode(
     key = jrandom.PRNGKey(420)
     _, _, loader_key = jrandom.split(key, 3)
     _, length_size, _ = data.shape
-    
-    # Scale weights
+
+    # Scale weights and set maximum time
     model = _scale_weights(model, weight_scale)
+    model = eqx.tree_at(
+        lambda tree: tree.func.max_time,
+        model,
+        replace=times.max(),
+    )
 
     # Set up logger
     if log is not None:
@@ -326,6 +331,7 @@ def _augment_data(data, times, y0s, n_augmentations, sigma, rng):
 
 def _jitter_data(x, sigma, rng):
     return x + jnp.array(rng.normal(loc=0.0, scale=sigma, size=x.shape))
+
 
 def _scale_weights(model: NeuralBase, scale: float) -> NeuralBase:
     """Rescales weights and biases for models with small rates"""
