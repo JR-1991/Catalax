@@ -64,7 +64,7 @@ To get a better understanding of Catalax, we recommend that you try out the exam
 
 * [Basic functions](/examples/Basics.ipynb) - An overview to models and integration
 * [Optimization](/examples/Optimization.ipynb) - How to perform parameter estimation using Catalax
-* [Non observable species](/examples/NonObservableSpecies.ipynb)) - How to deal with non-observable species
+* [Non observable species](/examples/NonObservableSpecies.ipynb) - How to deal with non-observable species
 * [Hamiltonian MC](/examples/HMC.ipynb) - How to perform parameter inference using Hamiltonian Monte Carlo
 * [Neural Ordinary Differential Equations](/examples/NeuralODE.ipynb) - How to use neural ODEs to model system dynamics
 * [Neural ODEs and HMC](/examples/SurrogateHMC.ipynb) - How to perform parameter inference using surrogate HMC
