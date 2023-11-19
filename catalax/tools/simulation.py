@@ -84,7 +84,7 @@ class Simulation(BaseModel):
                 max_steps=self.max_steps,
             )
 
-            return sol.ts, sol.ys
+            return sol.ys
 
         if self.sensitivity is not None:
             assert isinstance(
@@ -95,7 +95,7 @@ class Simulation(BaseModel):
                 y0s,
                 parameters,
                 time,
-            )[1]
+            )
 
             index = self.sensitivity.value.index(0)
 
