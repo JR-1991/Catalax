@@ -233,7 +233,29 @@ class Model(CatalaxBase):
         max_steps: int = 4096,
         sensitivity: Optional[InAxes] = None,
     ):
-        """Simulates the given model"""
+        """
+        Simulates a given model with the given initial conditions. The simulation can be
+        performed either by specifying the number of steps or the time points at which to
+        save the results. If both are specified, the number of steps will be ignored.
+
+        Args:
+            initial_conditions (List[Dict[str, float]]): The initial conditions for the simulation.
+            dt0 (float, optional): The initial time step size. Defaults to 0.1.
+            solver (Type, optional): The solver to use for the simulation. Defaults to Tsit5.
+            t0 (int, optional): The start time of the simulation. Defaults to None.
+            t1 (int, optional): The end time of the simulation. Defaults to None.
+            nsteps (int, optional): The number of steps to take in the simulation. Defaults to None.
+            rtol (float, optional): The relative tolerance for the solver. Defaults to 1e-5.
+            atol (float, optional): The absolute tolerance for the solver. Defaults to 1e-5.
+            saveat (Union[SaveAt, jax.Array], optional): The time points at which to save the simulation results. Defaults to None.
+            parameters (jax.Array, optional): The parameters for the simulation. Defaults to None.
+            in_axes (Tuple, optional): The axes along which to differentiate the simulation. Defaults to None.
+            max_steps (int, optional): The maximum number of steps to take in the simulation. Defaults to 4096.
+            sensitivity (InAxes, optional): The axes along which to compute sensitivities. Defaults to None.
+
+        Returns:
+            (jax.Array, jax.Array): The simulation results (time, trajectories)
+        """
 
         if isinstance(in_axes, InAxes):
             in_axes = in_axes.value
@@ -283,9 +305,9 @@ class Model(CatalaxBase):
             # Warmup the simulation to make use of jit compilation
             self._warmup_simulation(y0, parameters, saveat, in_axes)
 
-            return self._sim_func(y0, parameters, saveat)
+            return saveat, self._sim_func(y0, parameters, saveat)
 
-        return self._sim_func(y0, parameters, saveat)
+        return saveat, self._sim_func(y0, parameters, saveat)
 
     def _get_stoich_mat(self) -> jax.Array:
         """Creates the stoichiometry matrx based on the given model.
