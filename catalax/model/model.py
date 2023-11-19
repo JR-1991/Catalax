@@ -541,7 +541,38 @@ class Model(CatalaxBase):
 
         return symbols_
 
+    def y0_array_to_dict(self, y0_array: jax.Array) -> Dict[str, float]:
+        """
+        Converts a 1D or 2D array of initial values to a list of dictionaries.
+
+        Args:
+            y0_array (jax.Array): The array of initial values.
+
+        Returns:
+            List[Dict[str, float]]: A list of dictionaries, where each dictionary represents
+            the initial values for each species in the model.
+
+        Raises:
+            AssertionError: If the length of y0 array does not match the number of species in the model.
+        """
+
+        if len(y0_array.shape) == 1:
+            y0_array = jnp.expand_dims(y0_array, axis=0)
+
+        assert y0_array.shape[-1] == len(
+            self.species
+        ), "Length of y0 array does not match the number of species in the model."
+
+        return [
+            {
+                species: float(value)
+                for species, value in zip(self._get_species_order(), y0)
+            }
+            for y0 in y0_array
+        ]
+
     # ! Exporters
+
     def save(self, path: str, name: Optional[str] = None, **json_kwargs):
         """Saves a model to a JSON file.
 
@@ -581,7 +612,6 @@ class Model(CatalaxBase):
         }
 
     # ! Metrics
-
     def calculate_aic(
         self,
         data: jax.Array,
@@ -616,6 +646,7 @@ class Model(CatalaxBase):
         return aic
 
     # ! Importers
+
     @classmethod
     def load(cls, path: str):
         """Loads a model from a JSON file and initializes a model.
