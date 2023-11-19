@@ -1,0 +1,177 @@
+{
+  "name": "Model 4",
+  "species": [
+    {
+      "name": "PGME",
+      "symbol": "s0"
+    },
+    {
+      "name": "7-ADCA",
+      "symbol": "s1"
+    },
+    {
+      "name": "CEX",
+      "symbol": "s2"
+    },
+    {
+      "name": "PG",
+      "symbol": "s3"
+    }
+  ],
+  "odes": [
+    {
+      "equation": "0.0002*exp(-k_d*t)*(k3 + k5*s1/K_n)*(k2*s0/K_s + k_4b*s2/K_p)/((k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n)) - 0.0002*exp(-k_d*t)*(k2*s0/K_s + k_4b*s2/K_p)*(k3 + k6*s0/K_si + k5*s1/K_n)/((k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n)) - 0.0002*exp(-k_d*t)*k2*s0/(K_s*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n))",
+      "observable": true,
+      "species": "s0"
+    },
+    {
+      "equation": "0.0002*exp(-k_d*t)*(k3 + k5*s1/K_n)*(k2*s0/K_s + k_4b*s2/K_p)/((k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n)) - 0.0002*exp(-k_d*t)*k2*s0/(K_s*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n))",
+      "observable": true,
+      "species": "s1"
+    },
+    {
+      "equation": "-0.0002*exp(-k_d*t)*(k3 + k5*s1/K_n)*(k2*s0/K_s + k_4b*s2/K_p)/((k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n)) + 0.0002*exp(-k_d*t)*k2*s0/(K_s*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n))",
+      "observable": true,
+      "species": "s2"
+    },
+    {
+      "equation": "0.0002*exp(-k_d*t)*(k2*s0/K_s + k_4b*s2/K_p)*(k3 + k6*s0/K_si + k5*s1/K_n)/((k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)*(1 + k2*s0*(1 + s0/K_si + s1/K_n)/(K_s*(k3 + k6*s0/K_si + k4*s1/K_n + k5*s1/K_n)) + s0**2/(K_s*K_si) + s3/K_pg + s2/K_p + s1/K_n))",
+      "observable": true,
+      "species": "s3"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "k3",
+      "symbol": "k3",
+      "constant": false,
+      "value": 417.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "K_s",
+      "symbol": "K_s",
+      "constant": false,
+      "value": 14.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "k4",
+      "symbol": "k4",
+      "constant": false,
+      "value": 73600.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "K_pg",
+      "symbol": "K_pg",
+      "constant": false,
+      "value": 12.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "k2",
+      "symbol": "k2",
+      "constant": false,
+      "value": 432.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "k6",
+      "symbol": "k6",
+      "constant": false,
+      "value": 1660.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "K_p",
+      "symbol": "K_p",
+      "constant": false,
+      "value": 39.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "k_4b",
+      "symbol": "k_4b",
+      "constant": false,
+      "value": 9126.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "K_si",
+      "symbol": "K_si",
+      "value": 20.0,
+      "constant": false,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "k_d",
+      "symbol": "k_d",
+      "constant": false,
+      "value": 6.43e-4,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "k5",
+      "symbol": "k5",
+      "constant": false,
+      "value": 491.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    },
+    {
+      "name": "K_n",
+      "symbol": "K_n",
+      "constant": false,
+      "value": 290.0,
+      "prior": {
+        "type": "Uniform",
+        "low": 1e-06,
+        "high": 1000000.0
+      }
+    }
+  ]
+}

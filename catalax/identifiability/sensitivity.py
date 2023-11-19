@@ -345,9 +345,8 @@ def _print_log(
     gap: int,
     nsamples: int,
 ):
-    print("\n")
     statements = [
-        f"🚀 Sensitivity matrix analysis",
+        f"\n🚀 Sensitivity matrix analysis",
     ]
     fun = lambda name, value: f"├── \033[1m{name}\033[0m: {value}"
 

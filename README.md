@@ -68,3 +68,4 @@ To get a better understanding of Catalax, we recommend that you try out the exam
 * [Hamiltonian MC](/examples/HMC.ipynb) - How to perform parameter inference using Hamiltonian Monte Carlo
 * [Neural Ordinary Differential Equations](/examples/NeuralODE.ipynb) - How to use neural ODEs to model system dynamics
 * [Neural ODEs and HMC](/examples/SurrogateHMC.ipynb) - How to perform parameter inference using surrogate HMC
+* [Sensitivity Marix Analysis](/examples/SensitivityMatrixAnalysis.ipynb) - How to numerically infer local structural identifiability using the sensitivity matrix
