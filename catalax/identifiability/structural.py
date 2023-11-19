@@ -8,19 +8,21 @@ import pandas as pd
 from catalax import Model
 from catalax.identifiability import templates as jinja_templates
 
-try:
-    from julia import Main
-except ImportError:
-    raise ImportError(
-        "The julia package is required for the identifiability analysis. "
-        "Please install it using `pip install julia jill` and the following command:\n\n"
-        "python -c 'import julia; julia.install()'\n\n"
-    )
-
 
 class IdentPackages(Enum):
     SIAN = "SIAN"
     SCIML = "StructuralIdentifiability"
+
+
+def _import_julia():
+    try:
+        from julia import Main
+    except ImportError:
+        raise ImportError(
+            "The julia package is required for the identifiability analysis. "
+            "Please install it using `pip install julia jill` and the following command:\n\n"
+            "python -c 'import julia; julia.install()'\n\n"
+        )
 
 
 def SIAN(model: Model, update_model: bool = True) -> pd.DataFrame:
@@ -45,6 +47,8 @@ def SIAN(model: Model, update_model: bool = True) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A DataFrame containing the results of the analysis.
     """
+
+    _import_julia()
 
     try:
         from julia.SIAN import get_parameters, identifiability_ode
@@ -93,6 +97,8 @@ def SciML(model: Model, update_model: bool = True) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A DataFrame containing the results of the analysis.
     """
+
+    _import_julia()
 
     try:
         from julia.StructuralIdentifiability import assess_identifiability
