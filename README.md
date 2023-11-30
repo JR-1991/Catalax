@@ -62,7 +62,6 @@ f = ctx.visualize(
 
 To get a better understanding of Catalax, we recommend that you try out the examples found in the `examples` directory. These examples are designed to showcase the capabilities of Catalax and provide a starting point for your own projects:
 
-* [Basic functions](/examples/Basics.ipynb) - An overview to models and integration
 * [Optimization](/examples/Optimization.ipynb) - How to perform parameter estimation using Catalax
 * [Non observable species](/examples/NonObservableSpecies.ipynb) - How to deal with non-observable species
 * [Hamiltonian MC](/examples/HMC.ipynb) - How to perform parameter inference using Hamiltonian Monte Carlo
