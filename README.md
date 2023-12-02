@@ -66,6 +66,6 @@ To get a better understanding of Catalax, we recommend that you try out the exam
 * [Non observable species](/examples/NonObservableSpecies.ipynb) - How to deal with non-observable species
 * [Hamiltonian MC](/examples/HMC.ipynb) - How to perform parameter inference using Hamiltonian Monte Carlo
 * [Neural Ordinary Differential Equations](/examples/NeuralODE.ipynb) - How to use neural ODEs to model system dynamics
-* [Universal Differential Equations](/examples/UniversalODE.ipynb) - How to incorporate prior model knowledge into neural ODEs using universal differential equations
+* [Universal Differential Equations](/examples/UniversalODE.ipynb) - How to incorporate prior model knowledge into neural ODEs
 * [Neural ODEs and HMC](/examples/SurrogateHMC.ipynb) - How to perform parameter inference using surrogate HMC
 * [Sensitivity Matrix Analysis](/examples/SensitivityMatrixAnalysis.ipynb) - How to numerically infer local structural identifiability using the sensitivity matrix
