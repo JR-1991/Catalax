@@ -93,7 +93,7 @@ def run_mcmc(
 
     if neuralode is not None:
         rate_fun = model._setup_rate_function(in_axes=(0, 0, None))
-        sim_func = lambda y0s, theta, times: (None, rate_fun(times, y0s, theta))
+        sim_func = lambda y0s, theta, times: rate_fun(times, y0s, theta)
         times = times.ravel()
         y0s = data.reshape(data.shape[0] * data.shape[1], -1)
         data = _predict_rates_using_neural_ode(
@@ -185,7 +185,7 @@ def _setup_model(
             [numpyro.sample(name, distribution) for name, distribution in priors]
         )
 
-        _, states = sim_func(y0s, theta, times)
+        states = sim_func(y0s, theta, times)
 
         sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
 
