@@ -82,6 +82,12 @@ def visualize(
     # Simulate the model
     if func and initial_conditions:
         times_, states = func()
+
+        if len(times_.shape) == 1:
+            times_ = jnp.stack(
+                [times_] * data.shape[0],
+                axis=0,
+            )
     else:
         times_, states = None, None
 
