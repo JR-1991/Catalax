@@ -656,10 +656,19 @@ class Model(CatalaxBase):
         ), "Cannot calculate AIC, because this model hasnt been fitted yet."
 
         _, states = self.simulate(
-            initial_conditions=initial_conditions, saveat=times, in_axes=(0, None, 0)
+            initial_conditions=initial_conditions,
+            saveat=times,
+            in_axes=(0, None, 0),
         )
 
-        residual = states - data
+        # Get observables
+        observables = [
+            index
+            for index, species in enumerate(self._get_species_order())
+            if self.odes[species].observable
+        ]
+
+        residual = states[..., observables] - data
         chisqr = (residual**2).sum()
         ndata = len(residual.ravel())
         _neg2_log_likel = ndata * jnp.log(chisqr / ndata)
