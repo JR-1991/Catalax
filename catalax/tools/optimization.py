@@ -51,6 +51,11 @@ def optimize(
         _type_: _description_
     """
 
+    if len(data.shape) == 2:
+        data = jnp.expand_dims(data, axis=0)
+    if len(times.shape) == 1:
+        times = jnp.expand_dims(times, axis=0)
+
     params = _initialize_params(model, global_upper_bound, global_lower_bound)
     observables = jnp.array(
         [
@@ -190,7 +195,7 @@ def _residual(
     _, states = model.simulate(
         initial_conditions=y0s,
         dt0=dt0,
-        in_axes=(0, None, 0),
+        in_axes=(0, None, 0), # Replicates, Params, Species
         saveat=times,  # type: ignore
         max_steps=max_steps,
         parameters=parameters,
