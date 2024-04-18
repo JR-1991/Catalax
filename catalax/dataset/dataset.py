@@ -4,9 +4,9 @@ import jax
 import jax.numpy as jnp
 
 from pydantic import BaseModel, Field
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from measurement import Measurement
+from .measurement import Measurement
 
 class Dataset(BaseModel):
 
@@ -39,7 +39,7 @@ class Dataset(BaseModel):
 
     # ! Adders
 
-    def add_measurement(self, measurement: Measurement):
+    def add_measurement(self, measurement: Measurement) -> None:
         """Adds a measurement to the dataset.
 
         Args:
@@ -73,31 +73,42 @@ class Dataset(BaseModel):
         inits = pd.DataFrame(
             {
                 "measurementId": meas.id,
-                **meas.initial_concentrations
+                **meas.initial_conditions
             }
             for meas in self.measurements
         )
 
         return data, inits
 
-    def to_jax_array(self, species_order: List[str]):
-        """Converts the dataset to a JAX array"""
+    def to_jax_arrays(
+        self,
+        species_order: List[str],
+    ) -> Tuple[jax.Array, jax.Array, List[Dict[str, float]]]:
+        """Converts the dataset to a JAX arrays
 
-        data = jnp.stack(
-            [
-                meas.to_jax_array(species_order=species_order)
-                for meas in self.measurements
-            ],
-            axis=0,
-        )
+        This method requires a species order to arrange the data in the correct order.
 
-        time = jnp.stack(
-            [meas.time for meas in self.measurements], # type: ignore
-            axis=0,
-        )
-        initial_concentrations = [meas.initial_concentrations for meas in self.measurements]
+        - The shape of the data is (n_measurements, n_time_points, n_species).
+        - The shape of the time is (n_measurements, n_time_points).
 
-        return data, time, initial_concentrations
+        Args:
+            species_order (List[str]): The order of the species in the array.
+
+        Returns:
+            Tuple[jax.Array, jax.Array, List[Dict[str, float]]]: The data array, time array, and initial conditions.
+        """
+
+        data = []
+        time = []
+        initial_conditions = []
+
+        for meas in self.measurements:
+            data_, time_, inits = meas.to_jax_arrays(species_order=species_order)
+            data.append(data_)
+            time.append(time_)
+            initial_conditions.append(inits)
+
+        return jnp.stack(data, axis=0), jnp.stack(time, axis=0), initial_conditions
 
     # ! Importers
 
@@ -178,15 +189,9 @@ class Dataset(BaseModel):
             dataset.add_measurement(
                 measurement=Measurement.from_dataframe(
                     df=sub_data, # type: ignore
-                    initial_concentrations=sub_inits,
+                    initial_conditions=sub_inits,
                     id=meas_id,
                 )
             )
 
         return dataset
-
-if __name__ == "__main__":
-    dataset = Dataset(
-        name="My measurement",
-        species=["A", "B", "C"]
-    )

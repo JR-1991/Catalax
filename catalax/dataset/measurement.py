@@ -3,8 +3,10 @@ import jax.numpy as jnp
 import numpy as np
 import warnings
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
-from typing import Dict, Optional, List, Union
+from typing import Dict, Optional, List, Tuple, Union
 from uuid import uuid4
 from pydantic import (
     BaseModel,
@@ -32,13 +34,13 @@ class Measurement(BaseModel):
         ...     "A": [1, 2, 3],
         ...     "B": [4, 5, 6],
         ... }
-        >>> initial_concentrations = {
+        >>> initial_conditions = {
         ...     "A": 1.0,
         ...     "B": 4.0,
         ... }
         >>> time = [0, 1, 2]
         >>> measurement = Measurement(
-        ...     initial_concentrations=initial_concentrations,
+        ...     initial_conditions=initial_conditions,
         ...     data=data,
         ...     time=time,
         ... )
@@ -55,14 +57,14 @@ class Measurement(BaseModel):
         ...     "B": [4, 5, 6],
         ...     "C": [7, 8, 9],
         ... })
-        >>> initial_concentrations = {
+        >>> initial_conditions = {
         ...     "A": 1.0,
         ...     "B": 4.0,
         ...     "C": 7.0,
         ... }
         >>> measurement = Measurement.from_dataframe(
         ...     df=df,
-        ...     initial_concentrations=initial_concentrations,
+        ...     initial_conditions=initial_conditions,
         ... )
 
     Attributes:
@@ -82,7 +84,7 @@ class Measurement(BaseModel):
         default_factory=lambda: str(uuid4())
     )
 
-    initial_concentrations: Dict[str, float] = Field(
+    initial_conditions: Dict[str, float] = Field(
         ...,
         description="""
         The initial concentrations of the measurement.
@@ -136,7 +138,7 @@ class Measurement(BaseModel):
     def _check_species_consistency(self):
         """Checks whether the data species passed upon initialization are consistent with inits"""
 
-        species_diff = [sp for sp in self.data if sp not in self.initial_concentrations]
+        species_diff = [sp for sp in self.data if sp not in self.initial_conditions]
 
         if species_diff:
             raise ValueError(
@@ -162,7 +164,7 @@ class Measurement(BaseModel):
         species: str,
         data: Union[jax.Array, np.ndarray, List[float]],
         initial_concentration: float,
-    ):
+    ) -> None:
         """Add data to the measurement.
 
         Args:
@@ -176,11 +178,11 @@ class Measurement(BaseModel):
 
         assert data.shape[0] == self.time.shape[0], "The data and time arrays must have the same length." # type: ignore
         self.data[species] = data
-        self.initial_concentrations[species] = initial_concentration
+        self.initial_conditions[species] = initial_concentration
 
     # ! Exporters
 
-    def to_dataframe(self):
+    def to_dataframe(self) -> pd.DataFrame:
         """Convert the measurement to a pandas DataFrame."""
 
         data = self.data.copy()
@@ -194,14 +196,14 @@ class Measurement(BaseModel):
     def from_dataframe(
         cls,
         df: pd.DataFrame,
-        initial_concentrations: Dict[str, float],
+        initial_conditions: Dict[str, float],
         **kwargs,
     ):
         """Create a Measurement object from a pandas DataFrame.
 
         Args:
             df (pandas.DataFrame): The DataFrame to extract the data from.
-            initial_concentrations (Dict[str, float]): Mapping of the initial concentrations (species: value)
+            initial_conditions (Dict[str, float]): Mapping of the initial concentrations (species: value)
             measurementId (Optional[str]): ID of the measurement, if given. Defaults to None and thus UUID4
         """
 
@@ -209,7 +211,7 @@ class Measurement(BaseModel):
 
         species_diff = [
             sp for sp in df.columns
-            if sp not in initial_concentrations.keys()
+            if sp not in initial_conditions.keys()
             and sp != "time" and sp != "measurementId"
         ]
 
@@ -228,14 +230,14 @@ class Measurement(BaseModel):
         return cls(
             data=data, # type: ignore
             time=time,
-            initial_concentrations=initial_concentrations,
+            initial_conditions=initial_conditions,
             **kwargs,
         )
 
-    def to_jax_array(
+    def to_jax_arrays(
         self,
         species_order: List[str],
-    ):
+    ) -> Tuple[jax.Array, jax.Array, Dict[str, float]]:
         """Convert the measurement data to a JAX array.
 
         Arranges the data in the order of the species_order list.
@@ -245,7 +247,7 @@ class Measurement(BaseModel):
             species_order (List[str]): The order of the species in the array.
 
         Returns:
-            jax.Array: The data array.
+            Tuple[jax.Array, jax.Array, Dict[str, float]]: The data, time, and initial conditions.
 
         """
 
@@ -261,4 +263,51 @@ class Measurement(BaseModel):
             )
 
         # Shape of the data is (n_time_points, n_species)
-        return jnp.array([self.data[sp] for sp in species_order]).swapaxes(0, 1)
+        data = jnp.array([self.data[sp] for sp in species_order]).swapaxes(0, 1)
+        time = jnp.array(self.time)
+        inits = self.initial_conditions
+
+        return data, time, inits
+
+    def plot(self, show=True, ax=None):
+        """Plot the measurement data.
+
+        Args:
+            show (bool): Whether to show the plot. Defaults to True.
+
+        """
+
+        is_subplot = ax is not None
+        color_iter = iter(mcolors.TABLEAU_COLORS)
+        init_title = " ".join(
+            [
+                f"${key}={value}$"
+                for key, value in self.initial_conditions.items()
+            ]
+        )
+
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = None
+
+        for species in self.initial_conditions.keys():
+            ax.plot(
+                self.time,
+                self.data[species],
+                "o",
+                label=f"{species}",
+                c=next(color_iter),
+            )
+
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Concentration")
+        ax.set_title(init_title, fontweight="normal")
+
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+        if show:
+            plt.show()
+
+        if fig:
+            return fig
