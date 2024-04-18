@@ -2,6 +2,8 @@ from .model import Model
 from .model import InAxes
 from .tools.optimization import optimize
 from .tools.visualization import visualize
+from .dataset import Dataset
+from .dataset import Measurement
 
 __version__ = "0.3.0"
 
