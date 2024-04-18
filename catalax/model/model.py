@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import pandas as pd
 from diffrax import ODETerm, SaveAt, Tsit5
 from dotted_dict import DottedDict
-from pydantic import Field, PrivateAttr, validator
+from pydantic import Field, PrivateAttr, validator, ConfigDict
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 
 from catalax.model.base import CatalaxBase
@@ -48,17 +48,16 @@ class Model(CatalaxBase):
         model.add_parameter(name="E_tot", equation="c1 + e1")
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-        fields = {
-            "term": {"exclude": True},
-        }
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed = True,
+    )
 
     name: str
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
     species: Dict[str, Species] = Field(default_factory=PrettyDict)
     parameters: Dict[str, Parameter] = Field(default_factory=PrettyDict)
-    term: Optional[ODETerm] = Field(default=None)
+    term: Optional[ODETerm] = Field(default=None, exclude=True)
 
     _sim_func: Optional[Callable] = PrivateAttr(default=None)
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
@@ -113,10 +112,12 @@ class Model(CatalaxBase):
             self.add_species(name=species, species_map=species_map)
 
         self.odes[species] = ODE(
-            equation=equation, species=self.species[species], observable=observable
+            equation=equation,
+            species=self.species[species],
+            observable=observable,
         )
 
-        self.odes[species].__model__ = self
+        self.odes[species]._model = self
 
     def add_species(self, species_string: str = "", **species_map):
         """Adds a single or multiple species to the model, which can later be used in ODEs.
@@ -229,7 +230,7 @@ class Model(CatalaxBase):
         atol: float = 1e-5,
         saveat: Union[SaveAt, jax.Array] = None,
         parameters: Optional[jax.Array] = None,
-        in_axes: Optional[Tuple] = None,
+        in_axes: Union[Tuple, InAxes, None] = None,
         max_steps: int = 4096,
         sensitivity: Optional[InAxes] = None,
     ):

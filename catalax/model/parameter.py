@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Union
 
-from pydantic import PrivateAttr, root_validator
+from pydantic import PrivateAttr, model_validator
 from sympy import Expr
 
 from catalax.model.base import CatalaxBase
@@ -25,16 +25,16 @@ class Parameter(CatalaxBase):
     prior: Any = None  # TODO: Fix this typing
     _prior_str_: Optional[str] = None
 
-    @root_validator()
-    def _assign_prior_string(cls, values):
-        if isinstance(values["prior"], tuple):
+    @model_validator(mode="after")
+    def _assign_prior_string(self):
+        if isinstance(self.prior, tuple):
             prior, prior_str = values["prior"]
-            values["prior"] = prior
-            values["_prior_str_"] = prior_str
+            self.prior = prior
+            self._prior_str_ = prior_str
 
-        return values
+        return self
 
-    __repr_fields__: List[str] = PrivateAttr(
+    _repr_fields: List[str] = PrivateAttr(
         default={
             "name": "name",
             "symbol": "symbol",

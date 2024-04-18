@@ -1,9 +1,10 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Union
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 
+import diffrax.solver as solver
 from diffrax import (
     AbstractSolver,
     ODETerm,
@@ -57,11 +58,11 @@ class Simulation(BaseModel):
     parameters: List[str]
     stoich_mat: jax.Array
     dt0: float = 0.1
-    solver: AbstractSolver = Tsit5
     rtol: float = 1e-5
     atol: float = 1e-5
     max_steps: int = 64**4
     sensitivity: Optional[InAxes] = None
+    solver: Any = Tsit5
 
     _simulation_func = PrivateAttr(default=None)
 
