@@ -11,25 +11,29 @@ import numpy as np
 import optax
 import tqdm
 
+from catalax.dataset.dataset import Dataset
 from catalax.neural.neuralbase import NeuralBase
 from catalax.neural.strategy import Step, Strategy
 
 
 def train_neural_ode(
     model: NeuralBase,
-    data: jax.Array,
-    times: jax.Array,
-    inital_conditions: jax.Array,
+    dataset: Dataset,
     strategy: Strategy,
     optimizer=optax.adabelief,
     print_every: int = 100,
     log: Optional[str] = None,
     save_milestones: bool = False,
     milestone_dir: str = "./milestones",
-    n_augmentations: int = 0,
-    sigma: float = 0.0,
     weight_scale: float = 1e-2,
 ):
+
+    # Extract data from dataset
+    data, times, inital_conditions = dataset.to_jax_arrays(
+        species_order=model.species_order,
+        inits_to_array=True,
+    )
+
     # Set up PRNG keys
     key = jrandom.PRNGKey(420)
     _, _, loader_key = jrandom.split(key, 3)
@@ -52,18 +56,6 @@ def train_neural_ode(
     # Set up milestone directory
     if save_milestones:
         os.makedirs(milestone_dir, exist_ok=True)
-
-    # Augment data
-    if n_augmentations > 0:
-        rng = np.random.default_rng()
-        data, times, inital_conditions = _augment_data(
-            data,
-            times,
-            inital_conditions,
-            n_augmentations,
-            sigma,
-            rng,
-        )
 
     print(f"\n🚀 Training {model.__class__.__name__}...\n")
 
@@ -315,22 +307,6 @@ def _sum_of_squared_weights(model):
         for layer in jtn.tree_flatten(model)[0]
         if isinstance(layer, jax.Array)
     )
-
-
-def _augment_data(data, times, y0s, n_augmentations, sigma, rng):
-    """Augments the data by adding noise to it."""
-    return (
-        jnp.concatenate(
-            [_jitter_data(data, sigma, rng) for _ in range(n_augmentations)],
-            axis=0,
-        ),
-        jnp.concatenate([times] * n_augmentations, axis=0),
-        jnp.concatenate([y0s] * n_augmentations, axis=0),
-    )
-
-
-def _jitter_data(x, sigma, rng):
-    return x + jnp.array(rng.normal(loc=0.0, scale=sigma, size=x.shape))
 
 
 def _scale_weights(model: NeuralBase, scale: float) -> NeuralBase:
