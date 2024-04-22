@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import warnings
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -13,10 +14,12 @@ from pydantic import (
     Field,
     model_validator,
     field_serializer,
-    field_validator
+    field_validator,
 )
 
 from pydantic.config import ConfigDict
+from pydantic.fields import computed_field
+
 
 class Measurement(BaseModel):
     """A class to represent a measurement.
@@ -80,8 +83,19 @@ class Measurement(BaseModel):
         arbitrary_types_allowed=True,
     )
 
-    id: Optional[str] = Field(
-        default_factory=lambda: str(uuid4())
+    id: str = Field(
+        default_factory=lambda: str(uuid4()),
+        description="Unique identifier of this measurement.",
+    )
+
+    name: Optional[str] = Field(
+        default=None,
+        description="Name of the measurement",
+    )
+
+    description: Optional[str] = Field(
+        default=None,
+        description="Description of the measurement",
     )
 
     initial_conditions: Dict[str, float] = Field(
@@ -89,20 +103,25 @@ class Measurement(BaseModel):
         description="""
         The initial concentrations of the measurement.
         The keys are the species names and the values are the concentrations.
-        """
+        """,
     )
 
-    data: Dict[str, Union[ List[float], jax.Array, np.ndarray]] = Field(
+    data: Dict[str, Union[List[float], jax.Array, np.ndarray]] = Field(
         default_factory=dict,
         description="""
         The data of the measurement.
-        The keys are the species names and the values are the data points."""
+        The keys are the species names and the values are the data points.""",
     )
 
     time: Union[List[float], jax.Array, np.ndarray] = Field(
-        ...,
-        description="The time points of the measurement."
+        ..., description="The time points of the measurement."
     )
+
+    # ! Computed fields
+    @computed_field(return_type=List[str])
+    @property
+    def species(self):
+        return [sp for sp in self.data.keys()]
 
     # ! Validators
     @field_validator("time")
@@ -176,7 +195,7 @@ class Measurement(BaseModel):
         if isinstance(data, np.ndarray) or isinstance(data, list):
             data = jnp.array(data)
 
-        assert data.shape[0] == self.time.shape[0], "The data and time arrays must have the same length." # type: ignore
+        assert data.shape[0] == self.time.shape[0], "The data and time arrays must have the same length."  # type: ignore
         self.data[species] = data
         self.initial_conditions[species] = initial_concentration
 
@@ -187,7 +206,7 @@ class Measurement(BaseModel):
 
         data = self.data.copy()
         data["time"] = self.time
-        data["measurementId"] = [self.id]*self.time.shape[0] # type: ignore
+        data["measurementId"] = [self.id] * self.time.shape[0]  # type: ignore
 
         return pd.DataFrame(data)
 
@@ -210,9 +229,11 @@ class Measurement(BaseModel):
         assert "time" in df.columns, "The DataFrame must have a 'time' column."
 
         species_diff = [
-            sp for sp in df.columns
+            sp
+            for sp in df.columns
             if sp not in initial_conditions.keys()
-            and sp != "time" and sp != "measurementId"
+            and sp != "time"
+            and sp != "measurementId"
         ]
 
         if species_diff:
@@ -228,7 +249,7 @@ class Measurement(BaseModel):
         }
 
         return cls(
-            data=data, # type: ignore
+            data=data,  # type: ignore
             time=time,
             initial_conditions=initial_conditions,
             **kwargs,
@@ -237,17 +258,23 @@ class Measurement(BaseModel):
     def to_jax_arrays(
         self,
         species_order: List[str],
-    ) -> Tuple[jax.Array, jax.Array, Dict[str, float]]:
+        inits_to_array: bool = False,
+    ) -> Tuple[jax.Array, jax.Array, Union[jax.Array, Dict[str, float]]]:
         """Convert the measurement data to a JAX array.
 
         Arranges the data in the order of the species_order list.
-        The shape of the data is (n_time_points, n_species).
+
+        - If inits_to_array is True, the initial conditions are also converted to a JAX array.
+        - If inits_to_array is False, the initial conditions are returned as a dictionary.
+        - Shape of the data array: (n_time_points, n_species)
+        - Shape of the time array: (n_time_points)
+        - Shape of the initial conditions array: (n_species)
 
         Args:
             species_order (List[str]): The order of the species in the array.
 
         Returns:
-            Tuple[jax.Array, jax.Array, Dict[str, float]]: The data, time, and initial conditions.
+            Tuple[jax.Array, jax.Array, jax.Array]: The data, time, and initial conditions.
 
         """
 
@@ -262,12 +289,30 @@ class Measurement(BaseModel):
                 f"The measurement species are inconsistent with the dataset species. Missing {missing_species} in measurement {self.id}"
             )
 
-        # Shape of the data is (n_time_points, n_species)
         data = jnp.array([self.data[sp] for sp in species_order]).swapaxes(0, 1)
         time = jnp.array(self.time)
-        inits = self.initial_conditions
+
+        if inits_to_array:
+            inits = jnp.array([self.initial_conditions[sp] for sp in species_order])
+        else:
+            inits = self.initial_conditions
 
         return data, time, inits
+
+    def to_jsonl(self):
+        """Converts this measurement object to the JSON Lines format"""
+
+        indices = range(len(self.time))
+        lines = []
+
+        for index in indices:
+            data = {sp: float(self.data[sp][index]) for sp in self.species}
+
+            data["time"] = float(self.time[index])
+
+            lines.append(json.dumps(data))
+
+        return "\n".join(lines)
 
     def plot(self, show=True, ax=None):
         """Plot the measurement data.
@@ -280,16 +325,11 @@ class Measurement(BaseModel):
         is_subplot = ax is not None
         color_iter = iter(mcolors.TABLEAU_COLORS)
         init_title = " ".join(
-            [
-                f"${key}={value}$"
-                for key, value in self.initial_conditions.items()
-            ]
+            [f"{key}: ${value:.2f}$" for key, value in self.initial_conditions.items()]
         )
 
         if ax is None:
             fig, ax = plt.subplots()
-        else:
-            fig = None
 
         for species in self.initial_conditions.keys():
             ax.plot(
@@ -297,17 +337,59 @@ class Measurement(BaseModel):
                 self.data[species],
                 "o",
                 label=f"{species}",
-                c=next(color_iter),
             )
 
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Concentration")
-        ax.set_title(init_title, fontweight="normal")
+        ax.grid(alpha=0.3, linestyle="--")
+        ax.set_xlabel("Time", fontsize=12)
+        ax.set_ylabel("Concentration", fontsize=12)
+        ax.set_title(init_title, fontsize=12)
 
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
-        if show:
+        if show and not is_subplot:
             plt.show()
 
-        if fig:
-            return fig
+    # ! Data Augmentation
+    def augment(
+        self,
+        sigma: float,
+        seed: int,
+    ) -> "Measurement":
+        """Augment the data by adding Gaussian noise.
+
+        Args:
+            sigma (float): The standard deviation of the Gaussian noise.
+            seed (int): The seed for the random number generator.
+
+        Returns:
+            Measurement: The augmented measurement.
+        """
+
+        data = {
+            sp: self._jitter_data(self.data[sp], sigma, seed)  # type: ignore
+            for sp in self.data.keys()
+        }
+
+        return Measurement(
+            data=data,  # type: ignore
+            time=self.time,
+            initial_conditions=self.initial_conditions,
+            id=self.id,
+        )
+
+    @staticmethod
+    def _jitter_data(x: jax.Array, sigma: float, seed: int) -> jax.Array:
+        """Jitters the data by adding Gaussian noise.
+
+        Args:
+            x (jax.Array): The data to be jittered.
+            sigma (float): The standard deviation of the Gaussian noise.
+            seed (int): The seed for the random number generator.
+
+        Returns:
+            jax.Array: The jittered data.
+        """
+
+        rng = np.random.default_rng(seed)
+
+        return jnp.array(x + jnp.array(rng.normal(loc=0.0, scale=sigma, size=x.shape)))
