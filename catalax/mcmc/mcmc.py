@@ -11,13 +11,12 @@ from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
 
 from catalax.model.parameter import Parameter
+from catalax.dataset.dataset import Dataset
 
 
 def run_mcmc(
     model: "Model",
-    data: Array,
-    initial_conditions: List[Dict[str, float]],
-    times: Array,
+    dataset: Dataset,
     yerrs: Union[float, Array],
     num_warmup: int,
     num_samples: int,
@@ -29,7 +28,6 @@ def run_mcmc(
     chain_method: str = "sequential",
     num_chains: int = 1,
     seed: int = 420,
-    in_axes: Optional[Tuple] = (0, None, 0),
     verbose: int = 1,
     max_steps: int = 64**4,
 ):
@@ -44,10 +42,8 @@ def run_mcmc(
 
     Args:
         model (Model): The model to fit.
-        data (Array): The data against which the model is fitted.
-        initial_conditions (List[Dict[str, float]]): The initial conditions of the model.
+        dataset (Dataset): The dataset to fit.
         yerrs (Array, float): The standard deviation of the observed data.
-        times (Array): The times at which the data has been measured.
         num_warmup (int): Number of warmup steps.
         num_samples (int): Number of samples.
         dense_mass (bool, optional): Whether to use a dense mass matrix or not. Defaults to True.
@@ -66,17 +62,22 @@ def run_mcmc(
         param.prior is not None for param in model.parameters.values()
     ), f"Parameters {', '.join([param.name for param in model.parameters.values() if param.prior is None])} do not have priors. Please specify priors for all parameters."
 
-    if verbose:
-        _print_priors(model.parameters.values())
+    # Unpack the dataset
+    assert set(dataset.species) == set(
+        model._get_species_order()
+    ), "Species in dataset and model do not match."
 
-    if isinstance(data, np.ndarray):
-        data = jnp.array(data)
+    data, times, y0s = dataset.to_jax_arrays(
+        model._get_species_order(),
+        inits_to_array=True,
+    )
 
-    if len(data.shape) != 3:
-        data = jnp.expand_dims(data, -1)
-
-    # Assemble the initial conditions
-    y0s = model._assemble_y0_array(initial_conditions, in_axes=in_axes)
+    # Determine dimensions
+    in_axes = dataset._get_vmap_dims(
+        data=data,
+        time=times,
+        y0s=y0s,  # type: ignore
+    )
 
     # Compile the model to obtain the simulation function
     model._setup_system(
