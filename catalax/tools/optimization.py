@@ -7,14 +7,13 @@ import jax.numpy as jnp
 from lmfit import Parameters, minimize
 from lmfit.minimizer import MinimizerResult
 
+from catalax.dataset.dataset import Dataset
 from catalax.model import Model
 
 
 def optimize(
     model: Model,
-    initial_conditions: List[Dict[str, float]],
-    data: jax.Array,
-    times: jax.Array,
+    dataset: Dataset,
     global_upper_bound: Optional[float] = 1e5,
     global_lower_bound: Optional[float] = 1e-6,
     dt0: float = 0.01,
@@ -38,9 +37,7 @@ def optimize(
 
     Args:
         model (Model): The model to fit.
-        initial_conditions (List[Dict[str, float]]): List of initial condition objects.
-        data (jax.Array): Data to fit against.
-        times (jax.Array): Time steps of the data.
+        dataset (Dataset): The dataset to fit the model to.
         global_upper_bound (Optional[float], optional): Global upper bound - Only applies to unspecified params. Defaults to 1e5.
         global_lower_bound (Optional[float], optional): Global lower bound - Only applies to unspecified params. Defaults to 1e-6.
         dt0 (float, optional): Inetgration step width. Defaults to 0.01.
@@ -59,12 +56,25 @@ def optimize(
             if ode.observable == True
         ]
     )
+
+    assert set(dataset.species) == set(
+        model._get_species_order()
+    ), "Species in dataset and model do not match."
+
+    data, times, initial_conditions = dataset.to_jax_arrays(model._get_species_order())
+    in_axes = dataset._get_vmap_dims(
+        data=data,
+        time=times,
+        y0s=initial_conditions,
+    )
+
     minimize_args = (
         model,
         initial_conditions,
         data,
         times,
         observables,
+        in_axes,
         dt0,
         max_steps,
     )
@@ -165,6 +175,7 @@ def _residual(
     data: jax.Array,
     times: jax.Array,
     observables: jax.Array,
+    in_axes: Tuple[Optional[int], None, Optional[int]],
     dt0: float = 0.01,
     max_steps: int = 64**4,
 ):
