@@ -21,6 +21,7 @@ class NeuralBase(eqx.Module):
     hyperparams: Dict
     solver: diffrax.AbstractSolver
     vector_field: Optional[Stack]
+    species_order: List[str]
 
     def __init__(
         self,
@@ -42,6 +43,7 @@ class NeuralBase(eqx.Module):
         self.solver = solver
         self.observable_indices = observable_indices
         self.vector_field = None
+        self.species_order = model._get_species_order()
 
         # Keep hyperparams for serialisation
         self.hyperparams = {
@@ -52,6 +54,7 @@ class NeuralBase(eqx.Module):
             "rbf": isinstance(activation, RBFLayer),
             "use_final_bias": use_final_bias,
             "observable_indices": observable_indices,
+            "species_order": self.species_order,
         }
 
         # Save solver and MLP
