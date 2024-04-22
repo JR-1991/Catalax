@@ -48,9 +48,8 @@ class Model(CatalaxBase):
         model.add_parameter(name="E_tot", equation="c1 + e1")
     """
 
-
     model_config = ConfigDict(
-        arbitrary_types_allowed = True,
+        arbitrary_types_allowed=True,
     )
 
     name: str
@@ -228,12 +227,12 @@ class Model(CatalaxBase):
         nsteps: Optional[int] = None,
         rtol: float = 1e-5,
         atol: float = 1e-5,
-        saveat: Union[SaveAt, jax.Array] = None,
+        saveat: Union[jax.Array, None] = None,
         parameters: Optional[jax.Array] = None,
         in_axes: Union[Tuple, InAxes, None] = None,
         max_steps: int = 4096,
         sensitivity: Optional[InAxes] = None,
-    ):
+    ) -> Tuple[jax.Array, jax.Array]:
         """
         Simulates a given model with the given initial conditions. The simulation can be
         performed either by specifying the number of steps or the time points at which to
@@ -306,9 +305,12 @@ class Model(CatalaxBase):
             # Warmup the simulation to make use of jit compilation
             self._warmup_simulation(y0, parameters, saveat, in_axes)
 
-            return saveat, self._sim_func(y0, parameters, saveat)
+        result = self._sim_func(y0, parameters, saveat)
 
-        return saveat, self._sim_func(y0, parameters, saveat)
+        if len(result.shape) != 3:
+            return saveat, jnp.expand_dims(result, axis=0)
+        else:
+            return saveat, result
 
     def _get_stoich_mat(self) -> jax.Array:
         """Creates the stoichiometry matrx based on the given model.
