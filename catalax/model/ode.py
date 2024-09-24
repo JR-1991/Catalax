@@ -14,17 +14,13 @@ from .utils import parameter_exists
 class ODE(CatalaxBase):
     class Config:
         arbitrary_types_allowed = True
-        fields = {
-            "parameters": {"exclude": True},
-            "species": {"exclude": True},
-        }
 
     species: Species
     equation: Expr
     observable: bool = True
     parameters: Dict[Union[str, Expr], Parameter] = Field(default_factory=DottedDict)
 
-    __model__: Optional["Model"] = PrivateAttr(default=None)  # type: ignore
+    _model: Optional["Model"] = PrivateAttr(default=None)  # type: ignore
 
     @validator("equation", pre=True)
     def converts_ode_to_sympy(cls, value):
@@ -37,7 +33,7 @@ class ODE(CatalaxBase):
 
         super().__setattr__(name, value)
 
-        if name == "__model__":
+        if name == "_model":
             self.add_parameters_to_model()
 
     def add_parameters_to_model(self):
@@ -48,20 +44,20 @@ class ODE(CatalaxBase):
         done upon addition of the model due to no given knowledge of the species.
         """
 
-        if self.__model__ is None:
+        if self._model is None:
             return None
 
         for symbol in self.equation.free_symbols:
-            if str(symbol) in self.__model__.species or str(symbol) == "t":
+            if str(symbol) in self._model.species or str(symbol) == "t":
                 # Skip species and time symbol
                 continue
-            elif parameter_exists(str(symbol), self.__model__.parameters):
+            elif parameter_exists(str(symbol), self._model.parameters):
                 # Assign parameter if it is already present in the model
-                self.parameters[str(symbol)] = self.__model__.parameters[str(symbol)]
+                self.parameters[str(symbol)] = self._model.parameters[str(symbol)]
                 continue
 
             # Create a new one and add it to the model and ODE
             parameter = Parameter(name=str(symbol), symbol=symbol)  # type: ignore
 
             self.parameters[str(symbol)] = parameter
-            self.__model__.parameters[str(symbol)] = parameter
+            self._model.parameters[str(symbol)] = parameter

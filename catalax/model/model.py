@@ -50,9 +50,6 @@ class Model(CatalaxBase):
 
     class Config:
         arbitrary_types_allowed = True
-        fields = {
-            "term": {"exclude": True},
-        }
 
     name: str
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
@@ -116,7 +113,7 @@ class Model(CatalaxBase):
             equation=equation, species=self.species[species], observable=observable
         )
 
-        self.odes[species].__model__ = self
+        self.odes[species]._model = self
 
     def add_species(self, species_string: str = "", **species_map):
         """Adds a single or multiple species to the model, which can later be used in ODEs.
@@ -164,7 +161,6 @@ class Model(CatalaxBase):
 
             # Make sure the symbol is valid
             check_symbol(symbol)
-
             self.species[symbol] = Species(name=name, symbol=Symbol(symbol))
 
     @staticmethod

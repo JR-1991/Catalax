@@ -25,7 +25,7 @@ class Parameter(CatalaxBase):
     prior: Any = None  # TODO: Fix this typing
     _prior_str_: Optional[str] = None
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def _assign_prior_string(cls, values):
         if isinstance(values["prior"], tuple):
             prior, prior_str = values["prior"]
@@ -34,7 +34,7 @@ class Parameter(CatalaxBase):
 
         return values
 
-    __repr_fields__: List[str] = PrivateAttr(
+    _repr_fields: List[str] = PrivateAttr(
         default={
             "name": "name",
             "symbol": "symbol",

@@ -37,10 +37,10 @@ class PrettyDict(DottedDict):
 
     @staticmethod
     def _fields_to_print(cls_: CatalaxBase) -> Dict[str, str]:
-        if len(cls_.__repr_fields__) == 1 and cls_.__repr_fields__[0] == "__all__":
+        if len(cls_._repr_fields) == 1 and cls_._repr_fields[0] == "__all__":
             return {key: key for key in cls_.__dict__}
 
-        return cls_.__repr_fields__
+        return cls_._repr_fields
 
 
 def odeprint(y, expr):
@@ -77,16 +77,16 @@ def check_symbol(symbol: str) -> None:
     """Checks whether the given symbol is a valid symbol"""
 
     ERROR_MESSAGE = f"""Symbol '{symbol}' is not a valid symbol. The following rules apply:
-    
+
     (1) The first character must be a letter
     (2) The remaining characters can be letters and numbers
     (3) The symbol cannot end with an underscore
     (4) The symbol can contain at most one underscore followed by letters and numbers
-    
+
     These are valid symbols:
-    
+
     k1, k_12, k_max, k_max1
-    
+
     """
 
     # Convert to string to use string methods

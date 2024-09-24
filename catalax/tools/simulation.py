@@ -57,7 +57,7 @@ class Simulation(BaseModel):
     parameters: List[str]
     stoich_mat: jax.Array
     dt0: float = 0.1
-    solver: AbstractSolver = Tsit5
+    solver: Any = Tsit5
     rtol: float = 1e-5
     atol: float = 1e-5
     max_steps: int = 64**4
