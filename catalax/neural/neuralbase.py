@@ -4,14 +4,14 @@ from typing import Dict, List, Optional
 
 import diffrax
 import equinox as eqx
+import equinox.internal as eqxi
 import jax
-import jax.random as jrandom
 import jax.numpy as jnp
+import jax.random as jrandom
 
 from catalax import Model
 from catalax.neural.rbf import RBFLayer
 from catalax.tools.simulation import Stack
-
 from .mlp import MLP
 
 
@@ -43,7 +43,7 @@ class NeuralBase(eqx.Module):
         self.solver = solver
         self.observable_indices = observable_indices
         self.vector_field = None
-        self.species_order = model._get_species_order()
+        self.species_order = model.get_species_order()
 
         # Keep hyperparams for serialisation
         self.hyperparams = {
@@ -123,7 +123,7 @@ class NeuralBase(eqx.Module):
         # Get observable indices
         observable_indices = [
             index
-            for index, species in enumerate(model._get_species_order())
+            for index, species in enumerate(model.get_species_order())
             if model.odes[species].observable
         ]
 
@@ -183,3 +183,6 @@ class NeuralBase(eqx.Module):
             )
             f.write((hyperparam_str + "\n").encode())
             eqx.tree_serialise_leaves(f, self)
+
+    def save_to_onnx(self):
+        return eqxi.to_onnx(self.func)

@@ -3,6 +3,7 @@ from typing import Dict, Optional, Union
 from dotted_dict import DottedDict
 from pydantic import BaseModel, Field, PrivateAttr, validator
 from pydantic.config import ConfigDict
+from pydantic.functional_validators import field_validator
 from sympy import Expr, Symbol, sympify
 
 from catalax.model.base import CatalaxBase
@@ -13,9 +14,8 @@ from .utils import parameter_exists
 
 
 class ODE(CatalaxBase):
-
     model_config = ConfigDict(
-        arbitrary_types_allowed = True,
+        arbitrary_types_allowed=True,
     )
 
     species: Species = Field(..., exclude=True)
@@ -28,7 +28,7 @@ class ODE(CatalaxBase):
 
     _model: Optional["Model"] = PrivateAttr(default=None)  # type: ignore
 
-    @validator("equation", pre=True)
+    @field_validator("equation", mode="before")
     def converts_ode_to_sympy(cls, value):
         """Convertes a string"""
 

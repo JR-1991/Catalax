@@ -7,7 +7,6 @@ import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 import jax.tree_util as jtn
-import numpy as np
 import optax
 import tqdm
 
@@ -26,7 +25,7 @@ def train_neural_ode(
     save_milestones: bool = False,
     milestone_dir: str = "./milestones",
     weight_scale: float = 1e-2,
-):
+) -> NeuralBase:
 
     # Extract data from dataset
     data, times, inital_conditions = dataset.to_jax_arrays(
@@ -86,7 +85,7 @@ def train_neural_ode(
         )
 
         # Set up progress bar
-        pbar = tqdm.tqdm(total=strat.steps, desc=f"╰── startup")
+        pbar = tqdm.tqdm(total=strat.steps, desc="╰── startup")
 
         for step, (yi, y0i, ti) in zip(range(strat.steps), batches):
             loss, model, opt_state = make_step(

@@ -1,17 +1,15 @@
-from typing import Callable, Dict, List, Optional, Tuple, Union
-import numpy as np
+from typing import Callable, List, Optional, Tuple, Union
 
+import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-
-import jax
 from jax import Array
 from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
 
-from catalax.model.parameter import Parameter
 from catalax.dataset.dataset import Dataset
+from catalax.model.parameter import Parameter
 
 
 def run_mcmc(
@@ -64,16 +62,16 @@ def run_mcmc(
 
     # Unpack the dataset
     assert set(dataset.species) == set(
-        model._get_species_order()
+        model.get_species_order()
     ), "Species in dataset and model do not match."
 
     data, times, y0s = dataset.to_jax_arrays(
-        model._get_species_order(),
+        model.get_species_order(),
         inits_to_array=True,
     )
 
     # Determine dimensions
-    in_axes = dataset._get_vmap_dims(
+    in_axes = dataset.get_vmap_dims(
         data=data,
         time=times,
         y0s=y0s,  # type: ignore
@@ -89,7 +87,7 @@ def run_mcmc(
     # Get all priors
     priors = [
         (model.parameters[param].name, model.parameters[param].prior._distribution_fun)
-        for param in model._get_parameter_order()
+        for param in model.get_parameter_order()
     ]
 
     if neuralode is not None:
@@ -158,7 +156,7 @@ def _setup_model(
     observables = jnp.array(
         [
             i
-            for i, species in enumerate(model._get_species_order())
+            for i, species in enumerate(model.get_species_order())
             if model.odes[species].observable
         ]
     )

@@ -1,24 +1,19 @@
-from typing import List, Optional, Any, Union
+from typing import List, Optional, Any
 
+import diffrax as dfx
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-
-import diffrax.solver as solver
 from diffrax import (
-    AbstractSolver,
-    ODETerm,
     PIDController,
     SaveAt,
-    Tsit5,
     diffeqsolve,
 )
+from pydantic import BaseModel, PrivateAttr, ConfigDict
 
-from pydantic import BaseModel, PrivateAttr
-
-from .symbolicmodule import SymbolicModule
 from catalax.model.inaxes import InAxes
 from catalax.model.ode import ODE
+from .symbolicmodule import SymbolicModule
 
 
 class Stack(eqx.Module):
@@ -51,8 +46,9 @@ class Stack(eqx.Module):
 
 
 class Simulation(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
     odes: List[ODE]
     parameters: List[str]
@@ -62,7 +58,7 @@ class Simulation(BaseModel):
     atol: float = 1e-5
     max_steps: int = 64**4
     sensitivity: Optional[InAxes] = None
-    solver: Any = Tsit5
+    solver: Any = dfx.Tsit5
 
     _simulation_func = PrivateAttr(default=None)
 
@@ -73,7 +69,7 @@ class Simulation(BaseModel):
 
         def _simulate_system(y0, parameters, time):
             sol = diffeqsolve(
-                terms=ODETerm(stack),  # type: ignore
+                terms=dfx.ODETerm(stack),
                 solver=self.solver(),  # type: ignore
                 t0=0,
                 t1=time[-1],
@@ -92,11 +88,8 @@ class Simulation(BaseModel):
                 self.sensitivity, InAxes
             ), "Expected sensitivity to be an instance of 'InAxes'"
 
-            sens_fun = lambda y0s, parameters, time: _simulate_system(
-                y0s,
-                parameters,
-                time,
-            )
+            def sens_fun(y0s, parameters, time):
+                return _simulate_system(y0s, parameters, time)
 
             index = self.sensitivity.value.index(0)
 

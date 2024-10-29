@@ -1,17 +1,18 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from sympy import Expr, symbols
 
 from catalax.model.base import CatalaxBase
 
 
 class Species(CatalaxBase):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
     name: str
     symbol: Expr
 
-    @validator("symbol", pre=True)
+    @field_validator("symbol", mode="before")
     def convert_string_species_to_sympy(cls, value):
         """Converts given strings of unit definitions into SymPy symbols"""
 

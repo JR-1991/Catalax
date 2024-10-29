@@ -1,12 +1,12 @@
 import math
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from numpyro.infer import MCMC
 from numpyro.diagnostics import hpdi
+from numpyro.infer import MCMC
 
 from catalax.model.model import Model
 from catalax.neural.neuralbase import NeuralBase
@@ -37,7 +37,7 @@ def visualize(
 
     if colors is None:
         color_iter = iter(mcolors.TABLEAU_COLORS)  # type: ignore
-        colors = {species: next(color_iter) for species in model._get_species_order()}
+        colors = {species: next(color_iter) for species in model.get_species_order()}
 
     has_fit = all(
         parameter.value is not None for parameter in model.parameters.values()
@@ -126,7 +126,7 @@ def visualize(
         remaining_axes.remove((row, col))
 
         for species, color in colors.items():
-            index = model._get_species_order().index(species)
+            index = model.get_species_order().index(species)
 
             if use_names:
                 species = model.species[species].name
@@ -218,7 +218,7 @@ def _check_color_species_consistency(
     """Checks whether the given color mapping is consistent"""
 
     # Check whether all species in the color mapping are in the model and vice versa
-    diff1 = set(color_mapping.keys()).difference(model._get_species_order())
+    diff1 = set(color_mapping.keys()).difference(model.get_species_order())
     diff2 = set(model.species.keys()).difference(color_mapping.keys())
 
     if len(diff1) > 0 or len(diff2) > 0:
@@ -239,7 +239,7 @@ def _get_quantile_preds(
 ) -> Tuple[jax.Array, jax.Array]:
     samples = mcmc.get_samples()
     hdpi_range = [
-        hpdi(mcmc.get_samples()[param], mass) for param in model._get_parameter_order()
+        hpdi(mcmc.get_samples()[param], mass) for param in model.get_parameter_order()
     ]
 
     # Construct upper and lower parameters

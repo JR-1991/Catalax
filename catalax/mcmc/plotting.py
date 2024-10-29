@@ -41,7 +41,7 @@ def plot_posterior(mcmc, model, **kwargs) -> None:
     """Plots the posterior distribution of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    fig = az.plot_posterior(inf_data, var_names=model._get_parameter_order(), **kwargs)
+    fig = az.plot_posterior(inf_data, var_names=model.get_parameter_order(), **kwargs)
 
     return fig
 
@@ -75,7 +75,7 @@ def plot_credibility_interval(
     # Get HPDI
     hpdi_mu = hpdi(post_states, 0.9)
 
-    for i, species in enumerate(model._get_species_order()):
+    for i, species in enumerate(model.get_species_order()):
         plt.plot(time, states[:, i], label=f"{species} simulation")
         plt.fill_between(
             time[0],
@@ -94,7 +94,7 @@ def plot_trace(mcmc, model, **kwargs) -> None:
     """Plots the trace of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    f = az.plot_trace(inf_data, var_names=model._get_parameter_order(), **kwargs)
+    f = az.plot_trace(inf_data, var_names=model.get_parameter_order(), **kwargs)
 
     plt.tight_layout()
 
@@ -105,7 +105,7 @@ def plot_forest(mcmc, model, **kwargs) -> None:
     """Plots a forest plot of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    f = az.plot_forest(inf_data, var_names=model._get_parameter_order(), **kwargs)
+    f = az.plot_forest(inf_data, var_names=model.get_parameter_order(), **kwargs)
 
     plt.tight_layout()
 

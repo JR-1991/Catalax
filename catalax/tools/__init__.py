@@ -1,2 +1,2 @@
-from .simulation import Stack
 from .simulation import Simulation
+from .simulation import Stack
