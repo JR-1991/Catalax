@@ -499,10 +499,14 @@ class Measurement(BaseModel):
             )
         )
 
+        if measurement.id is None:
+            measurement.id = str(uuid4())
+
         return cls(
             initial_conditions=initials,
             data=data,
             time=time,
+            id=measurement.id,
         )
 
     def has_data(self):
