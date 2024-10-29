@@ -1,29 +1,33 @@
+from __future__ import annotations
+
+import copy
 import json
 import os
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union, Any
 
 import jax
 import jax.numpy as jnp
 import pandas as pd
-from diffrax import ODETerm, SaveAt, Tsit5
+from diffrax import ODETerm, Tsit5
 from dotted_dict import DottedDict
-from pydantic import Field, PrivateAttr, validator, ConfigDict
+from jax import Array
+from pydantic import Field, PrivateAttr, ConfigDict, field_validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
+from pathlib import Path
 
-from catalax.model.base import CatalaxBase
 from catalax.mcmc import priors
+from catalax.model.base import CatalaxBase
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
-
+from .inaxes import InAxes
 from .ode import ODE
 from .parameter import Parameter
 from .species import Species
 from .utils import PrettyDict, check_symbol, eqprint, odeprint
-from .inaxes import InAxes
+from ..dataset import Dataset
 
 
 class Model(CatalaxBase):
-
     """
     Model class for storing ODEs, species, and parameters, which is used
     to describe a biological system. Model classes can be passed to analysis
@@ -219,7 +223,6 @@ class Model(CatalaxBase):
 
     def simulate(
         self,
-        initial_conditions: List[Dict[str, float]],
         dt0: float = 0.1,
         solver=Tsit5,
         t0: Optional[int] = None,
@@ -227,18 +230,22 @@ class Model(CatalaxBase):
         nsteps: Optional[int] = None,
         rtol: float = 1e-5,
         atol: float = 1e-5,
+        initial_conditions: Optional[List[Dict[str, float]]] = None,
+        dataset: Optional[Dataset] = None,
         saveat: Union[jax.Array, None] = None,
         parameters: Optional[jax.Array] = None,
-        in_axes: Union[Tuple, InAxes, None] = None,
+        in_axes: Union[Tuple, InAxes, None] = InAxes.Y0.value,
         max_steps: int = 4096,
         sensitivity: Optional[InAxes] = None,
-    ) -> Tuple[jax.Array, jax.Array]:
+        return_array: bool = False,
+    ) -> tuple[Array | None, Array | Any] | Dataset:
         """
         Simulates a given model with the given initial conditions. The simulation can be
         performed either by specifying the number of steps or the time points at which to
         save the results. If both are specified, the number of steps will be ignored.
 
         Args:
+            dataset (Dataset): The dataset to simulate.
             initial_conditions (List[Dict[str, float]]): The initial conditions for the simulation.
             dt0 (float, optional): The initial time step size. Defaults to 0.1.
             solver (Type, optional): The solver to use for the simulation. Defaults to Tsit5.
@@ -252,6 +259,7 @@ class Model(CatalaxBase):
             in_axes (Tuple, optional): The axes along which to differentiate the simulation. Defaults to None.
             max_steps (int, optional): The maximum number of steps to take in the simulation. Defaults to 4096.
             sensitivity (InAxes, optional): The axes along which to compute sensitivities. Defaults to None.
+            return_array (bool, optional): Whether to return the simulation results as an array. Defaults to False.
 
         Returns:
             (jax.Array, jax.Array): The simulation results (time, trajectories)
@@ -267,13 +275,18 @@ class Model(CatalaxBase):
         elif nsteps is None and saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
 
-        if isinstance(initial_conditions, dict):
-            initial_conditions = [initial_conditions]
+        if dataset:
+            dataset = copy.deepcopy(dataset)
+            y0 = dataset.to_y0_matrix(species_order=self.get_species_order())
+        elif initial_conditions:
+            dataset = Dataset(species=self.get_species_order())
+            y0 = self._assemble_y0_array(initial_conditions, in_axes)
+        elif dataset and initial_conditions:
+            raise ValueError(
+                "Please specify either a dataset or initial conditions, not both."
+            )
 
         parameters = self._get_parameters(parameters)
-
-        # Setup the initial conditions
-        y0 = self._assemble_y0_array(initial_conditions, in_axes)
 
         # Setup save points
         if nsteps is not None:
@@ -308,9 +321,28 @@ class Model(CatalaxBase):
         result = self._sim_func(y0, parameters, saveat)
 
         if len(result.shape) != 3:
-            return saveat, jnp.expand_dims(result, axis=0)
-        else:
+            result = jnp.expand_dims(result, axis=0)
+
+        # For now create a new dataset
+        dataset = Dataset.from_model(self)
+
+        if return_array:
             return saveat, result
+        else:
+            for y0_i in range(result.shape[0]):
+                init_conc = {
+                    species: float(y0[y0_i, sp_j])
+                    for sp_j, species in enumerate(self.get_species_order())
+                }
+
+                dataset.add_from_jax_array(
+                    model=self,
+                    data=result[y0_i, :, :],
+                    time=saveat,
+                    initial_condition=init_conc,
+                )
+
+            return dataset
 
     def _get_stoich_mat(self) -> jax.Array:
         """Creates the stoichiometry matrx based on the given model.
@@ -323,7 +355,7 @@ class Model(CatalaxBase):
 
         if hasattr(self, "reactions"):
             raise NotImplementedError(
-                f"So far stoichioemtry matrix construction is exclusive to ODE models and not implemented yet."
+                "So far stoichioemtry matrix construction is exclusive to ODE models and not implemented yet."
             )
 
         stoich_mat = jnp.zeros((len(self.odes), len(self.odes)))
@@ -357,10 +389,10 @@ class Model(CatalaxBase):
         """
 
         # Retrieve ODEs based on species order
-        odes = [self.odes[species] for species in self._get_species_order()]
+        odes = [self.odes[species] for species in self.get_species_order()]
         simulation_setup = Simulation(
             odes=odes,
-            parameters=self._get_parameter_order(),
+            parameters=self.get_parameter_order(),
             stoich_mat=self._get_stoich_mat(),
             **kwargs,
         )
@@ -380,13 +412,13 @@ class Model(CatalaxBase):
         if parameters is not None:
             return parameters
 
-        return jnp.array([self.parameters[param].value for param in self._get_parameter_order()])  # type: ignore
+        return jnp.array([self.parameters[param].value for param in self.get_parameter_order()])  # type: ignore
 
-    def _get_parameter_order(self) -> List[str]:
+    def get_parameter_order(self) -> List[str]:
         """Returns the order of the parameters in the model"""
         return sorted(self.parameters.keys())
 
-    def _get_species_order(self) -> List[str]:
+    def get_species_order(self) -> List[str]:
         """Returns the order of the species in the model"""
         return sorted(self.species.keys())
 
@@ -407,7 +439,7 @@ class Model(CatalaxBase):
 
         if in_axes is not None and len(initial_conditions) > 1:
             return jnp.stack(
-                [df_inits[s].values for s in self._get_species_order()], axis=-1  # type: ignore
+                [df_inits[s].values for s in self.get_species_order()], axis=-1  # type: ignore
             )
         elif in_axes and len(initial_conditions) > 1:
             raise ValueError(
@@ -415,7 +447,7 @@ class Model(CatalaxBase):
             )
 
         return jnp.array(
-            [initial_conditions[0][species] for species in self._get_species_order()]
+            [initial_conditions[0][species] for species in self.get_species_order()]
         )
 
     def _warmup_simulation(self, y0, parameters, saveat, in_axes):
@@ -459,8 +491,8 @@ class Model(CatalaxBase):
             in_axes is None or len(in_axes) == 3
         ), "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
 
-        odes = [self.odes[species] for species in self._get_species_order()]
-        fun = Stack(odes=odes, parameters=self._get_parameter_order())
+        odes = [self.odes[species] for species in self.get_species_order()]
+        fun = Stack(odes=odes, parameters=self.get_parameter_order())
 
         if in_axes is None:
             return fun
@@ -514,9 +546,9 @@ class Model(CatalaxBase):
         elif self.term is None:
             self._setup_term()
 
-        species_maps = {symbol: i for i, symbol in enumerate(self._get_species_order())}
+        species_maps = {symbol: i for i, symbol in enumerate(self.get_species_order())}
         parameter_maps = {
-            symbol: i for i, symbol in enumerate(self._get_parameter_order())
+            symbol: i for i, symbol in enumerate(self.get_parameter_order())
         }
 
         def _vector_field(y, parameters):
@@ -552,7 +584,7 @@ class Model(CatalaxBase):
 
         return ""
 
-    @validator("species", pre=True)
+    @field_validator("species", mode="before")
     def _convert_species_to_sympy(cls, value):
         """Converts given strings of unit definitions into SymPy symbols"""
 
@@ -591,7 +623,7 @@ class Model(CatalaxBase):
         return [
             {
                 species: float(value)
-                for species, value in zip(self._get_species_order(), y0)
+                for species, value in zip(self.get_species_order(), y0)
             }
             for y0 in y0_array
         ]
@@ -667,7 +699,7 @@ class Model(CatalaxBase):
         # Get observables
         observables = [
             index
-            for index, species in enumerate(self._get_species_order())
+            for index, species in enumerate(self.get_species_order())
             if self.odes[species].observable
         ]
 
@@ -680,7 +712,6 @@ class Model(CatalaxBase):
         return aic
 
     # ! Importers
-
     @classmethod
     def load(cls, path: str):
         """Loads a model from a JSON file and initializes a model.
@@ -731,3 +762,7 @@ class Model(CatalaxBase):
             model.parameters[parameter.symbol].__dict__.update(parameter)
 
         return model
+
+    @classmethod
+    def from_enzymeml(cls, path: Path | str):
+        raise NotImplementedError("This method is not implemented yet.")

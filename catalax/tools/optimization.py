@@ -1,4 +1,3 @@
-import sys
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple
 
@@ -53,16 +52,17 @@ def optimize(
         [
             index
             for index, ode in enumerate(model.odes.values())
-            if ode.observable == True
+            if ode.observable is True
         ]
     )
 
     assert set(dataset.species) == set(
-        model._get_species_order()
+        model.get_species_order()
     ), "Species in dataset and model do not match."
 
-    data, times, initial_conditions = dataset.to_jax_arrays(model._get_species_order())
-    in_axes = dataset._get_vmap_dims(
+    data, times, initial_conditions = dataset.to_jax_arrays(model.get_species_order())
+
+    in_axes = dataset.get_vmap_dims(
         data=data,
         time=times,
         y0s=initial_conditions,
@@ -79,7 +79,7 @@ def optimize(
         max_steps,
     )
 
-    _iPython_print(params)
+    _ipython_print(params)
 
     result = minimize(
         _residual,
@@ -88,8 +88,8 @@ def optimize(
         method=method,
     )
 
-    _iPython_flush()
-    _iPython_print(result)
+    _ipython_flush()
+    _ipython_print(result)
 
     # Update the model with the inferred parameters
     new_model = deepcopy(model)
@@ -103,7 +103,7 @@ def optimize(
     )
 
 
-def _iPython_print(obj):
+def _ipython_print(obj):
     """Print Jupyter things when available"""
     try:
         from IPython.display import display
@@ -113,7 +113,7 @@ def _iPython_print(obj):
         pass
 
 
-def _iPython_flush():
+def _ipython_flush():
     """Flush Jupyter things when available"""
     try:
         from IPython.display import clear_output
@@ -196,7 +196,7 @@ def _residual(
     """
 
     params = {**params.valuesdict()}  # type: ignore
-    parameters = jnp.array([params[param] for param in model._get_parameter_order()])
+    parameters = jnp.array([params[param] for param in model.get_parameter_order()])
 
     _, states = model.simulate(
         initial_conditions=y0s,
@@ -205,6 +205,7 @@ def _residual(
         saveat=times,  # type: ignore
         max_steps=max_steps,
         parameters=parameters,
+        return_array=True,
     )
 
     return data - states[:, :, observables]
