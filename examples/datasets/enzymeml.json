@@ -1,0 +1,2900 @@
+{
+  "name": "Model 4",
+  "references": [],
+  "creators": [],
+  "vessels": [
+    {
+      "id": "v0",
+      "name": "Falcon Tube",
+      "volume": 5.0,
+      "unit": {
+        "id": "u0",
+        "name": "ml",
+        "base_units": [
+          {
+            "kind": "litre",
+            "exponent": 1,
+            "scale": -3.0
+          }
+        ]
+      },
+      "constant": true
+    }
+  ],
+  "proteins": [
+    {
+      "id": "p0",
+      "name": "E",
+      "constant": false,
+      "sequence": "MRRLAACLLATAVAAATSAALAQTSPMTPDITGKPFVAGDAANDYVKREVMIPMRDGVKLHTVIVLPKGARNAPIVLTRTPYDASGRTERLASPHMKDLLSAGDDVFVEGGYIRVFQDVRGKYGSEGDYVMTRPLRGPLNPSEVDHATDAWDTIDWLVKNVKESNGKVGMIGSSYEGFTVVMALTNPHPALKVAAPESPMIDGWMGDDWFNYGAFRQVNFDYFTGQLSKRGKGAGIPRQGHDDYSNFLQAGSAGDFAKAAGLEQLPWWHKLTEHAAYDSFWQEQALDKVMARTPLKVPTMWLQGLWDQEDMWGAIHSYAAMEPRDKSNKLNYLVMGPWRHSQVNSDASSLGALNFDGDTARQFRRDVLRPFFDQYLVDGAPKAATPPVFIYNTGENHWDRLQAWPRSCDKGCAAKSKPLYLQAGGKLSFQAPTAAQPAFEEYVSDPAKPVPFVPRPVDFGDRSMWTTWLVHDQRFVDGRPDVLTFVTEPLTAPLQIAGAPDVHLQASTSGSDSDWVVKLIDVYPDEMAADPKMGGYELPVSMAIFRGRYRESFSTPAPLAANQPLAFQFGLPTANHTFQPGHRVMVQVQSSLFPLYDRNPQTYVPNVFFAKPGDYQKATQRVYVAPGQGSYISLPVR",
+      "vessel_id": "v0",
+      "ecnumber": "3.1.1.43",
+      "organism": "Xanthomonas campestris pv. campestris",
+      "references": []
+    },
+    {
+      "id": "p1",
+      "name": "EA",
+      "constant": false,
+      "sequence": "MRRLAACLLATAVAAATSAALAQTSPMTPDITGKPFVAGDAANDYVKREVMIPMRDGVKLHTVIVLPKGARNAPIVLTRTPYDASGRTERLASPHMKDLLSAGDDVFVEGGYIRVFQDVRGKYGSEGDYVMTRPLRGPLNPSEVDHATDAWDTIDWLVKNVKESNGKVGMIGSSYEGFTVVMALTNPHPALKVAAPESPMIDGWMGDDWFNYGAFRQVNFDYFTGQLSKRGKGAGIPRQGHDDYSNFLQAGSAGDFAKAAGLEQLPWWHKLTEHAAYDSFWQEQALDKVMARTPLKVPTMWLQGLWDQEDMWGAIHSYAAMEPRDKSNKLNYLVMGPWRHSQVNSDASSLGALNFDGDTARQFRRDVLRPFFDQYLVDGAPKAATPPVFIYNTGENHWDRLQAWPRSCDKGCAAKSKPLYLQAGGKLSFQAPTAAQPAFEEYVSDPAKPVPFVPRPVDFGDRSMWTTWLVHDQRFVDGRPDVLTFVTEPLTAPLQIAGAPDVHLQASTSGSDSDWVVKLIDVYPDEMAADPKMGGYELPVSMAIFRGRYRESFSTPAPLAANQPLAFQFGLPTANHTFQPGHRVMVQVQSSLFPLYDRNPQTYVPNVFFAKPGDYQKATQRVYVAPGQGSYISLPVR",
+      "vessel_id": "v0",
+      "ecnumber": "3.1.1.43",
+      "organism": "Xanthomonas campestris pv. campestris",
+      "references": []
+    },
+    {
+      "id": "p2",
+      "name": "ED",
+      "constant": false,
+      "sequence": "MRRLAACLLATAVAAATSAALAQTSPMTPDITGKPFVAGDAANDYVKREVMIPMRDGVKLHTVIVLPKGARNAPIVLTRTPYDASGRTERLASPHMKDLLSAGDDVFVEGGYIRVFQDVRGKYGSEGDYVMTRPLRGPLNPSEVDHATDAWDTIDWLVKNVKESNGKVGMIGSSYEGFTVVMALTNPHPALKVAAPESPMIDGWMGDDWFNYGAFRQVNFDYFTGQLSKRGKGAGIPRQGHDDYSNFLQAGSAGDFAKAAGLEQLPWWHKLTEHAAYDSFWQEQALDKVMARTPLKVPTMWLQGLWDQEDMWGAIHSYAAMEPRDKSNKLNYLVMGPWRHSQVNSDASSLGALNFDGDTARQFRRDVLRPFFDQYLVDGAPKAATPPVFIYNTGENHWDRLQAWPRSCDKGCAAKSKPLYLQAGGKLSFQAPTAAQPAFEEYVSDPAKPVPFVPRPVDFGDRSMWTTWLVHDQRFVDGRPDVLTFVTEPLTAPLQIAGAPDVHLQASTSGSDSDWVVKLIDVYPDEMAADPKMGGYELPVSMAIFRGRYRESFSTPAPLAANQPLAFQFGLPTANHTFQPGHRVMVQVQSSLFPLYDRNPQTYVPNVFFAKPGDYQKATQRVYVAPGQGSYISLPVR",
+      "vessel_id": "v0",
+      "ecnumber": "3.1.1.43",
+      "organism": "Xanthomonas campestris pv. campestris",
+      "references": []
+    }
+  ],
+  "complexes": [
+    {
+      "id": "c0",
+      "name": "E·PGME",
+      "constant": false,
+      "vessel_id": "v0",
+      "participants": [
+        "p0",
+        "s0"
+      ]
+    },
+    {
+      "id": "c1",
+      "name": "E·7-ADCA",
+      "constant": false,
+      "vessel_id": "v0",
+      "participants": [
+        "p0",
+        "s1"
+      ]
+    },
+    {
+      "id": "c2",
+      "name": "E·PG",
+      "constant": false,
+      "vessel_id": "v0",
+      "participants": [
+        "p0",
+        "s3"
+      ]
+    },
+    {
+      "id": "c3",
+      "name": "E·PGME·PGME",
+      "constant": false,
+      "vessel_id": "v0",
+      "participants": [
+        "p0",
+        "s0",
+        "s0"
+      ]
+    },
+    {
+      "id": "c4",
+      "name": "EA·7-ADCA",
+      "constant": false,
+      "vessel_id": "v0",
+      "participants": [
+        "p1",
+        "s1"
+      ]
+    },
+    {
+      "id": "c5",
+      "name": "EA·PGME",
+      "constant": false,
+      "vessel_id": "v0",
+      "participants": [
+        "p1",
+        "s0"
+      ]
+    },
+    {
+      "id": "c6",
+      "name": "E·CEX",
+      "constant": false,
+      "vessel_id": "v0",
+      "participants": [
+        "p0",
+        "s2"
+      ]
+    }
+  ],
+  "small_molecules": [
+    {
+      "id": "s0",
+      "name": "PGME",
+      "constant": false,
+      "vessel_id": "v0",
+      "references": []
+    },
+    {
+      "id": "s1",
+      "name": "7-ADCA",
+      "constant": false,
+      "vessel_id": "v0",
+      "references": []
+    },
+    {
+      "id": "s2",
+      "name": "CEX",
+      "constant": false,
+      "vessel_id": "v0",
+      "references": []
+    },
+    {
+      "id": "s3",
+      "name": "PG",
+      "constant": false,
+      "vessel_id": "v0",
+      "references": []
+    }
+  ],
+  "reactions": [
+    {
+      "id": "r0",
+      "name": "reaction-1",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "v_r * (K_n * c1 - p0 * s1)",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "s1",
+            "name": "s1",
+            "symbol": "s1"
+          },
+          {
+            "id": "p0",
+            "name": "p0",
+            "symbol": "p0"
+          },
+          {
+            "id": "c1",
+            "name": "c1",
+            "symbol": "c1"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c1",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s1",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r1",
+      "name": "reaction-2",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "v_r * (K_s * c0 - p0 * s0)",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "s0",
+            "name": "s0",
+            "symbol": "s0"
+          },
+          {
+            "id": "p0",
+            "name": "p0",
+            "symbol": "p0"
+          },
+          {
+            "id": "c0",
+            "name": "c0",
+            "symbol": "c0"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c0",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s0",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r2",
+      "name": "reaction-3",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "k_2 * c0",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "c0",
+            "name": "c0",
+            "symbol": "c0"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c0",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p1",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r3",
+      "name": "reaction-4",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "v_r * (K_si * c3 - c0 * s0)",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "s0",
+            "name": "s0",
+            "symbol": "s0"
+          },
+          {
+            "id": "c0",
+            "name": "c0",
+            "symbol": "c0"
+          },
+          {
+            "id": "c3",
+            "name": "c3",
+            "symbol": "c3"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c3",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "c0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s0",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r4",
+      "name": "reaction-5",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "v_r * (K_si * c5 - p1 * s0)",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "s0",
+            "name": "s0",
+            "symbol": "s0"
+          },
+          {
+            "id": "p1",
+            "name": "p1",
+            "symbol": "p1"
+          },
+          {
+            "id": "c5",
+            "name": "c5",
+            "symbol": "c5"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c5",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p1",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s0",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r5",
+      "name": "reaction-6",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "k_6 * c5",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "c5",
+            "name": "c5",
+            "symbol": "c5"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c5",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s3",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r6",
+      "name": "reaction-7",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "k_3 * p1",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "p1",
+            "name": "p1",
+            "symbol": "p1"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "p1",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s3",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r7",
+      "name": "reaction-8",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "v_r * (K_pg * c2 - p0 * s3)",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "s3",
+            "name": "s3",
+            "symbol": "s3"
+          },
+          {
+            "id": "p0",
+            "name": "p0",
+            "symbol": "p0"
+          },
+          {
+            "id": "c2",
+            "name": "c2",
+            "symbol": "c2"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c2",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s3",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r8",
+      "name": "reaction-9",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "v_r * (K_n * c4 - p1 * s1)",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "s1",
+            "name": "s1",
+            "symbol": "s1"
+          },
+          {
+            "id": "p1",
+            "name": "p1",
+            "symbol": "p1"
+          },
+          {
+            "id": "c4",
+            "name": "c4",
+            "symbol": "c4"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c4",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p1",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s1",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r9",
+      "name": "reaction-10",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "k_5 * c4",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "c4",
+            "name": "c4",
+            "symbol": "c4"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c4",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s3",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s1",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r10",
+      "name": "reaction-11",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "k_4 * c4 - k_4b * c6",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "c4",
+            "name": "c4",
+            "symbol": "c4"
+          },
+          {
+            "id": "c6",
+            "name": "c6",
+            "symbol": "c6"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c4",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "c6",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r11",
+      "name": "reaction-12",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "v_r * (K_p * c6 - p0 * s2)",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "s2",
+            "name": "s2",
+            "symbol": "s2"
+          },
+          {
+            "id": "p0",
+            "name": "p0",
+            "symbol": "p0"
+          },
+          {
+            "id": "c6",
+            "name": "c6",
+            "symbol": "c6"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "c6",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p0",
+          "stoichiometry": 1.0
+        },
+        {
+          "species_id": "s2",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    },
+    {
+      "id": "r12",
+      "name": "Enzyme deactivation",
+      "reversible": false,
+      "kinetic_law": {
+        "equation": "k_d * p0",
+        "equation_type": "rateLaw",
+        "variables": [
+          {
+            "id": "p0",
+            "name": "p0",
+            "symbol": "p0"
+          }
+        ]
+      },
+      "species": [
+        {
+          "species_id": "p0",
+          "stoichiometry": -1.0
+        },
+        {
+          "species_id": "p2",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    }
+  ],
+  "measurements": [
+    {
+      "id": "m0",
+      "name": "Cephalexin synthesis 1",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 20.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            20.0,
+            16.385,
+            12.45,
+            9.255,
+            5.135,
+            0.645,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 10.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            10.0,
+            8.72,
+            7.025,
+            5.94,
+            5.18,
+            5.815,
+            7.57,
+            8.945,
+            9.87,
+            10.575
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            2.66,
+            3.885,
+            4.815,
+            5.755,
+            4.9,
+            3.24,
+            1.915,
+            1.075,
+            0.575
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 2.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            2.0,
+            3.705,
+            5.77,
+            8.035,
+            11.965,
+            17.28,
+            19.93,
+            21.36,
+            22.55,
+            23.38
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    },
+    {
+      "id": "m1",
+      "name": "Cephalexin synthesis 2",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 20.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            20.0,
+            16.5,
+            12.67,
+            9.915,
+            5.91,
+            1.32,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 20.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            20.0,
+            18.58,
+            16.255,
+            14.82,
+            13.14,
+            12.625,
+            14.2,
+            15.445,
+            17.02,
+            18.5
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            3.205,
+            5.09,
+            6.385,
+            7.855,
+            8.225,
+            7.17,
+            5.63,
+            4.1,
+            2.0
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 1.3,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            1.3,
+            2.955,
+            4.615,
+            6.175,
+            8.8,
+            13.25,
+            16.055,
+            17.62,
+            19.34,
+            20.8
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "name": "Cephalexin synthesis 3",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 20.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            20.0,
+            13.005,
+            9.505,
+            7.21,
+            4.0,
+            0.91,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 40.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            40.0,
+            36.555,
+            33.87,
+            32.49,
+            30.405,
+            29.985,
+            30.675,
+            31.905,
+            33.045,
+            34.525
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            3.59,
+            5.57,
+            6.85,
+            8.24,
+            8.945,
+            8.18,
+            7.255,
+            6.39,
+            5.69
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 5.1,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            5.1,
+            6.365,
+            7.59,
+            8.59,
+            10.13,
+            12.93,
+            14.565,
+            15.8,
+            16.98,
+            18.15
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "name": "Cephalexin synthesis 4",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 20.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            20.0,
+            15.345,
+            11.64,
+            8.975,
+            5.265,
+            1.455,
+            0.385,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 60.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            60.0,
+            56.8,
+            53.58,
+            51.6,
+            48.265,
+            47.6,
+            48.185,
+            49.0,
+            50.76,
+            52.505
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            3.77,
+            6.11,
+            7.74,
+            9.595,
+            11.325,
+            11.065,
+            10.2,
+            9.66,
+            9.005
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 1.9,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            1.9,
+            2.94,
+            3.99,
+            4.935,
+            6.305,
+            8.87,
+            10.61,
+            12.0,
+            13.075,
+            14.24
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "name": "Cephalexin synthesis 5",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 20.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            20.0,
+            15.34,
+            12.075,
+            9.335,
+            5.515,
+            1.46,
+            0.35,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 42.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            42.0,
+            38.405,
+            36.06,
+            34.06,
+            31.46,
+            29.595,
+            30.615,
+            31.83,
+            32.985,
+            34.08
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            3.42,
+            5.52,
+            6.99,
+            8.78,
+            9.875,
+            9.44,
+            8.515,
+            7.47,
+            6.695
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 1.5,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            1.5,
+            2.815,
+            4.105,
+            5.085,
+            6.69,
+            9.535,
+            11.49,
+            13.08,
+            14.505,
+            15.63
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    },
+    {
+      "id": "m5",
+      "name": "Cephalexin synthesis 6",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 40.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            40.0,
+            34.595,
+            31.035,
+            27.01,
+            21.225,
+            10.1,
+            5.9,
+            3.33,
+            1.695,
+            0.84
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 42.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            42.0,
+            37.9,
+            34.9,
+            32.805,
+            29.17,
+            24.5,
+            23.0,
+            22.595,
+            23.09,
+            24.8
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            3.625,
+            6.4,
+            8.5,
+            11.1,
+            15.645,
+            16.5,
+            16.345,
+            15.81,
+            15.255
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 3.3,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            3.3,
+            4.75,
+            6.13,
+            7.52,
+            11.1,
+            17.315,
+            20.5,
+            22.605,
+            24.925,
+            26.5
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    },
+    {
+      "id": "m6",
+      "name": "Cephalexin synthesis 7",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 76.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            76.0,
+            73.36,
+            69.3,
+            65.6,
+            60.2,
+            46.9,
+            38.03,
+            30.4,
+            24.655,
+            19.7
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 40.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            40.0,
+            38.51,
+            36.175,
+            34.09,
+            31.025,
+            25.965,
+            22.94,
+            20.805,
+            19.445,
+            18.36
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            3.04,
+            5.195,
+            7.28,
+            10.295,
+            15.76,
+            18.74,
+            20.755,
+            21.89,
+            22.875
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 5.7,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            5.7,
+            7.21,
+            8.735,
+            10.4,
+            13.49,
+            20.83,
+            26.8,
+            32.53,
+            36.77,
+            41.13
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    },
+    {
+      "id": "m7",
+      "name": "Cephalexin synthesis 8",
+      "species_data": [
+        {
+          "species_id": "p0",
+          "initial": 0.0002,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [],
+          "time": [],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s0",
+          "initial": 140.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            140.0,
+            138.2,
+            136.0,
+            134.745,
+            132.905,
+            130.085,
+            128.395,
+            126.75,
+            125.96,
+            124.6
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s1",
+          "initial": 40.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            40.0,
+            38.8,
+            37.725,
+            36.88,
+            36.155,
+            34.61,
+            33.71,
+            33.11,
+            33.035,
+            32.8
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s2",
+          "initial": 0.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            0.0,
+            1.53,
+            2.395,
+            3.04,
+            3.895,
+            4.99,
+            5.545,
+            5.98,
+            6.325,
+            6.625
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        },
+        {
+          "species_id": "s3",
+          "initial": 14.0,
+          "data_unit": {
+            "id": "u1",
+            "name": "mmole / l",
+            "base_units": [
+              {
+                "kind": "litre",
+                "exponent": -1,
+                "scale": 1.0
+              },
+              {
+                "kind": "mole",
+                "exponent": 1,
+                "scale": -3.0
+              }
+            ]
+          },
+          "data": [
+            14.0,
+            17.9,
+            18.85,
+            19.735,
+            20.84,
+            22.595,
+            23.62,
+            25.0,
+            26.025,
+            26.93
+          ],
+          "time": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+            25.0,
+            30.0
+          ],
+          "time_unit": {
+            "id": "u4",
+            "name": "min",
+            "base_units": [
+              {
+                "kind": "second",
+                "exponent": 1,
+                "multiplier": 60.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          "data_type": "http://purl.obolibrary.org/obo/PATO_0000033",
+          "is_simulated": false
+        }
+      ]
+    }
+  ],
+  "equations": [],
+  "parameters": [
+    {
+      "id": "v_r",
+      "name": "",
+      "symbol": "v_r",
+      "unit": {
+        "id": "u5",
+        "name": "l / min mmole",
+        "base_units": [
+          {
+            "kind": "litre",
+            "exponent": 1,
+            "scale": 1.0
+          },
+          {
+            "kind": "mole",
+            "exponent": -1,
+            "scale": -3.0
+          },
+          {
+            "kind": "second",
+            "exponent": -1,
+            "multiplier": 60.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      "constant": true
+    },
+    {
+      "id": "K_si",
+      "name": "",
+      "symbol": "K_si",
+      "unit": {
+        "id": "u1",
+        "name": "mmole / l",
+        "base_units": [
+          {
+            "kind": "litre",
+            "exponent": -1,
+            "scale": 1.0
+          },
+          {
+            "kind": "mole",
+            "exponent": 1,
+            "scale": -3.0
+          }
+        ]
+      },
+      "constant": false
+    },
+    {
+      "id": "K_n",
+      "name": "",
+      "symbol": "K_n",
+      "unit": {
+        "id": "u1",
+        "name": "mmole / l",
+        "base_units": [
+          {
+            "kind": "litre",
+            "exponent": -1,
+            "scale": 1.0
+          },
+          {
+            "kind": "mole",
+            "exponent": 1,
+            "scale": -3.0
+          }
+        ]
+      },
+      "constant": false
+    }
+  ]
+}
