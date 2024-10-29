@@ -2,7 +2,6 @@ from .dataset import Dataset
 from .dataset import Measurement
 from .model import InAxes
 from .model import Model
-from .tools.initials import InitialConditions
 from .tools.optimization import optimize
 from .tools.visualization import visualize
 
