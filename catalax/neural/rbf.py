@@ -1,8 +1,8 @@
 from typing import Optional
-import jax
-import jax.nn as jnn
-import jax.numpy as jnp
+
 import equinox as eqx
+import jax
+import jax.numpy as jnp
 
 
 class RBFLayer(eqx.Module):
@@ -21,7 +21,7 @@ class RBFLayer(eqx.Module):
 
         if width_size:
             assert key is not None, "Must provide key if width_size is given."
-            mukey = jax.random.split(key, 1)
+            mukey = jax.random.split(key, 1)[0]
             self.mu = jax.random.uniform(mukey, (width_size,))
         else:
             self.mu = None
