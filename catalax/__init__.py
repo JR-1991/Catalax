@@ -1,11 +1,12 @@
-from .model import Model
-from .model import InAxes
-from .tools.optimization import optimize
-from .tools.visualization import visualize
 from .dataset import Dataset
 from .dataset import Measurement
+from .model import InAxes
+from .model import Model
+from .tools.initials import InitialConditions
+from .tools.optimization import optimize
+from .tools.visualization import visualize
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 PARAMETERS = InAxes.PARAMETERS
 TIME = InAxes.TIME

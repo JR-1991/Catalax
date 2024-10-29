@@ -1,21 +1,25 @@
+from __future__ import annotations
+
 import os
+import tempfile
 import uuid
-import zipfile
-import rich
 import warnings
-import pandas as pd
-import numpy as np
+import zipfile
+from copy import deepcopy
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
+
 import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import mlcroissant as mlc
-
-from datetime import datetime
-from copy import deepcopy
+import numpy as np
+import pandas as pd
+from jax import Array
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Tuple, Union
 
-from .croissant import extract_record_set, json_lines_to_dict, dataset_to_croissant
+from .croissant import extract_record_set, json_lines_to_dict
 from .measurement import Measurement
 
 
@@ -52,6 +56,16 @@ class Dataset(BaseModel):
     )
 
     # ! Adders
+    def add_initial(self, **kwargs) -> None:
+        """Adds initial conditions to the dataset.
+
+        Args:
+            **kwargs: The initial conditions to add.
+
+        """
+
+        self.measurements.append(Measurement(initial_conditions=kwargs))
+
     def add_measurement(self, measurement: Measurement) -> None:
         """Adds a measurement to the dataset.
 
@@ -98,7 +112,9 @@ class Dataset(BaseModel):
         self,
         species_order: List[str],
         inits_to_array: bool = False,
-    ) -> Tuple[jax.Array, jax.Array, Union[jax.Array, Dict[str, float]]]:
+    ) -> (
+        tuple[Array, Array, Array] | tuple[Array, Array, list[Array | dict[str, float]]]
+    ):
         """Converts the dataset to a JAX arrays
 
         This method requires a species order to arrange the data in the correct order.
@@ -109,6 +125,7 @@ class Dataset(BaseModel):
 
         Args:
             species_order (List[str]): The order of the species in the array.
+            inits_to_array (bool, optional): Whether to convert the initial conditions to an array. Defaults to False.
 
         Returns:
             Tuple[jax.Array, jax.Array, List[Dict[str, float]]]: The data array, time array, and initial conditions.
@@ -141,11 +158,26 @@ class Dataset(BaseModel):
                 initial_conditions,  # type: ignore
             )
 
+    def to_y0_matrix(self, species_order: List[str]) -> Array:
+        """Assembles the initial conditions of the dataset into a dictionary.
+
+        Returns:
+            Dict[str, Array]: The initial conditions.
+        """
+
+        inits = []
+
+        for meas in self.measurements:
+            inits.append(meas.to_y0_array(species_order=species_order))
+
+        return jnp.stack(inits, axis=0)
+
     def to_croissant(
         self,
         dirpath: str,
         license: str = "CC BY-SA 4.0",
         version: str = "1.0.0",
+        name: Optional[str] = None,
         cite_as: Optional[str] = None,
         url: Optional[str] = None,
         date_published: datetime = datetime.now(),  # type: ignore
@@ -168,6 +200,7 @@ class Dataset(BaseModel):
 
         Args:
             dataset (Dataset): The Dataset to export.
+            name (str, optional): The name of the dataset. Defaults to None.
             dirpath (str): The directory to save the Croissant archive to.
             license (str, optional): The license for the dataset. Defaults to "CC BY-SA 4.0".
             version (str, optional): The version of the dataset. Defaults to "1.0.0".
@@ -180,9 +213,15 @@ class Dataset(BaseModel):
 
         os.makedirs(dirpath, exist_ok=True)
 
+        if name is None and self.name is None:
+            name = self.id
+        elif name is None and self.name is not None:
+            name = self.name.replace(" ", "_")
+
         dataset_to_croissant(
             dataset=self,
             dirpath=dirpath,
+            name=name,
             license=license,
             version=version,
             cite_as=cite_as,
@@ -190,11 +229,43 @@ class Dataset(BaseModel):
             date_published=date_published,  # type: ignore
         )
 
-        archive_path = os.path.join(dirpath, self.name.replace("_", "")) + ".zip"
-
-        rich.print(f"🥐 Dataset exported to Croissant archive at {archive_path}")
-
     # ! Importers
+    @classmethod
+    def from_enzymeml(cls, path: Path | str) -> "Dataset":
+        """Reads an EnzymeML file and returns a Dataset.
+
+        Args:
+            path (Path): The path to the EnzymeML file.
+
+        Returns:
+            Dataset: The Dataset object.
+        """
+
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        try:
+            import pyenzyme as pe
+        except ImportError:
+            raise ImportError(
+                "Please install the 'pyenzyme' package to use this method."
+            )
+
+        enzmldoc = pe.EnzymeMLDocument.read(path)
+        measurements = [
+            Measurement.from_enzymeml(meas)
+            for meas in enzmldoc.measurements
+            if any(sp.data is not None and len(sp.data) > 0 for sp in meas.species_data)
+        ]
+
+        all_species = list(set(sp for meas in measurements for sp in meas.data.keys()))
+
+        return cls(
+            id=enzmldoc.name,
+            name=enzmldoc.name,
+            species=all_species,
+            measurements=measurements,
+        )
 
     @classmethod
     def from_dataframe(
@@ -202,7 +273,7 @@ class Dataset(BaseModel):
         name: str,
         data: pd.DataFrame,
         inits: pd.DataFrame,
-        id: Optional[str] = None,
+        meas_id: Optional[str] = None,
         description: Optional[str] = "",
     ):
         """Creates a dataset from Pandas DataFrames
@@ -240,8 +311,11 @@ class Dataset(BaseModel):
             Dataset.from_dataframe(data=data, inits=inits)
 
         Args:
+            name (str): The name of the dataset.
             data (pandas.DataFrame): Contains all time courses.
             inits (pandas.DataFrame): Containse all initial concentrations.
+            meas_id (Optional[str], optional): The ID of the dataset. Defaults to None.
+            description (Optional[str], optional): The description of the dataset. Defaults to "".
 
         """
 
@@ -253,10 +327,10 @@ class Dataset(BaseModel):
             "measurementId" in inits.columns
         ), "Missing column in inits table: 'measurementId'"
 
-        if id is None:
-            id = str(uuid.uuid4())
+        if meas_id is None:
+            meas_id = str(uuid.uuid4())
 
-        # Check if IDs are consistents
+        # Check if IDs are consistent
         data_ids = set(data["measurementId"])
         init_ids = set(inits["measurementId"])
 
@@ -282,7 +356,7 @@ class Dataset(BaseModel):
             species=species,
             name=name,
             description=description,
-            id=id,
+            id=meas_id,
         )
 
         # Extract data and inits by measurement IDs
@@ -302,6 +376,27 @@ class Dataset(BaseModel):
         return dataset
 
     @classmethod
+    def from_model(cls, model: "Model"):
+        """Creates a dataset from a model object.
+
+        Args:
+            model (Model): The model to create the dataset from.
+
+        Returns:
+            Dataset: The dataset object.
+        """
+
+        from ..model import Model
+
+        assert isinstance(model, Model), "Expected a Model object."
+
+        return cls(
+            id=model.name,
+            name=model.name,
+            species=model.get_species_order(),
+        )
+
+    @classmethod
     def from_croissant(cls, path: str):
         """Reads a Croissant archive and returns a Dataset.
 
@@ -312,40 +407,47 @@ class Dataset(BaseModel):
             Dataset: The Dataset object.
         """
 
-        with zipfile.ZipFile(path, "r") as f:
-            f.extractall(".")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with zipfile.ZipFile(path, "r") as f:
+                f.extractall(tmpdir)
 
-        croissant_path = os.path.join(".", "croissant.json")
-        croissant_ds = mlc.Dataset(jsonld=croissant_path)
+            croissant_path = os.path.join(tmpdir, "croissant.json")
+            croissant_ds = mlc.Dataset(jsonld=croissant_path)
 
-        init_rs = extract_record_set(croissant_ds, lambda uuid: "/inits" in uuid)
-        meas_rs = extract_record_set(croissant_ds, lambda uuid: "/inits" not in uuid)
-
-        species = set()
-        measurements = []
-
-        for uuid, rs in meas_rs.items():
-            assert uuid in init_rs, f"Initial conditions not found for {uuid}"
-
-            # Extract the initial conditions and measurements
-            inits = list(init_rs[uuid])[0]
-            meas_recs = croissant_ds.records(record_set=uuid)
-
-            data = json_lines_to_dict(meas_recs)
-            time = data.pop("time")
-
-            # Update the species set
-            species.update(inits.keys())
-
-            # Create a Measurement object
-            measurements.append(
-                Measurement(
-                    initial_conditions=inits,
-                    data=data,  # type: ignore
-                    time=time,
-                    id=uuid,
-                )
+            init_rs = extract_record_set(
+                croissant_ds, lambda meas_id: "/inits" in meas_id
             )
+            meas_rs = extract_record_set(
+                croissant_ds, lambda meas_id: "/inits" not in meas_id
+            )
+
+            species = set()
+            measurements = []
+
+            for meas_uuid, rs in meas_rs.items():
+                assert (
+                    meas_uuid in init_rs
+                ), f"Initial conditions not found for {meas_uuid}"
+
+                # Extract the initial conditions and measurements
+                inits = list(init_rs[meas_uuid])[0]
+                meas_recs = croissant_ds.records(record_set=meas_uuid)
+
+                data = json_lines_to_dict(meas_recs)
+                time = data.pop("time")
+
+                # Update the species set
+                species.update(inits.keys())
+
+                # Create a Measurement object
+                measurements.append(
+                    Measurement(
+                        initial_conditions=inits,
+                        data=data,  # type: ignore
+                        time=time,
+                        id=meas_uuid,
+                    )
+                )
 
         return cls(
             id=croissant_ds.metadata.id,
@@ -355,38 +457,61 @@ class Dataset(BaseModel):
             measurements=measurements,
         )  # type: ignore
 
+    def add_from_jax_array(
+        self,
+        model: "Model",
+        initial_condition: Dict[str, float],
+        data: Array,
+        time: Array,
+    ):
+        species_order = model.get_species_order()
+
+        measurement = Measurement(
+            initial_conditions=initial_condition,
+            time=time,
+            data={
+                species: data[:, i].squeeze() for i, species in enumerate(species_order)
+            },
+        )
+
+        self.add_measurement(measurement)
+
     # ! Plotting
     def plot(
         self,
         ncols: int = 2,
         show: bool = True,
         path: Optional[str] = None,
-        model: Optional["Model"] = None,  # type: ignore
         measurement_ids: List[str] = [],
+        figsize: Tuple[int, int] = (5, 3),
+        model: "Model" = None,
     ):
         """Plots all measurements in the dataset.
 
         Args:
             ncols (int, optional): Number of columns in the plot. Defaults to 2.
             show (bool, optional): Whether to show the plot. Defaults to True.
+            path (Optional[str], optional): Path to save the plot. Defaults to None.
+            model (Optional[Model], optional): The model to overlay on the plot. Defaults to None.
+            measurement_ids (List[str], optional): List of measurement IDs to plot. Defaults to [].
+            figsize (Tuple[int, int], optional): Size of each individual figure. figure.
+            model (Model, optional): The model to overlay on the plot. Defaults to None.
 
         Returns:
             matplotlib.figure.Figure: The figure object
         """
 
-        if len(measurement_ids) == 0:
-            measurement_ids = [meas.id for meas in self.measurements]
+        x, y = figsize
 
-        if len(measurement_ids) == 1:
-            nrows = 1
-            ncols = 1
-        else:
-            nrows = int(np.ceil(len(measurement_ids) / ncols))
+        if len(measurement_ids) == 0:
+            measurement_ids = [meas.id for meas in self.measurements if meas.has_data()]
+
+        ncols, nrows = self._get_rows_cols(measurement_ids, ncols)
 
         fig, axs = plt.subplots(
             nrows=nrows,
             ncols=ncols,
-            figsize=(ncols * 5, nrows * 3),
+            figsize=(ncols * x, nrows * y),
         )
 
         if len(measurement_ids) > 1:
@@ -394,11 +519,15 @@ class Dataset(BaseModel):
         else:
             axs = [axs]
 
-        for i, meas in enumerate(self.measurements):
+        index = 0
+
+        for meas in self.measurements:
             if meas.id not in measurement_ids:
                 continue
 
-            meas.plot(ax=axs[i])
+            meas.plot(ax=axs[index], model=model)
+
+            index += 1
 
         # Remove legend from plots that have a right neighbor
         for i, ax in enumerate(axs):
@@ -406,6 +535,9 @@ class Dataset(BaseModel):
                 ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
             else:
                 ax.legend().set_visible(False)
+
+        if len(measurement_ids) > 1 and len(measurement_ids) % 2 != 0:
+            axs[-1].set_visible(False)
 
         plt.tight_layout(w_pad=4, h_pad=4)
 
@@ -421,12 +553,24 @@ class Dataset(BaseModel):
 
         return fig
 
+    @staticmethod
+    def _get_rows_cols(
+        measurement_ids: list[str],
+        ncols: int,
+    ) -> Tuple[int, int]:
+        if len(measurement_ids) == 1:
+            return 1, 1
+        else:
+            return ncols, int(np.ceil(len(measurement_ids) / ncols))
+
     # ! Data Augmentation
     def augment(
         self,
         n_augmentations: int,
         sigma: float = 0.5,
         seed: int = 42,
+        append: bool = True,
+        multiplicative: bool = False,
     ):
         """Augments the dataset by adding Gaussian noise to the data.
 
@@ -434,20 +578,31 @@ class Dataset(BaseModel):
             n_augmentations (int): The number of augmentations to be performed.
             sigma (float, optional): The standard deviation of the Gaussian noise. Defaults to 0.5.
             seed (int, optional): The seed for the random number generator. Defaults to 42.
+            append (bool, optional): Whether to append the augmented data to the dataset. Defaults to True.
+            multiplicative (bool, optional): Whether to add multiplicative noise. Defaults to False.
 
         Returns:
             Dataset: The augmented dataset.
         """
 
-        augmented_dataset = deepcopy(self)  # type: ignore
+        if append:
+            augmented_dataset = deepcopy(self)  # type: ignore
+        else:
+            augmented_dataset = Dataset(
+                id=self.id,
+                name=self.name,
+                description=self.description,
+                species=self.species,
+            )
         augmented_meas = []
 
         for i in range(n_augmentations):
-            for meas in augmented_dataset.measurements:
+            for meas in self.measurements:
                 augmented_meas.append(
                     meas.augment(
                         sigma=sigma,
                         seed=seed + i,
+                        multiplicative=multiplicative,
                     )
                 )
 
@@ -457,19 +612,19 @@ class Dataset(BaseModel):
 
     # ! Utilities
     @staticmethod
-    def _get_vmap_dims(
+    def get_vmap_dims(
         data: jax.Array,
         time: jax.Array,
         y0s: Union[jax.Array, Dict[str, float]],
     ) -> Tuple[Optional[int], None, Optional[int]]:
         """Determines the axes in which vmap will be applies"""
 
-        if isinstance(y0s, dict):
+        if isinstance(y0s, list):
             multiple_y0s = len(y0s) > 1
         elif isinstance(y0s, jax.Array):
             multiple_y0s = len(y0s.shape) == 2
         else:
-            raise TypeError(f"Expected dict or array for 'y0s' but got {type(y0s)}")
+            raise TypeError(f"Expected array for 'y0s' but got {type(y0s)}")
 
         return (
             0 if len(data.shape) == 3 else None,

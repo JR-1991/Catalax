@@ -1,14 +1,15 @@
-import jax
-import jax.numpy as jnp
-import numpy as np
-import warnings
 import json
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-
+import warnings
 from typing import Dict, Optional, List, Tuple, Union
 from uuid import uuid4
+
+import jax
+import jax.numpy as jnp
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pyenzyme as pe
 from pydantic import (
     BaseModel,
     Field,
@@ -16,7 +17,6 @@ from pydantic import (
     field_serializer,
     field_validator,
 )
-
 from pydantic.config import ConfigDict
 from pydantic.fields import computed_field
 
@@ -113,8 +113,9 @@ class Measurement(BaseModel):
         The keys are the species names and the values are the data points.""",
     )
 
-    time: Union[List[float], jax.Array, np.ndarray] = Field(
-        ..., description="The time points of the measurement."
+    time: Optional[Union[List[float], jax.Array, np.ndarray]] = Field(
+        None,
+        description="The time points of the measurement.",
     )
 
     # ! Computed fields
@@ -200,7 +201,6 @@ class Measurement(BaseModel):
         self.initial_conditions[species] = initial_concentration
 
     # ! Exporters
-
     def to_dataframe(self) -> pd.DataFrame:
         """Convert the measurement to a pandas DataFrame."""
 
@@ -299,6 +299,18 @@ class Measurement(BaseModel):
 
         return data, time, inits
 
+    def to_y0_array(self, species_order: List[str]) -> jax.Array:
+        """Convert the initial conditions to a JAX array.
+
+        Args:
+            species_order (List[str]): The order of the species in the array.
+
+        Returns:
+            jax.Array: The initial conditions.
+        """
+
+        return jnp.array([self.initial_conditions[sp] for sp in species_order])
+
     def to_jsonl(self):
         """Converts this measurement object to the JSON Lines format"""
 
@@ -314,12 +326,18 @@ class Measurement(BaseModel):
 
         return "\n".join(lines)
 
-    def plot(self, show=True, ax=None):
+    def plot(
+        self,
+        show=True,
+        ax=None,
+        model: Optional["Model"] = None,
+    ):
         """Plot the measurement data.
 
         Args:
             show (bool): Whether to show the plot. Defaults to True.
-
+            ax (Optional[plt.Axes]): The axes to plot the data on. Defaults to None.
+            model (Model): The model to plot the fit of. Defaults to None.
         """
 
         is_subplot = ax is not None
@@ -331,13 +349,30 @@ class Measurement(BaseModel):
         if ax is None:
             fig, ax = plt.subplots()
 
+        model_data = self._gather_fit(model)
+
         for species in self.initial_conditions.keys():
+            if self.data.get(species) is None or len(self.data[species]) == 0:
+                continue
+
+            color = next(color_iter)
+
             ax.plot(
                 self.time,
                 self.data[species],
                 "o",
                 label=f"{species}",
+                c=color,
             )
+
+            if model_data:
+                ax.plot(
+                    model_data["time"],
+                    model_data[species],
+                    "-",
+                    label=f"{species} fit",
+                    c=color,
+                )
 
         ax.grid(alpha=0.3, linestyle="--")
         ax.set_xlabel("Time", fontsize=12)
@@ -349,24 +384,57 @@ class Measurement(BaseModel):
         if show and not is_subplot:
             plt.show()
 
+    def _gather_fit(
+        self,
+        model: Optional["Model"],
+    ) -> Dict[str, jax.Array] | None:
+        if model:
+            times, states = model.simulate(
+                initial_conditions=[self.initial_conditions],
+                t0=self.time.min(),
+                t1=self.time.max(),
+                nsteps=len(self.time) * 2,
+                return_array=True,
+                in_axes=None,
+            )
+
+            # Organize results in a dictionary
+            model_data = {
+                species: states[0, :, index]
+                for index, species in enumerate(model.get_species_order())
+            }
+
+            model_data["time"] = times
+        else:
+            model_data = None
+
+        return model_data
+
     # ! Data Augmentation
     def augment(
         self,
         sigma: float,
         seed: int,
+        multiplicative: bool = False,
     ) -> "Measurement":
         """Augment the data by adding Gaussian noise.
 
         Args:
             sigma (float): The standard deviation of the Gaussian noise.
             seed (int): The seed for the random number generator.
+            multiplicative (bool): Whether to multiply the signal by the noise.
 
         Returns:
             Measurement: The augmented measurement.
         """
 
         data = {
-            sp: self._jitter_data(self.data[sp], sigma, seed)  # type: ignore
+            sp: self._jitter_data(
+                x=self.data[sp],
+                sigma=sigma,
+                seed=seed,
+                multiplicative=multiplicative,
+            )  # type: ignore
             for sp in self.data.keys()
         }
 
@@ -374,22 +442,69 @@ class Measurement(BaseModel):
             data=data,  # type: ignore
             time=self.time,
             initial_conditions=self.initial_conditions,
-            id=self.id,
+            id=str(uuid4()),
         )
 
     @staticmethod
-    def _jitter_data(x: jax.Array, sigma: float, seed: int) -> jax.Array:
+    def _jitter_data(
+        x: jax.Array,
+        sigma: float,
+        seed: int,
+        multiplicative: bool = False,
+    ) -> jax.Array:
         """Jitters the data by adding Gaussian noise.
 
         Args:
             x (jax.Array): The data to be jittered.
             sigma (float): The standard deviation of the Gaussian noise.
             seed (int): The seed for the random number generator.
+            multiplicative (bool): Whether to multiply the signal by the noise
 
         Returns:
             jax.Array: The jittered data.
         """
 
-        rng = np.random.default_rng(seed)
+        key = jax.random.PRNGKey(seed)
 
-        return jnp.array(x + jnp.array(rng.normal(loc=0.0, scale=sigma, size=x.shape)))
+        if multiplicative:
+            noise = jax.random.normal(key, shape=x.shape, dtype=x.dtype) * sigma + 1.0
+            return x * noise
+
+        noise = jax.random.normal(key, shape=x.shape, dtype=x.dtype) * sigma
+        return x + noise
+
+    @classmethod
+    def from_enzymeml(cls, measurement: pe.Measurement):
+        """Create a Measurement object from a pyenzyme Measurement object."""
+
+        initials = {
+            species.species_id: species.initial
+            for species in measurement.species_data
+            if species.initial is not None
+        }
+
+        data = {
+            species.species_id: jnp.array(species.data)
+            for species in measurement.species_data
+            if species.data is not None and len(species.data) > 0
+        }
+
+        time = next(
+            iter(
+                [
+                    jnp.array(data.time)
+                    for data in measurement.species_data
+                    if data.time is not None and len(data.time) > 0
+                ]
+            )
+        )
+
+        return cls(
+            initial_conditions=initials,
+            data=data,
+            time=time,
+        )
+
+    def has_data(self):
+        """Check if the measurement has data"""
+        return any(len(data) > 0 for data in self.data.values())

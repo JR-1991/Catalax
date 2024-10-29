@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-import os
-import pandas as pd
 import hashlib
-import mlcroissant as mlc
 import json
+import os
 import zipfile
-
 from datetime import datetime
-from typing import TYPE_CHECKING
-from typing import Dict, List, Optional, Tuple
 from io import StringIO
+from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
+import mlcroissant as mlc
+import pandas as pd
+import rich
 
 if TYPE_CHECKING:
     from catalax import Dataset, Measurement
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 def dataset_to_croissant(
     dataset: Dataset,
     dirpath: str,
+    name: Optional[str] = None,
     license: str = "CC BY-SA 4.0",
     version: str = "1.0.0",
     cite_as: Optional[str] = None,
@@ -43,6 +44,8 @@ def dataset_to_croissant(
     can use the `mlcommons/croissant` Python package to parse the unzipped files.
 
     Args:
+        name (str, optional): The name of the dataset. Defaults to None.
+        date_published (datetime): The date the dataset was published.
         dataset (Dataset): The Dataset to export.
         dirpath (str): The directory to save the Croissant archive to.
         license (str, optional): The license for the dataset. Defaults to "CC BY-SA 4.0".
@@ -51,12 +54,9 @@ def dataset_to_croissant(
         url (Optional[str], optional): The URL for the dataset. Defaults to None.
     """
 
-    if dataset.name is None:
-        dataset.name = dataset.id
-
     record_sets = []
     distribution = []
-    zip_path = os.path.join(dirpath, f"{dataset.name.replace(' ', '_')}.zip")
+    zip_path = os.path.join(dirpath, f"{name}.zip")
 
     # Open ZIP file for writing
     with zipfile.ZipFile(zip_path, "w") as f:
@@ -87,6 +87,8 @@ def dataset_to_croissant(
         content = metadata.to_json()
         content = json.dumps(content, indent=2, default=str) + "\n"
         f.writestr("croissant.json", content)
+
+    rich.print(f"🥐 Dataset exported to Croissant archive at {zip_path}")
 
 
 def extract_record_set(
