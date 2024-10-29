@@ -248,10 +248,20 @@ class Dataset(BaseModel):
             import pyenzyme as pe
         except ImportError:
             raise ImportError(
-                "Please install the 'pyenzyme' package to use this method."
+                "Please install the 'pyenzyme' package to use this method. Use the following: "
+                "pip install pyenzyme"
             )
 
-        enzmldoc = pe.EnzymeMLDocument.read(path)
+        # If it ends with .json, it's a v2 file
+        if path.suffix == ".json":
+            enzmldoc = pe.EnzymeMLDocument.read(path)
+        elif path.suffix == ".omex":
+            enzmldoc = pe.EnzymeMLDocument.from_sbml(path)
+        else:
+            raise ValueError(
+                "Unknown file format. Please provide a .json or .omex file."
+            )
+
         measurements = [
             Measurement.from_enzymeml(meas)
             for meas in enzmldoc.measurements
