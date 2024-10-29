@@ -1,15 +1,14 @@
 from typing import Dict, List, Tuple
-import jax
-import equinox as eqx
-import numpy as np
-import matplotlib.pyplot as plt
 
+import jax
+import jax.numpy as jnp
+import matplotlib.pyplot as plt
+import numpy as np
 from sympy import Symbol, latex
 from tqdm import tqdm
 
-import jax.numpy as jnp
-from catalax.model.model import Model
 from catalax import INITS, PARAMETERS
+from catalax.model.model import Model
 
 
 def sensitivity_analysis(
@@ -125,7 +124,7 @@ def _calculate_senisitivity_matrix(
         scale = np.random.uniform(
             low=lower_scale,
             high=upper_scale,
-            size=len(model._get_parameter_order()),
+            size=len(model.get_parameter_order()),
         )
 
         _, sensitivity = model.simulate(
@@ -187,7 +186,7 @@ def _validate_initial_conditions(
     Raises:
         ValueError: If any initial condition is missing species from the model.
     """
-    all_species = model._get_species_order()
+    all_species = model.get_species_order()
     for initial_condition in initial_conditions:
         if not all(species in initial_condition for species in all_species):
             raise ValueError(
@@ -285,7 +284,7 @@ def _plot_singular_values(
     ax.set_yscale("log")
     ax.grid(axis="y", linestyle=":")
 
-    ax.set_xticks(jnp.arange(len(model._get_parameter_order())))
+    ax.set_xticks(jnp.arange(len(model.get_parameter_order())))
     ax.set_title("Singular values", pad=20)
     ax.set_xlabel("Index")
 
@@ -307,7 +306,7 @@ def _plot_singular_vectors(
         None
     """
 
-    x = jnp.arange(len(model._get_parameter_order()))
+    x = jnp.arange(len(model.get_parameter_order()))
     width = 0.3
     distance = 0.15
     n_bars = zero_vectors.shape[0]
@@ -325,7 +324,7 @@ def _plot_singular_vectors(
 
     latex_symbols = [
         "${symbol}$".format(symbol=latex(Symbol(model.parameters[param].symbol)))
-        for param in model._get_parameter_order()
+        for param in model.get_parameter_order()
     ]
 
     ax.set_xticks(x + (distance * (n_bars - 1)) / n_bars)
