@@ -4,10 +4,10 @@ from typing import Dict, List, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
+from brainunit import Quantity
+from catalax.model import Model
 from lmfit import Parameters, minimize
 from lmfit.minimizer import MinimizerResult
-
-from catalax.model import Model
 
 
 def optimize(
@@ -18,7 +18,7 @@ def optimize(
     global_upper_bound: Optional[float] = 1e5,
     global_lower_bound: Optional[float] = 1e-6,
     dt0: float = 0.01,
-    max_steps: int = 64**4,
+    max_steps: int = 64 ** 4,
     method: str = "bfgs",
 ) -> Tuple[MinimizerResult, Model]:
     """Optimization functions to determine the parameters of a model of a system, given data.
@@ -59,11 +59,22 @@ def optimize(
             if ode.observable == True
         ]
     )
+
+    # unitless
+    new_y0s = []
+    for y0s_dict in initial_conditions:
+        new_y0s_dict = {
+            key: value.mantissa if isinstance(value, Quantity) else value
+            for key, value in y0s_dict.items()
+        }
+        new_y0s.append(new_y0s_dict)
+    data = data.mantissa if isinstance(data, Quantity) else data
+
     minimize_args = (
         model,
-        initial_conditions,
+        new_y0s,
         data,
-        times,
+        times.mantissa if isinstance(times, Quantity) else times,
         observables,
         dt0,
         max_steps,
@@ -85,7 +96,9 @@ def optimize(
     new_model = deepcopy(model)
 
     for name, parameter in result.params.items():  # type: ignore
-        new_model.parameters[name].value = parameter.value
+        new_model.parameters[name].value = Quantity(parameter.value,
+                                                    unit=new_model.parameters[name].initial_value.unit) if isinstance(
+            new_model.parameters[name].initial_value, Quantity) else parameter.value
 
     return (
         result,
@@ -149,7 +162,7 @@ def _initialize_params(
 
         params.add(
             param.name,
-            value=param.initial_value,
+            value=param.initial_value.mantissa if isinstance(param.initial_value, Quantity) else param.initial_value,
             min=param.lower_bound,
             max=param.upper_bound,
             vary=not param.constant,
@@ -166,7 +179,7 @@ def _residual(
     times: jax.Array,
     observables: jax.Array,
     dt0: float = 0.01,
-    max_steps: int = 64**4,
+    max_steps: int = 64 ** 4,
 ):
     """Performs a simulation of the model and returns the residual between the
     data and the simulation.
@@ -194,6 +207,7 @@ def _residual(
         saveat=times,  # type: ignore
         max_steps=max_steps,
         parameters=parameters,
+        origin_solve=True,
     )
 
     return data - states[:, :, observables]

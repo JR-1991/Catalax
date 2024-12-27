@@ -2,6 +2,7 @@ from typing import Any, List, Optional, Union
 
 from pydantic import PrivateAttr, root_validator
 from sympy import Expr
+from brainunit import Quantity
 
 from catalax.model.base import CatalaxBase
 
@@ -15,13 +16,13 @@ class Identifiability(CatalaxBase):
 class Parameter(CatalaxBase):
     name: str
     symbol: Expr
-    value: Optional[float] = None
+    value: Optional[Union[float, Quantity]] = None
     constant: bool = False
     identifiability: Optional[Identifiability] = None
-    initial_value: Optional[float] = None
+    initial_value: Optional[Union[float, Quantity]] = None
     equation: Union[str, Expr, None] = None
-    lower_bound: Optional[float] = None
-    upper_bound: Optional[float] = None
+    lower_bound: Optional[Union[float, Quantity]] = None
+    upper_bound: Optional[Union[float, Quantity]] = None
     prior: Any = None  # TODO: Fix this typing
     _prior_str_: Optional[str] = None
 

@@ -9,6 +9,8 @@ from diffrax import ODETerm, SaveAt, Tsit5
 from dotted_dict import DottedDict
 from pydantic import Field, PrivateAttr, validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
+from brainunit import math as bm
+from brainunit import Quantity
 
 from catalax.model.base import CatalaxBase
 from catalax.mcmc import priors
@@ -55,7 +57,7 @@ class Model(CatalaxBase):
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
     species: Dict[str, Species] = Field(default_factory=PrettyDict)
     parameters: Dict[str, Parameter] = Field(default_factory=PrettyDict)
-    term: Optional[ODETerm] = Field(default=None)
+    term: Optional[Callable] = Field(default=None)
 
     _sim_func: Optional[Callable] = PrivateAttr(default=None)
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
@@ -163,6 +165,15 @@ class Model(CatalaxBase):
             check_symbol(symbol)
             self.species[symbol] = Species(name=name, symbol=Symbol(symbol))
 
+    def add_term(self, term: Callable):
+        """Adds a term to the model.
+
+        Args:
+            term (Callable): The term to add to the model.
+        """
+
+        self.term = term
+
     @staticmethod
     def _split_species_string(species_string: str) -> List[Symbol]:
         """Helper method to split a string of species into a list of species"""
@@ -215,7 +226,7 @@ class Model(CatalaxBase):
 
     def simulate(
         self,
-        initial_conditions: List[Dict[str, float]],
+        initial_conditions: List[Dict[str, Union[float, Quantity]]],
         dt0: float = 0.1,
         solver=Tsit5,
         t0: Optional[int] = None,
@@ -228,6 +239,7 @@ class Model(CatalaxBase):
         in_axes: Optional[Tuple] = None,
         max_steps: int = 4096,
         sensitivity: Optional[InAxes] = None,
+        origin_solve=False,
     ):
         """
         Simulates a given model with the given initial conditions. The simulation can be
@@ -273,13 +285,13 @@ class Model(CatalaxBase):
 
         # Setup save points
         if nsteps is not None:
-            saveat = jnp.linspace(t0, t1, nsteps)  # type: ignore
+            saveat = bm.linspace(t0, t1, nsteps)  # type: ignore
             t0 = saveat[0]  # type: ignore
             t1 = saveat[-1]  # type: ignore
         elif saveat is None:
             raise ValueError("Must specify either nsteps or saveat.")
 
-        if self._model_changed(in_axes, dt0, sensitivity) or self._sim_func is None:
+        if self._model_changed(in_axes, dt0, sensitivity) or self._sim_func is None or origin_solve is True:
             self._setup_system(
                 in_axes=in_axes,
                 t0=t0,
@@ -290,6 +302,7 @@ class Model(CatalaxBase):
                 atol=atol,
                 max_steps=max_steps,
                 sensitivity=sensitivity,
+                origin_solve=origin_solve,
             )
 
             # Set markers to check whether the conditions have changed
@@ -319,8 +332,8 @@ class Model(CatalaxBase):
                 f"So far stoichioemtry matrix construction is exclusive to ODE models and not implemented yet."
             )
 
-        stoich_mat = jnp.zeros((len(self.odes), len(self.odes)))
-        diag_indices = jnp.diag_indices_from(stoich_mat)
+        stoich_mat = bm.zeros((len(self.odes), len(self.odes)))
+        diag_indices = bm.diag_indices_from(stoich_mat)
 
         return stoich_mat.at[diag_indices].set(1)
 
@@ -338,7 +351,7 @@ class Model(CatalaxBase):
 
         return False
 
-    def _setup_system(self, in_axes: Tuple = (0, None, None), **kwargs):
+    def _setup_system(self, in_axes: Tuple = (0, None, None), origin_solve=False, **kwargs):
         """Converts given SymPy equations into Equinox modules, used for simulation.
 
         This method will prepare the simulation function, jit it and vmap it across
@@ -358,7 +371,7 @@ class Model(CatalaxBase):
             **kwargs,
         )
 
-        self._sim_func = simulation_setup._prepare_func(in_axes=in_axes)
+        self._sim_func = simulation_setup._prepare_func(in_axes=in_axes, term=self.term, origin_solve=origin_solve)
 
     def _get_parameters(self, parameters: Optional[jax.Array] = None) -> jax.Array:
         """Gets all the parameters for the model"""
@@ -373,7 +386,7 @@ class Model(CatalaxBase):
         if parameters is not None:
             return parameters
 
-        return jnp.array([self.parameters[param].value for param in self._get_parameter_order()])  # type: ignore
+        return [self.parameters[param].value for param in self._get_parameter_order()]  # type: ignore
 
     def _get_parameter_order(self) -> List[str]:
         """Returns the order of the parameters in the model"""
@@ -384,12 +397,18 @@ class Model(CatalaxBase):
         return sorted(self.species.keys())
 
     def _assemble_y0_array(
-        self, initial_conditions: List[Dict[str, float]], in_axes: Tuple
+        self, initial_conditions: List[Dict[str, Union[float, Quantity]]], in_axes: Tuple
     ) -> jax.Array:
         """Assembles the initial conditions into an array"""
+        # TODO: compat with Quantity
 
         # Turn initial conditions dict into a dataframe
         df_inits = pd.DataFrame(initial_conditions)
+
+        y0_list = [
+            [condition[species] for species in self._get_species_order()]
+            for condition in initial_conditions
+        ]
 
         # Check whether all species have initial conditions and
         # if there are more than in the model
@@ -399,17 +418,13 @@ class Model(CatalaxBase):
             )
 
         if in_axes is not None and len(initial_conditions) > 1:
-            return jnp.stack(
-                [df_inits[s].values for s in self._get_species_order()], axis=-1  # type: ignore
-            )
+            return bm.asarray(y0_list)
         elif in_axes and len(initial_conditions) > 1:
             raise ValueError(
                 "If in_axes is set to None, only one initial condition can be specified."
             )
 
-        return jnp.array(
-            [initial_conditions[0][species] for species in self._get_species_order()]
-        )
+        return bm.asarray(y0_list)
 
     def _warmup_simulation(self, y0, parameters, saveat, in_axes):
         """Warms up the simulation to make use of jit compilation"""
@@ -426,11 +441,11 @@ class Model(CatalaxBase):
         y0_axis, parameters_axis, saveat_axis = in_axes
 
         if y0_axis is not None:
-            y0 = jnp.expand_dims(y0[0, :], axis=0)
+            y0 = bm.expand_dims(y0[0, :], axis=0)
         if parameters_axis is not None:
-            parameters = jnp.expand_dims(parameters[0, :], axis=0)
+            parameters = bm.expand_dims(parameters[0, :], axis=0)
         if saveat_axis is not None:
-            saveat = jnp.expand_dims(saveat[0, :], axis=0)
+            saveat = bm.expand_dims(saveat[0, :], axis=0)
 
         self._sim_func(y0, parameters, saveat)
 
@@ -575,7 +590,7 @@ class Model(CatalaxBase):
         """
 
         if len(y0_array.shape) == 1:
-            y0_array = jnp.expand_dims(y0_array, axis=0)
+            y0_array = bm.expand_dims(y0_array, axis=0)
 
         assert y0_array.shape[-1] == len(
             self.species
@@ -614,9 +629,26 @@ class Model(CatalaxBase):
                 )
             )
 
-    def to_dict(self):
+    def to_dict(self, with_unit=True):
         """Converts the model into a serializable dictionary."""
         model_dict = DottedDict(self.dict(exclude_none=True))
+        if with_unit:
+            return {
+                "name": model_dict.name,
+                "species": [species.to_dict() for species in model_dict.species.values()],
+                "odes": [
+                    {**ode.to_dict(), "species": species}
+                    for species, ode in model_dict.odes.items()
+                ],
+                "parameters": [
+                    parameter.to_dict() for parameter in model_dict.parameters.values()
+                ],
+            }
+        parameters_dicts = []
+        for parameter in model_dict.parameters.values():
+            parameter_dict = parameter.to_dict()
+            parameter_dict['value'] = parameter_dict['value'].mantissa if isinstance(parameter_dict['value'], Quantity) else parameter_dict['value']
+            parameters_dicts.append(parameter_dict)
         return {
             "name": model_dict.name,
             "species": [species.to_dict() for species in model_dict.species.values()],
@@ -624,9 +656,7 @@ class Model(CatalaxBase):
                 {**ode.to_dict(), "species": species}
                 for species, ode in model_dict.odes.items()
             ],
-            "parameters": [
-                parameter.to_dict() for parameter in model_dict.parameters.values()
-            ],
+            "parameters": parameters_dicts,
         }
 
     # ! Metrics
@@ -667,7 +697,7 @@ class Model(CatalaxBase):
         residual = states[..., observables] - data
         chisqr = (residual**2).sum()
         ndata = len(residual.ravel())
-        _neg2_log_likel = ndata * jnp.log(chisqr / ndata)
+        _neg2_log_likel = ndata * bm.log(chisqr / ndata)
         aic = _neg2_log_likel + 2 * len(self.parameters)
 
         return aic

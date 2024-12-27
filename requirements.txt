@@ -1,0 +1,2 @@
+diffrax @ git+https://github.com/chaoming0625/diffrax.git
+brainunit @ git+https://github.com/chaobrain/brainunit.git

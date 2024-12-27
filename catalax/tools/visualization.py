@@ -7,6 +7,8 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from numpyro.infer import MCMC
 from numpyro.diagnostics import hpdi
+import brainunit as u
+from brainunit import math as bm, Quantity
 
 from catalax.model.model import Model
 from catalax.neural.neuralbase import NeuralBase
@@ -52,16 +54,16 @@ def visualize(
         func = lambda: (
             model.simulate(
                 initial_conditions=initial_conditions,  # type: ignore
-                dt0=0.01,
+                dt0=0.01 * u.second,
                 in_axes=(0, None, None),
-                saveat=jnp.linspace(0, times.max(), resolution),
+                saveat=bm.linspace(0 * u.second, times.max(), resolution),
                 max_steps=max_steps,
             )
         )
     elif neural_ode and initial_conditions:
-        y0s = jnp.stack(
+        y0s = bm.stack(
             [
-                jnp.array(
+                bm.array(
                     [float(init[species]) for species in sorted(list(init.keys()))]
                 )
                 for init in initial_conditions
@@ -70,7 +72,7 @@ def visualize(
         func = lambda: (
             neural_ode.predict(  # type: ignore
                 y0s=y0s,
-                times=jnp.linspace(0, times.max(), resolution),
+                times=bm.linspace(0, times.max(), resolution),
             )
         )
     else:
@@ -84,7 +86,7 @@ def visualize(
         times_, states = func()
 
         if len(times_.shape) == 1:
-            times_ = jnp.stack(
+            times_ = bm.stack(
                 [times_] * data.shape[0],
                 axis=0,
             )
@@ -239,12 +241,12 @@ def _get_quantile_preds(
 ) -> Tuple[jax.Array, jax.Array]:
     samples = mcmc.get_samples()
     hdpi_range = [
-        hpdi(mcmc.get_samples()[param], mass) for param in model._get_parameter_order()
+        Quantity(hpdi(mcmc.get_samples()[param], mass), model.parameters[param].value.unit) for param in model._get_parameter_order()
     ]
 
     # Construct upper and lower parameters
-    lower_quantile_params = jnp.array([value[0] for value in hdpi_range])
-    upper_quantile_params = jnp.array([value[1] for value in hdpi_range])
+    lower_quantile_params = [value[0] for value in hdpi_range]
+    upper_quantile_params = [value[1] for value in hdpi_range]
 
     lower_quantile_pred = _simulate_quantile(
         model,
@@ -261,7 +263,7 @@ def _get_quantile_preds(
     )
 
     # Stack both and get the minimum across the stacked dim
-    stacked_quantiles = jnp.stack([lower_quantile_pred, upper_quantile_pred])
+    stacked_quantiles = bm.stack([lower_quantile_pred, upper_quantile_pred])
     lower_end = stacked_quantiles.min(axis=0)
     upper_end = stacked_quantiles.max(axis=0)
 
