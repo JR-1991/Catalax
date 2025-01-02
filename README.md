@@ -98,4 +98,4 @@ f = ctx.visualize(
 )
 ```
 
-More examples for unit-aware numerical integration please see [unit-aware examples](https://github.com/routhleck/catalax/blob/main/examples-with-units).
+More examples for unit-aware numerical integration please see [unit-aware examples](https://github.com/routhleck/catalax/blob/master/examples-with-units).
