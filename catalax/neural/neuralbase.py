@@ -48,7 +48,7 @@ class NeuralBase(eqx.Module):
             "data_size": data_size,
             "width_size": width_size,
             "depth": depth,
-            "model": model.to_dict(),
+            "model": model.to_dict(with_unit=False),
             "rbf": isinstance(activation, RBFLayer),
             "use_final_bias": use_final_bias,
             "observable_indices": observable_indices,

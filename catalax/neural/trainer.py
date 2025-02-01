@@ -10,6 +10,7 @@ import jax.tree_util as jtn
 import numpy as np
 import optax
 import tqdm
+from brainunit import Quantity
 
 from catalax.neural.neuralbase import NeuralBase
 from catalax.neural.strategy import Step, Strategy
@@ -34,6 +35,11 @@ def train_neural_ode(
     key = jrandom.PRNGKey(420)
     _, _, loader_key = jrandom.split(key, 3)
     _, length_size, _ = data.shape
+
+    # data, time to jax.Array
+    data = data.mantissa if isinstance(data, Quantity) else data
+    times = times.mantissa if isinstance(times, Quantity) else times
+    inital_conditions = inital_conditions.mantissa if isinstance(inital_conditions, Quantity) else inital_conditions
 
     # Scale weights and set maximum time
     model = _scale_weights(model, weight_scale)

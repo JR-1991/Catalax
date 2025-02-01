@@ -22,7 +22,7 @@ class RBFLayer(eqx.Module):
         if width_size:
             assert key is not None, "Must provide key if width_size is given."
             mukey = jax.random.split(key, 1)
-            self.mu = jax.random.uniform(mukey, (width_size,))
+            self.mu = jax.random.uniform(key, (width_size,))
         else:
             self.mu = None
 

@@ -8,32 +8,60 @@
   ],
   "odes": [
     {
+      "species": "s1",
       "equation": "-s1*v_max/(K_m + s1)",
       "observable": true,
-      "species": "s1"
+      "parameters": {
+        "v_max": {
+          "name": "v_max",
+          "symbol": "v_max",
+          "value": "7. * katal",
+          "constant": false,
+          "prior": {
+            "type": "Uniform",
+            "unit": "kat",
+            "low": 1e-06,
+            "high": 200.0
+          }
+        },
+        "K_m": {
+          "name": "K_m",
+          "symbol": "K_m",
+          "value": "100. * molar",
+          "constant": false,
+          "prior": {
+            "type": "Uniform",
+            "unit": "M",
+            "low": 1e-06,
+            "high": 1000.0
+          }
+        }
+      }
     }
   ],
   "parameters": [
     {
-      "name": "K_m",
-      "symbol": "K_m",
-      "value": 100.0,
+      "name": "v_max",
+      "symbol": "v_max",
+      "value": "7. * katal",
       "constant": false,
       "prior": {
         "type": "Uniform",
+        "unit": "kat",
         "low": 1e-06,
-        "high": 1000.0
+        "high": 200.0
       }
     },
     {
-      "name": "v_max",
-      "symbol": "v_max",
-      "value": 7.0,
+      "name": "K_m",
+      "symbol": "K_m",
+      "value": "100. * molar",
       "constant": false,
       "prior": {
         "type": "Uniform",
+        "unit": "M",
         "low": 1e-06,
-        "high": 200.0
+        "high": 1000.0
       }
     }
   ]

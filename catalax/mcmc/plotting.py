@@ -4,6 +4,7 @@ import arviz as az
 import corner
 import jax
 import matplotlib.pyplot as plt
+from brainunit import Quantity
 from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
 
@@ -11,6 +12,7 @@ from numpyro.infer import MCMC
 def plot_corner(
     mcmc: MCMC,
     quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
+    model = None,
 ):
     """Plots the correlation between the parameters.
 
@@ -20,6 +22,18 @@ def plot_corner(
     """
 
     data = az.from_numpyro(mcmc)
+    var_names = []
+    for param in mcmc.get_samples().keys():
+        if param != "sigma":
+            if isinstance(model.parameters[param].value, Quantity):
+                # setattr(data.posterior, param + f" ({model.parameters[param].value.unit})", data.posterior[param])
+                data.posterior[
+                    f"{param} ({model.parameters[param].value.unit})"
+                ] = data.posterior[param]
+                var_names.append(f"{param} ({model.parameters[param].value.unit})")
+            else:
+                var_names.append(param)
+
     fig = corner.corner(
         data,
         plot_contours=False,
@@ -29,7 +43,7 @@ def plot_corner(
         title_kwargs={"fontsize": 12},
         divergences=True,
         use_math_text=False,
-        var_names=[var for var in mcmc.get_samples().keys() if var != "sigma"],
+        var_names=var_names,
     )
 
     fig.tight_layout()
@@ -41,7 +55,15 @@ def plot_posterior(mcmc, model, **kwargs) -> None:
     """Plots the posterior distribution of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
-    fig = az.plot_posterior(inf_data, var_names=model._get_parameter_order(), **kwargs)
+    var_names = []
+    for keys in model._get_parameter_order():
+        if isinstance(model.parameters[keys].value, Quantity):
+            inf_data.posterior[keys + f" ({model.parameters[keys].value.unit})"] = inf_data.posterior[keys]
+            var_names.append(keys + f" ({model.parameters[keys].value.unit})")
+        else:
+            var_names.append(keys)
+
+    fig = az.plot_posterior(inf_data, var_names=var_names, **kwargs)
 
     return fig
 
@@ -93,8 +115,19 @@ def plot_credibility_interval(
 def plot_trace(mcmc, model, **kwargs) -> None:
     """Plots the trace of the given bayes analysis"""
 
+
     inf_data = az.from_numpyro(mcmc)
-    f = az.plot_trace(inf_data, var_names=model._get_parameter_order(), **kwargs)
+    var_names = []
+    for keys in model._get_parameter_order():
+        if isinstance(model.parameters[keys].value, Quantity):
+            inf_data.posterior[
+                f"{keys} ({model.parameters[keys].value.unit})"
+            ] = inf_data.posterior[keys]
+            var_names.append(f"{keys} ({model.parameters[keys].value.unit})")
+        else:
+            var_names.append(keys)
+
+    f = az.plot_trace(inf_data, var_names=var_names, **kwargs)
 
     plt.tight_layout()
 
@@ -105,6 +138,15 @@ def plot_forest(mcmc, model, **kwargs) -> None:
     """Plots a forest plot of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
+    var_names = []
+    for keys in model._get_parameter_order():
+        if isinstance(model.parameters[keys].value, Quantity):
+            inf_data.posterior[
+                f"{keys} ({model.parameters[keys].value.unit})"
+            ] = inf_data.posterior[keys]
+            var_names.append(f"{keys} ({model.parameters[keys].value.unit})")
+        else:
+            var_names.append(keys)
     f = az.plot_forest(inf_data, var_names=model._get_parameter_order(), **kwargs)
 
     plt.tight_layout()

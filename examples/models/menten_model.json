@@ -8,22 +8,36 @@
   ],
   "odes": [
     {
+      "species": "s1",
       "equation": "-s1*v_max/(K_m + s1)",
       "observable": true,
-      "species": "s1"
+      "parameters": {
+        "v_max": {
+          "name": "v_max",
+          "symbol": "v_max",
+          "value": "7. * katal",
+          "constant": false
+        },
+        "K_m": {
+          "name": "K_m",
+          "symbol": "K_m",
+          "value": "100. * molar",
+          "constant": false
+        }
+      }
     }
   ],
   "parameters": [
     {
-      "name": "K_m",
-      "symbol": "K_m",
-      "value": 100.0,
+      "name": "v_max",
+      "symbol": "v_max",
+      "value": "7. * katal",
       "constant": false
     },
     {
-      "name": "v_max",
-      "symbol": "v_max",
-      "value": 7.0,
+      "name": "K_m",
+      "symbol": "K_m",
+      "value": "100. * molar",
       "constant": false
     }
   ]
