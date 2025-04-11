@@ -3,7 +3,8 @@ from __future__ import annotations
 import copy
 import json
 import os
-from typing import Callable, Dict, List, Optional, Tuple, Union, Any
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -11,20 +12,20 @@ import pandas as pd
 from diffrax import ODETerm, Tsit5
 from dotted_dict import DottedDict
 from jax import Array
-from pydantic import Field, PrivateAttr, ConfigDict, field_validator
+from pydantic import ConfigDict, Field, PrivateAttr, field_validator
 from sympy import Expr, Matrix, Symbol, symbols, sympify
-from pathlib import Path
 
 from catalax.mcmc import priors
 from catalax.model.base import CatalaxBase
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
+
+from ..dataset import Dataset
 from .inaxes import InAxes
 from .ode import ODE
 from .parameter import Parameter
 from .species import Species
 from .utils import PrettyDict, check_symbol, eqprint, odeprint
-from ..dataset import Dataset
 
 
 class Model(CatalaxBase):
@@ -412,7 +413,9 @@ class Model(CatalaxBase):
         if parameters is not None:
             return parameters
 
-        return jnp.array([self.parameters[param].value for param in self.get_parameter_order()])  # type: ignore
+        return jnp.array(
+            [self.parameters[param].value for param in self.get_parameter_order()]
+        )  # type: ignore
 
     def get_parameter_order(self) -> List[str]:
         """Returns the order of the parameters in the model"""
@@ -439,7 +442,8 @@ class Model(CatalaxBase):
 
         if in_axes is not None and len(initial_conditions) > 1:
             return jnp.stack(
-                [df_inits[s].values for s in self.get_species_order()], axis=-1  # type: ignore
+                [df_inits[s].values for s in self.get_species_order()],
+                axis=-1,  # type: ignore
             )
         elif in_axes and len(initial_conditions) > 1:
             raise ValueError(
@@ -487,9 +491,9 @@ class Model(CatalaxBase):
             model (Model): Catalax model to prepare the rate function for.
         """
 
-        assert (
-            in_axes is None or len(in_axes) == 3
-        ), "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
+        assert in_axes is None or len(in_axes) == 3, (
+            "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
+        )
 
         odes = [self.odes[species] for species in self.get_species_order()]
         fun = Stack(odes=odes, parameters=self.get_parameter_order())
@@ -616,9 +620,9 @@ class Model(CatalaxBase):
         if len(y0_array.shape) == 1:
             y0_array = jnp.expand_dims(y0_array, axis=0)
 
-        assert y0_array.shape[-1] == len(
-            self.species
-        ), "Length of y0 array does not match the number of species in the model."
+        assert y0_array.shape[-1] == len(self.species), (
+            "Length of y0 array does not match the number of species in the model."
+        )
 
         return [
             {
