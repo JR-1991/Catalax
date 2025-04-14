@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "catalax"
-version = "0.4.0"
+version = "0.4.1"
 description = "A JAX-based framework for (neural) ODE modelling in biocatalysis."
 authors = ["Jan Range <jan.range@simtech.uni-stuttgart.de>"]
 license = "MIT License"
@@ -38,3 +38,6 @@ where = ["catalax"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+ignore_missing_imports = true
