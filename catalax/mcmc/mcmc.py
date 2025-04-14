@@ -56,20 +56,33 @@ def run_mcmc(
     """
 
     # Check if all paramaters have priors
-    assert all(
-        param.prior is not None for param in model.parameters.values()
-    ), f"Parameters {', '.join([param.name for param in model.parameters.values() if param.prior is None])} do not have priors. Please specify priors for all parameters."
+    assert all(param.prior is not None for param in model.parameters.values()), (
+        f"Parameters {', '.join([param.name for param in model.parameters.values() if param.prior is None])} do not have priors. Please specify priors for all parameters."
+    )
 
-    # Unpack the dataset
-    assert set(dataset.species) == set(
-        model.get_species_order()
-    ), "Species in dataset and model do not match."
+    # Get observable species from the model
+    observable_species = sorted(
+        [species for species, ode in model.odes.items() if ode.observable]
+    )
 
-    data, times, y0s = dataset.to_jax_arrays(
-        model.get_species_order(),
+    filtered_dataset = dataset.filter_observable_species(observable_species)
+
+    # Extract data, times, and initial conditions from the dataset
+    data, times, y0s = filtered_dataset.to_jax_arrays(
+        model.get_observable_species_order(),
         inits_to_array=True,
     )
 
+    # Create initial conditions for all species
+    all_species = model.get_species_order()
+    full_y0s = []
+
+    for meas in dataset.measurements:
+        # Create array with all initial conditions in the correct order
+        y0 = jnp.array([meas.initial_conditions[species] for species in all_species])
+        full_y0s.append(y0)
+
+    y0s = jnp.stack(full_y0s)
     # Determine dimensions
     in_axes = dataset.get_vmap_dims(
         data=data,
@@ -229,7 +242,7 @@ def _print_priors(parameters: List[Parameter]):
     """
     fun = lambda name, value: f"├── \033[1m{name}\033[0m: {value}"
     statements = [
-        f"🔸 Priors",
+        "🔸 Priors",
         *[fun(param.name, param.prior._print_str) for param in parameters],
     ]
 
