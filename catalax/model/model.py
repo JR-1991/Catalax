@@ -425,6 +425,10 @@ class Model(CatalaxBase):
         """Returns the order of the species in the model"""
         return sorted(self.species.keys())
 
+    def get_observable_species_order(self) -> List[str]:
+        """Returns the order of the observable species in the model"""
+        return sorted([key for key in self.species.keys() if self.odes[key].observable])
+
     def _assemble_y0_array(
         self, initial_conditions: List[Dict[str, float]], in_axes: Tuple
     ) -> jax.Array:
