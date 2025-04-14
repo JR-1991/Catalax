@@ -60,20 +60,13 @@ def run_mcmc(
         f"Parameters {', '.join([param.name for param in model.parameters.values() if param.prior is None])} do not have priors. Please specify priors for all parameters."
     )
 
-    # Get observable species from the model
-    observable_species = sorted(
-        [species for species, ode in model.odes.items() if ode.observable]
-    )
-
-    filtered_dataset = dataset.filter_observable_species(observable_species)
-
-    # Extract data, times, and initial conditions from the dataset
-    data, times, y0s = filtered_dataset.to_jax_arrays(
+    # Extract data, times, and initial conditions from the dataset for observable species
+    data, times, y0s = dataset.to_jax_arrays(
         model.get_observable_species_order(),
         inits_to_array=True,
     )
 
-    # Create initial conditions for all species
+    # Create initial conditions for all species, including non-observable species
     all_species = model.get_species_order()
     full_y0s = []
 
@@ -83,11 +76,12 @@ def run_mcmc(
         full_y0s.append(y0)
 
     y0s = jnp.stack(full_y0s)
+
     # Determine dimensions
     in_axes = dataset.get_vmap_dims(
         data=data,
         time=times,
-        y0s=y0s,  # type: ignore
+        y0s=y0s,
     )
 
     # Compile the model to obtain the simulation function
