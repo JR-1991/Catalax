@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import PrivateAttr, model_validator
 from sympy import Expr
@@ -28,22 +28,22 @@ class Parameter(CatalaxBase):
     @model_validator(mode="after")
     def _assign_prior_string(self):
         if isinstance(self.prior, tuple):
-            prior, prior_str = values["prior"]
+            prior, prior_str = self.prior
             self.prior = prior
             self._prior_str_ = prior_str
 
         return self
 
-    _repr_fields: List[str] = PrivateAttr(
-        default={
-            "name": "name",
-            "symbol": "symbol",
-            "value": "value",
-            "_prior_str_": "prior",
-            "initial_value": "initial_value",
-            "equation": "equation",
-            "lower_bound": "lower_bound",
-            "upper_bound": "upper_bound",
-            "constant": "constant",
-        }
+    _repr_fields = PrivateAttr(
+        default=[
+            "name",
+            "symbol",
+            "value",
+            "_prior_str_",
+            "initial_value",
+            "equation",
+            "lower_bound",
+            "upper_bound",
+            "constant",
+        ]
     )
