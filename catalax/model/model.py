@@ -856,9 +856,3 @@ class Model(CatalaxBase):
                     upper=parameter.upper_bound,
                     lower=parameter.lower_bound,
                 )
-
-
-if __name__ == "__main__":
-    path = "/Users/max/Documents/GitHub/lars-sah/data/enzymeml_docs/TkSAHH with SIH as substrate - kinetic assay.json"
-    model = Model.from_enzymeml(path)
-    print(model)
