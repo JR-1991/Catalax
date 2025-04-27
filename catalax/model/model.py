@@ -3,7 +3,9 @@ from __future__ import annotations
 import copy
 import json
 import os
-from typing import Callable, Dict, List, Optional, Tuple, Union, Any
+import re
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -11,20 +13,21 @@ import pandas as pd
 from diffrax import ODETerm, Tsit5
 from dotted_dict import DottedDict
 from jax import Array
-from pydantic import Field, PrivateAttr, ConfigDict, field_validator
+from pydantic import ConfigDict, Field, PrivateAttr, field_validator
+from pyenzyme import EnzymeMLDocument
 from sympy import Expr, Matrix, Symbol, symbols, sympify
-from pathlib import Path
 
 from catalax.mcmc import priors
 from catalax.model.base import CatalaxBase
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
+
+from ..dataset import Dataset
 from .inaxes import InAxes
 from .ode import ODE
 from .parameter import Parameter
 from .species import Species
 from .utils import PrettyDict, check_symbol, eqprint, odeprint
-from ..dataset import Dataset
 
 
 class Model(CatalaxBase):
@@ -412,7 +415,9 @@ class Model(CatalaxBase):
         if parameters is not None:
             return parameters
 
-        return jnp.array([self.parameters[param].value for param in self.get_parameter_order()])  # type: ignore
+        return jnp.array(
+            [self.parameters[param].value for param in self.get_parameter_order()]
+        )  # type: ignore
 
     def get_parameter_order(self) -> List[str]:
         """Returns the order of the parameters in the model"""
@@ -421,6 +426,10 @@ class Model(CatalaxBase):
     def get_species_order(self) -> List[str]:
         """Returns the order of the species in the model"""
         return sorted(self.species.keys())
+
+    def get_observable_species_order(self) -> List[str]:
+        """Returns the order of the observable species in the model"""
+        return sorted([key for key in self.species.keys() if self.odes[key].observable])
 
     def _assemble_y0_array(
         self, initial_conditions: List[Dict[str, float]], in_axes: Tuple
@@ -439,7 +448,8 @@ class Model(CatalaxBase):
 
         if in_axes is not None and len(initial_conditions) > 1:
             return jnp.stack(
-                [df_inits[s].values for s in self.get_species_order()], axis=-1  # type: ignore
+                [df_inits[s].values for s in self.get_species_order()],
+                axis=-1,  # type: ignore
             )
         elif in_axes and len(initial_conditions) > 1:
             raise ValueError(
@@ -487,9 +497,9 @@ class Model(CatalaxBase):
             model (Model): Catalax model to prepare the rate function for.
         """
 
-        assert (
-            in_axes is None or len(in_axes) == 3
-        ), "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
+        assert in_axes is None or len(in_axes) == 3, (
+            "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
+        )
 
         odes = [self.odes[species] for species in self.get_species_order()]
         fun = Stack(odes=odes, parameters=self.get_parameter_order())
@@ -598,7 +608,7 @@ class Model(CatalaxBase):
 
         return symbols_
 
-    def y0_array_to_dict(self, y0_array: jax.Array) -> Dict[str, float]:
+    def y0_array_to_dict(self, y0_array: jax.Array) -> List[Dict[str, float]]:
         """
         Converts a 1D or 2D array of initial values to a list of dictionaries.
 
@@ -616,9 +626,9 @@ class Model(CatalaxBase):
         if len(y0_array.shape) == 1:
             y0_array = jnp.expand_dims(y0_array, axis=0)
 
-        assert y0_array.shape[-1] == len(
-            self.species
-        ), "Length of y0 array does not match the number of species in the model."
+        assert y0_array.shape[-1] == len(self.species), (
+            "Length of y0 array does not match the number of species in the model."
+        )
 
         return [
             {
@@ -764,5 +774,85 @@ class Model(CatalaxBase):
         return model
 
     @classmethod
-    def from_enzymeml(cls, path: Path | str):
-        raise NotImplementedError("This method is not implemented yet.")
+    def from_enzymeml(cls, path: Path | str, name: str | None = None):
+        with open(path, "r") as f:
+            enzmldoc = EnzymeMLDocument.model_validate_json(f.read())
+
+        if name is None:
+            name = enzmldoc.name
+
+        model = cls(name=name)
+
+        # get observables
+        observables = set()
+        non_observables = set()
+        for measurement in enzmldoc.measurements:
+            for species_data in measurement.species_data:
+                if species_data.data:
+                    observables.add(species_data.species_id)
+                else:
+                    non_observables.add(species_data.species_id)
+
+        all_species = observables | non_observables
+
+        # create regex match objects for all species
+        species_regex = re.compile(r"|".join(map(re.escape, all_species)))
+
+        for reaction in enzmldoc.reactions:
+            # get species from reaction
+            match_species = species_regex.findall(reaction.kinetic_law.equation)
+
+            # add species to model
+            for species in set(match_species):
+                model.add_species(species)
+
+            # add ode to model
+            model.add_ode(
+                species=reaction.kinetic_law.species_id,
+                equation=reaction.kinetic_law.equation,
+                observable=True
+                if reaction.kinetic_law.species_id in observables
+                else False,
+            )
+
+        # add for all model.species that don't have an ode, a constant rate of 0
+        for species in model.species:
+            if species not in model.odes:
+                model.add_ode(species=species, equation="0", observable=False)
+
+        return model
+
+    def update_enzymeml_parameters(self, enzmldoc: EnzymeMLDocument):
+        """Updates model parameters of enzymeml document with model parameters.
+        Existing parameters will be updated, non-existing parameters will be added.
+
+        Args:
+            enzmldoc (EnzymeMLDocument): EnzymeML document to update.
+        """
+
+        enzml_param_ids = [param.id for param in enzmldoc.parameters]
+
+        for parameter in self.parameters.values():
+            # update existing parameter
+            if parameter.name in enzml_param_ids:
+                enzymeml_param = next(
+                    p for p in enzmldoc.parameters if p.id == parameter.name
+                )
+                enzymeml_param.value = parameter.value
+                enzymeml_param.initial_value = parameter.initial_value
+                enzymeml_param.constant = parameter.constant
+                enzymeml_param.upper = parameter.upper_bound
+                enzymeml_param.lower = parameter.lower_bound
+
+            # add new parameter
+            else:
+                enzmldoc.add_to_parameters(
+                    id=parameter.name,
+                    symbol=parameter.name,
+                    name=parameter.name,
+                    value=parameter.value,
+                    initial_value=parameter.initial_value,
+                    constant=parameter.constant,
+                    upper=parameter.upper_bound,
+                    lower=parameter.lower_bound,
+                )

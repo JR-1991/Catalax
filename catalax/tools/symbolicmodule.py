@@ -29,7 +29,6 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 import sympy
 
-
 PyTree = Any
 
 concatenate = sympy.Function("concatenate")
@@ -104,12 +103,10 @@ assert len(_reverse_lookup) == len(_lookup)
 
 class _AbstractNode(eqx.Module):
     @abc.abstractmethod
-    def __call__(self, memodict: dict):
-        ...
+    def __call__(self, memodict: dict): ...
 
     @abc.abstractmethod
-    def sympy(self, memodict: dict, func_lookup: dict) -> sympy.Expr:
-        ...
+    def sympy(self, memodict: dict, func_lookup: dict) -> sympy.Expr: ...
 
     # Comparisons based on identity
     __hash__ = object.__hash__
@@ -351,18 +348,18 @@ class SymbolicModule(eqx.Module):
             make_array=make_array,
             positionals=positionals,
         )
-        self.nodes = jax.tree_map(_convert, expressions)
+        self.nodes = jax.tree_util.tree_map(_convert, expressions)
 
     @staticmethod
     def _check_positionals(positionals):
-        assert all(
-            isinstance(pos, list) for pos in positionals.values()
-        ), f"Expected lists as positional - Received types {set(type(kw) for kw in kwargs.values())}"
+        assert all(isinstance(pos, list) for pos in positionals.values()), (
+            f"Expected lists as positional - Received types {set(type(kw) for kw in kwargs.values())}"
+        )
 
         _has_single_type = lambda l: len(set([type(e) for e in l])) == 1
-        assert all(
-            _has_single_type(pos) for pos in positionals.values()
-        ), "Received mixed types within positionals. Please make sure to pass lists of strings."
+        assert all(_has_single_type(pos) for pos in positionals.values()), (
+            "Received mixed types within positionals. Please make sure to pass lists of strings."
+        )
 
     def sympy(self) -> sympy.Expr:
         if self.has_extra_funcs:
@@ -370,10 +367,12 @@ class SymbolicModule(eqx.Module):
                 "SymbolicModule cannot be converted back to SymPy if `extra_funcs` is passed"
             )
         memodict = dict()
-        return jax.tree_map(
+        return jax.tree_util.tree_map(
             lambda n: n.sympy(memodict, _reverse_lookup), self.nodes, is_leaf=_is_node
         )
 
     def __call__(self, **symbols):
         memodict = symbols
-        return jax.tree_map(lambda n: n(memodict), self.nodes, is_leaf=_is_node)
+        return jax.tree_util.tree_map(
+            lambda n: n(memodict), self.nodes, is_leaf=_is_node
+        )

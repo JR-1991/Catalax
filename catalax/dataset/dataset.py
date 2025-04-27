@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 from jax import Array
 from pydantic import BaseModel, Field
+from pyenzyme import EnzymeMLDocument
 
 from .croissant import extract_record_set, json_lines_to_dict
 from .measurement import Measurement
@@ -74,9 +75,9 @@ class Dataset(BaseModel):
 
         """
 
-        assert not any(
-            meas.id == measurement.id for meas in self.measurements
-        ), f"Measurement with ID={measurement.id} already exists."
+        assert not any(meas.id == measurement.id for meas in self.measurements), (
+            f"Measurement with ID={measurement.id} already exists."
+        )
 
         unused_species = [
             sp for sp in measurement.data.keys() if sp not in self.species
@@ -231,36 +232,15 @@ class Dataset(BaseModel):
 
     # ! Importers
     @classmethod
-    def from_enzymeml(cls, path: Path | str) -> "Dataset":
-        """Reads an EnzymeML file and returns a Dataset.
+    def from_enzymeml(cls, enzmldoc: EnzymeMLDocument) -> "Dataset":
+        """Creates a dataset from an EnzymeMLDocument.
 
         Args:
-            path (Path): The path to the EnzymeML file.
+            enzmldoc (EnzymeMLDocument): The EnzymeML document to create the dataset from.
 
         Returns:
             Dataset: The Dataset object.
         """
-
-        if not isinstance(path, Path):
-            path = Path(path)
-
-        try:
-            import pyenzyme as pe
-        except ImportError:
-            raise ImportError(
-                "Please install the 'pyenzyme' package to use this method. Use the following: "
-                "pip install pyenzyme"
-            )
-
-        # If it ends with .json, it's a v2 file
-        if path.suffix == ".json":
-            enzmldoc = pe.EnzymeMLDocument.read(path)
-        elif path.suffix == ".omex":
-            enzmldoc = pe.EnzymeMLDocument.from_sbml(path)
-        else:
-            raise ValueError(
-                "Unknown file format. Please provide a .json or .omex file."
-            )
 
         measurements = [
             Measurement.from_enzymeml(meas)
@@ -276,6 +256,32 @@ class Dataset(BaseModel):
             species=all_species,
             measurements=measurements,
         )
+
+    @classmethod
+    def read_enzymeml(cls, path: Path | str) -> "Dataset":
+        """Reads an EnzymeML file and returns a Dataset.
+
+        Args:
+            path (Path): The path to the EnzymeML file.
+
+        Returns:
+            Dataset: The Dataset object.
+        """
+
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        # If it ends with .json, it's a v2 file
+        if path.suffix == ".json":
+            enzmldoc = EnzymeMLDocument.read(path)
+        elif path.suffix == ".omex":
+            enzmldoc = EnzymeMLDocument.from_sbml(path)
+        else:
+            raise ValueError(
+                "Unknown file format. Please provide a .json or .omex file."
+            )
+
+        return cls.from_enzymeml(enzmldoc)
 
     @classmethod
     def from_dataframe(
@@ -329,13 +335,13 @@ class Dataset(BaseModel):
 
         """
 
-        assert (
-            "measurementId" in data.columns
-        ), "Missing column in data table: 'measurementId'"
+        assert "measurementId" in data.columns, (
+            "Missing column in data table: 'measurementId'"
+        )
         assert "time" in data.columns, "Missing column in data table: 'time'"
-        assert (
-            "measurementId" in inits.columns
-        ), "Missing column in inits table: 'measurementId'"
+        assert "measurementId" in inits.columns, (
+            "Missing column in inits table: 'measurementId'"
+        )
 
         if meas_id is None:
             meas_id = str(uuid.uuid4())
@@ -435,9 +441,9 @@ class Dataset(BaseModel):
             measurements = []
 
             for meas_uuid, rs in meas_rs.items():
-                assert (
-                    meas_uuid in init_rs
-                ), f"Initial conditions not found for {meas_uuid}"
+                assert meas_uuid in init_rs, (
+                    f"Initial conditions not found for {meas_uuid}"
+                )
 
                 # Extract the initial conditions and measurements
                 inits = list(init_rs[meas_uuid])[0]

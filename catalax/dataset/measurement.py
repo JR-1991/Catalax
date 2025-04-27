@@ -1,6 +1,6 @@
 import json
 import warnings
-from typing import Dict, Optional, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 from uuid import uuid4
 
 import jax
@@ -13,9 +13,9 @@ import pyenzyme as pe
 from pydantic import (
     BaseModel,
     Field,
-    model_validator,
     field_serializer,
     field_validator,
+    model_validator,
 )
 from pydantic.config import ConfigDict
 from pydantic.fields import computed_field
@@ -148,9 +148,9 @@ class Measurement(BaseModel):
 
     @model_validator(mode="after")
     def _check_data_time_length_match(self):
-        assert all(
-            len(data) == len(self.time) for data in self.data.values()
-        ), "The data and time arrays must have the same length."
+        assert all(len(data) == len(self.time) for data in self.data.values()), (
+            "The data and time arrays must have the same length."
+        )
 
         return self
 
@@ -196,7 +196,9 @@ class Measurement(BaseModel):
         if isinstance(data, np.ndarray) or isinstance(data, list):
             data = jnp.array(data)
 
-        assert data.shape[0] == self.time.shape[0], "The data and time arrays must have the same length."  # type: ignore
+        assert data.shape[0] == self.time.shape[0], (
+            "The data and time arrays must have the same length."
+        )  # type: ignore
         self.data[species] = data
         self.initial_conditions[species] = initial_concentration
 
