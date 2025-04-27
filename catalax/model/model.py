@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -13,6 +14,7 @@ from diffrax import ODETerm, Tsit5
 from dotted_dict import DottedDict
 from jax import Array
 from pydantic import ConfigDict, Field, PrivateAttr, field_validator
+from pyenzyme import EnzymeMLDocument
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 
 from catalax.mcmc import priors
@@ -606,7 +608,7 @@ class Model(CatalaxBase):
 
         return symbols_
 
-    def y0_array_to_dict(self, y0_array: jax.Array) -> Dict[str, float]:
+    def y0_array_to_dict(self, y0_array: jax.Array) -> List[Dict[str, float]]:
         """
         Converts a 1D or 2D array of initial values to a list of dictionaries.
 
@@ -772,5 +774,91 @@ class Model(CatalaxBase):
         return model
 
     @classmethod
-    def from_enzymeml(cls, path: Path | str):
-        raise NotImplementedError("This method is not implemented yet.")
+    def from_enzymeml(cls, path: Path | str, name: str | None = None):
+        with open(path, "r") as f:
+            enzmldoc = EnzymeMLDocument.model_validate_json(f.read())
+
+        if name is None:
+            name = enzmldoc.name
+
+        model = cls(name=name)
+
+        # get observables
+        observables = set()
+        non_observables = set()
+        for measurement in enzmldoc.measurements:
+            for species_data in measurement.species_data:
+                if species_data.data:
+                    observables.add(species_data.species_id)
+                else:
+                    non_observables.add(species_data.species_id)
+
+        all_species = observables | non_observables
+
+        # create regex match objects for all species
+        species_regex = re.compile(r"|".join(map(re.escape, all_species)))
+
+        for reaction in enzmldoc.reactions:
+            # get species from reaction
+            match_species = species_regex.findall(reaction.kinetic_law.equation)
+
+            # add species to model
+            for species in set(match_species):
+                model.add_species(species)
+
+            # add ode to model
+            model.add_ode(
+                species=reaction.kinetic_law.species_id,
+                equation=reaction.kinetic_law.equation,
+                observable=True
+                if reaction.kinetic_law.species_id in observables
+                else False,
+            )
+
+        # add for all model.species that don't have an ode, a constant rate of 0
+        for species in model.species:
+            if species not in model.odes:
+                model.add_ode(species=species, equation="0", observable=False)
+
+        return model
+
+    def update_enzymeml_parameters(self, enzmldoc: EnzymeMLDocument):
+        """Updates model parameters of enzymeml document with model parameters.
+        Existing parameters will be updated, non-existing parameters will be added.
+
+        Args:
+            enzmldoc (EnzymeMLDocument): EnzymeML document to update.
+        """
+
+        enzml_param_ids = [param.id for param in enzmldoc.parameters]
+
+        for parameter in self.parameters.values():
+            # update existing parameter
+            if parameter.name in enzml_param_ids:
+                enzymeml_param = next(
+                    p for p in enzmldoc.parameters if p.id == parameter.name
+                )
+                enzymeml_param.value = parameter.value
+                enzymeml_param.initial_value = parameter.initial_value
+                enzymeml_param.constant = parameter.constant
+                enzymeml_param.upper = parameter.upper_bound
+                enzymeml_param.lower = parameter.lower_bound
+
+            # add new parameter
+            else:
+                enzmldoc.add_to_parameters(
+                    id=parameter.name,
+                    symbol=parameter.name,
+                    name=parameter.name,
+                    value=parameter.value,
+                    initial_value=parameter.initial_value,
+                    constant=parameter.constant,
+                    upper=parameter.upper_bound,
+                    lower=parameter.lower_bound,
+                )
+
+
+if __name__ == "__main__":
+    path = "/Users/max/Documents/GitHub/lars-sah/data/enzymeml_docs/TkSAHH with SIH as substrate - kinetic assay.json"
+    model = Model.from_enzymeml(path)
+    print(model)
