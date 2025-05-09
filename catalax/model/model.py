@@ -14,7 +14,7 @@ from diffrax import ODETerm, Tsit5
 from dotted_dict import DottedDict
 from jax import Array
 from pydantic import ConfigDict, Field, PrivateAttr, field_validator
-from pyenzyme import EnzymeMLDocument
+from pyenzyme import EnzymeMLDocument, read_enzymeml
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 
 from catalax.mcmc import priors
@@ -75,7 +75,7 @@ class Model(CatalaxBase):
     def add_ode(
         self,
         species: str,
-        equation: str,  # type: ignore
+        equation: str,
         observable: bool = True,
         species_map: Optional[Dict[str, str]] = None,
     ):
@@ -103,7 +103,7 @@ class Model(CatalaxBase):
             equation (str): The equation that describes the dynamics of the species.
 
         Raises:
-            ValueError: _description_
+            ValueError: If the species is not a string or a SymPy expression.
         """
 
         if any(str(ode.species.name) == species for ode in self.odes.values()):
@@ -112,13 +112,22 @@ class Model(CatalaxBase):
             )
 
         if isinstance(equation, str):
-            equation: Expr = sympify(equation)
+            sympy_equation: Expr = sympify(equation)
+        elif isinstance(equation, Expr):
+            sympy_equation = equation
+        else:
+            raise ValueError(
+                f"Equation must be a string or a SymPy expression, got {type(equation)}"
+            )
 
         if species not in self.species:
-            self.add_species(name=species, species_map=species_map)
+            if species_map:  # not None and not empty
+                self.add_species(**species_map)
+            else:
+                self.add_species(species_string=species)
 
         self.odes[species] = ODE(
-            equation=equation,
+            equation=sympy_equation,
             species=self.species[species],
             observable=observable,
         )
@@ -774,9 +783,12 @@ class Model(CatalaxBase):
         return model
 
     @classmethod
-    def from_enzymeml(cls, path: Path | str, name: str | None = None):
-        with open(path, "r") as f:
-            enzmldoc = EnzymeMLDocument.model_validate_json(f.read())
+    def from_enzymeml(cls, enzmldoc: EnzymeMLDocument, name: str | None = None):
+        """Initializes a model from an EnzymeML document.
+
+        Args:
+            enzmldoc (EnzymeMLDocument): The EnzymeML document to create the model from.
+        """
 
         if name is None:
             name = enzmldoc.name
@@ -797,30 +809,41 @@ class Model(CatalaxBase):
 
         # create regex match objects for all species
         species_regex = re.compile(r"|".join(map(re.escape, all_species)))
-
         for reaction in enzmldoc.reactions:
             # get species from reaction
             match_species = species_regex.findall(reaction.kinetic_law.equation)
-
             # add species to model
             for species in set(match_species):
-                model.add_species(species)
+                model.add_species(", ".join(match_species))
 
             # add ode to model
             model.add_ode(
                 species=reaction.kinetic_law.species_id,
                 equation=reaction.kinetic_law.equation,
-                observable=True
-                if reaction.kinetic_law.species_id in observables
-                else False,
+                observable=True,
             )
 
         # add for all model.species that don't have an ode, a constant rate of 0
-        for species in model.species:
-            if species not in model.odes:
+        for species in non_observables:
+            if species not in model.species:
                 model.add_ode(species=species, equation="0", observable=False)
 
         return model
+
+    @classmethod
+    def read_enzymeml(cls, path: Path | str, name: str | None = None):
+        """Initializes a model from the "reactions" section of an EnzymeML document.
+
+        Args:
+            path (Path | str): Path to the EnzymeML document.
+            name (str | None, optional): Name of the model. Defaults to None.
+
+        Returns:
+            Model: Resulting model instance.
+        """
+        enzmldoc = read_enzymeml(path)
+
+        return cls.from_enzymeml(enzmldoc, name)
 
     def update_enzymeml_parameters(self, enzmldoc: EnzymeMLDocument):
         """Updates model parameters of enzymeml document with model parameters.
