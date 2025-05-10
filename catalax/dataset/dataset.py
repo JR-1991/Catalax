@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from jax import Array
 from pydantic import BaseModel, Field
-from pyenzyme import EnzymeMLDocument
+from pyenzyme import EnzymeMLDocument, read_enzymeml
 
 from .croissant import extract_record_set, json_lines_to_dict
 from .measurement import Measurement
@@ -266,6 +266,10 @@ class Dataset(BaseModel):
 
         Returns:
             Dataset: The Dataset object.
+
+        Raises:
+            ValueError: If the file format is not supported.
+            NotImplementedError: If OMEX files are not supported yet.
         """
 
         if not isinstance(path, Path):
@@ -273,9 +277,9 @@ class Dataset(BaseModel):
 
         # If it ends with .json, it's a v2 file
         if path.suffix == ".json":
-            enzmldoc = EnzymeMLDocument.read(path)
+            enzmldoc = read_enzymeml(path)
         elif path.suffix == ".omex":
-            enzmldoc = EnzymeMLDocument.from_sbml(path)
+            raise NotImplementedError("OMEX files are not supported yet.")
         else:
             raise ValueError(
                 "Unknown file format. Please provide a .json or .omex file."
@@ -401,10 +405,10 @@ class Dataset(BaseModel):
         Returns:
             Dataset: The dataset object.
         """
-
         from ..model import Model
 
-        assert isinstance(model, Model), "Expected a Model object."
+        if not isinstance(model, Model):
+            raise ValueError(f"Expected a Model object. Got {type(model)}")
 
         return cls(
             id=model.name,
@@ -500,7 +504,7 @@ class Dataset(BaseModel):
         path: Optional[str] = None,
         measurement_ids: List[str] = [],
         figsize: Tuple[int, int] = (5, 3),
-        model: "Model" = None,
+        model: Optional["Model"] = None,
     ):
         """Plots all measurements in the dataset.
 

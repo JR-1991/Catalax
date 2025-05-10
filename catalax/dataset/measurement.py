@@ -339,7 +339,7 @@ class Measurement(BaseModel):
         Args:
             show (bool): Whether to show the plot. Defaults to True.
             ax (Optional[plt.Axes]): The axes to plot the data on. Defaults to None.
-            model (Model): The model to plot the fit of. Defaults to None.
+            model (Optional[Model]): The model to plot the fit of. Defaults to None.
         """
 
         is_subplot = ax is not None
@@ -379,7 +379,7 @@ class Measurement(BaseModel):
         ax.grid(alpha=0.3, linestyle="--")
         ax.set_xlabel("Time", fontsize=12)
         ax.set_ylabel("Concentration", fontsize=12)
-        ax.set_title(init_title, fontsize=12)
+        ax.set_title(init_title, fontsize=8)
 
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
