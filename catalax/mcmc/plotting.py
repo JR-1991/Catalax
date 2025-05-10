@@ -1,3 +1,4 @@
+import warnings
 from typing import Dict, Tuple
 
 import arviz as az
@@ -11,33 +12,40 @@ from numpyro.infer import MCMC
 def plot_corner(
     mcmc: MCMC,
     quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
-):
+    digits_after_decimal: int = 2,
+) -> plt.Figure:
     """Plots the correlation between the parameters.
 
     Args:
         mcmc (MCMC): The MCMC object to plot.
-        model (Model): The model to infer the parameters of.
+        quantiles (Tuple[float, float, float]): The quantiles to plot. Defaults to (0.16, 0.5, 0.84).
+        digits_after_decimal (int): The number of digits to show after the decimal point. Defaults to 2.
+
+    Returns:
+        plt.Figure: The figure.
     """
 
     data = az.from_numpyro(mcmc)
-    fig = corner.corner(
-        data,
-        plot_contours=False,
-        quantiles=list(quantiles),
-        bins=20,
-        show_titles=True,
-        title_kwargs={"fontsize": 12},
-        divergences=True,
-        use_math_text=False,
-        var_names=[var for var in mcmc.get_samples().keys() if var != "sigma"],
-    )
 
-    fig.tight_layout()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        fig = corner.corner(
+            data,
+            plot_contours=False,
+            quantiles=list(quantiles),
+            bins=20,
+            show_titles=True,
+            title_kwargs={"fontsize": 12},
+            divergences=True,
+            use_math_text=False,
+            var_names=[var for var in mcmc.get_samples().keys() if var != "sigma"],
+            title_fmt=f".{digits_after_decimal}f",
+        )
 
     return fig
 
 
-def plot_posterior(mcmc, model, **kwargs) -> None:
+def plot_posterior(mcmc: MCMC, model, **kwargs):
     """Plots the posterior distribution of the given bayes analysis"""
 
     inf_data = az.from_numpyro(mcmc)
@@ -47,7 +55,11 @@ def plot_posterior(mcmc, model, **kwargs) -> None:
 
 
 def plot_credibility_interval(
-    mcmc, model, initial_condition: Dict[str, float], time: jax.Array, dt0: float = 0.1
+    mcmc: MCMC,
+    model,
+    initial_condition: Dict[str, float],
+    time: jax.Array,
+    dt0: float = 0.1,
 ) -> None:
     """Plots the credibility interval for a single simulation"""
 
