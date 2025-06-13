@@ -4,6 +4,17 @@ from .model import InAxes
 from .model import Model
 from .tools.optimization import optimize
 from .tools.visualization import visualize
+from .model import SimulationConfig
+
+__all__ = [
+    "SimulationConfig",
+    "Dataset",
+    "Measurement",
+    "InAxes",
+    "Model",
+    "optimize",
+    "visualize",
+]
 
 __version__ = "0.4.0"
 
