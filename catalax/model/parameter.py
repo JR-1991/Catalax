@@ -12,6 +12,12 @@ class Identifiability(CatalaxBase):
     package: str
 
 
+class HDI(CatalaxBase):
+    lower: float
+    upper: float
+    q: float
+
+
 class Parameter(CatalaxBase):
     name: str
     symbol: Expr
@@ -22,12 +28,14 @@ class Parameter(CatalaxBase):
     equation: Union[str, Expr, None] = None
     lower_bound: Optional[float] = None
     upper_bound: Optional[float] = None
+    hdi: Optional[HDI] = None
     prior: Any = None  # TODO: Fix this typing
     _prior_str_: Optional[str] = None
 
     @model_validator(mode="after")
     def _assign_prior_string(self):
         if isinstance(self.prior, tuple):
+            prior, prior_str = self.prior
             prior, prior_str = self.prior
             self.prior = prior
             self._prior_str_ = prior_str

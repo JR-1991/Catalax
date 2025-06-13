@@ -3,34 +3,41 @@ from __future__ import annotations
 import copy
 import json
 import os
-import re
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import re
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
-import pandas as pd
-from diffrax import ODETerm, Tsit5
+
+import arviz as az
 from dotted_dict import DottedDict
 from jax import Array
 from pydantic import ConfigDict, Field, PrivateAttr, field_validator
 from pyenzyme import EnzymeMLDocument
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 
+from catalax.dataset.dataset import Dataset
 from catalax.mcmc import priors
 from catalax.model.base import CatalaxBase
+from catalax.model.simconfig import SimulationConfig
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
-
-from ..dataset import Dataset
+from .constant import Constant
 from .inaxes import InAxes
 from .ode import ODE
-from .parameter import Parameter
+from .parameter import HDI, Parameter
 from .species import Species
 from .utils import PrettyDict, check_symbol, eqprint, odeprint
+from ..predictor import Predictor
+
+Y0_INDEX = 0
+PARAMETERS_INDEX = 1
+CONSTANTS_INDEX = 2
+TIME_INDEX = 3
 
 
-class Model(CatalaxBase):
+class Model(CatalaxBase, Predictor):
     """
     Model class for storing ODEs, species, and parameters, which is used
     to describe a biological system. Model classes can be passed to analysis
@@ -63,7 +70,7 @@ class Model(CatalaxBase):
     odes: Dict[str, ODE] = Field(default_factory=DottedDict)
     species: Dict[str, Species] = Field(default_factory=PrettyDict)
     parameters: Dict[str, Parameter] = Field(default_factory=PrettyDict)
-    term: Optional[ODETerm] = Field(default=None, exclude=True)
+    constants: Dict[str, Constant] = Field(default_factory=PrettyDict)
 
     _sim_func: Optional[Callable] = PrivateAttr(default=None)
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
@@ -96,7 +103,7 @@ class Model(CatalaxBase):
 
         If there already exists an ODE for the given species, a ValueError will be raised.
         Due to the theoretical nature of dynamic systems, there can only be one ODE per
-        species. If a species hasnt been added to the model, it will be added automatically.
+        species. If a species hasn't been added to the model, it will be added automatically.
 
         Args:
             species (str): The species to be modelled within this ODE.
@@ -115,7 +122,7 @@ class Model(CatalaxBase):
             equation: Expr = sympify(equation)
 
         if species not in self.species:
-            self.add_species(name=species, species_map=species_map)
+            self.add_species(species)
 
         self.odes[species] = ODE(
             equation=equation,
@@ -222,130 +229,240 @@ class Model(CatalaxBase):
 
         return str(inverse_dict[name])
 
+    def add_constant(self, constant_string: str = "", **constants_map):
+        """
+        Adds a constant or multiple constants to the model.
+
+        This method will add new constants to the model and the model's constants dictionary,
+        which can be accessed by object dot-notation. For example, if the constant is named 'c1'
+        and the model is named 'model', the constant can be accessed by:
+
+            model = Model(name="model")
+            model.add_constant("c1")
+            model.constants.c1 -> Constant(name="c1", symbol=c1)
+
+        Constants can be added in two ways. The first is by passing a string of constant names that
+        are separated by a comma. The second is by passing a dictionary of constant symbols (key)
+        and names (values) and unpacking them as keyword arguments.
+
+        The following are both valid ways to add constants:
+
+            (1) model.add_constant("c1, c2, c3")
+            (2) model.add_constant(**{"c1": "constant1", "c2": "constant2", "c3": "constant3"})
+
+        If a constant already exists, a ValueError will be raised.
+
+        Args:
+            constant_string (str, optional): String of comma-separated constant symbols. Defaults to "".
+            **constants_map (Dict[str, str]): Dictionary of constant symbols (key) and names (values).
+
+        Raises:
+            TypeError: If the constant names are not of type str.
+        """
+        if constant_string:
+            constants_map.update(
+                {
+                    str(constant): str(constant)
+                    for constant in self._split_species_string(constant_string)
+                }
+            )
+
+        for symbol, name in constants_map.items():
+            if not isinstance(name, str):
+                raise TypeError("Constants names must be of type str")
+
+            # Make sure the symbol is valid
+            check_symbol(symbol)
+
+            self.constants[symbol] = Constant(name=name, symbol=Symbol(symbol))
+
     # ! Simulation methods
 
     def simulate(
         self,
-        dt0: float = 0.1,
-        solver=Tsit5,
-        t0: Optional[int] = None,
-        t1: Optional[int] = None,
-        nsteps: Optional[int] = None,
-        rtol: float = 1e-5,
-        atol: float = 1e-5,
-        initial_conditions: Optional[List[Dict[str, float]]] = None,
-        dataset: Optional[Dataset] = None,
+        dataset: Dataset,
+        config: SimulationConfig,
         saveat: Union[jax.Array, None] = None,
         parameters: Optional[jax.Array] = None,
-        in_axes: Union[Tuple, InAxes, None] = InAxes.Y0.value,
-        max_steps: int = 4096,
-        sensitivity: Optional[InAxes] = None,
+        in_axes: InAxes = InAxes.Y0,
         return_array: bool = False,
-    ) -> tuple[Array | None, Array | Any] | Dataset:
+    ) -> Dataset:
         """
-        Simulates a given model with the given initial conditions. The simulation can be
-        performed either by specifying the number of steps or the time points at which to
-        save the results. If both are specified, the number of steps will be ignored.
+        Simulate the model with given dataset and parameters.
 
         Args:
-            dataset (Dataset): The dataset to simulate.
-            initial_conditions (List[Dict[str, float]]): The initial conditions for the simulation.
-            dt0 (float, optional): The initial time step size. Defaults to 0.1.
-            solver (Type, optional): The solver to use for the simulation. Defaults to Tsit5.
-            t0 (int, optional): The start time of the simulation. Defaults to None.
-            t1 (int, optional): The end time of the simulation. Defaults to None.
-            nsteps (int, optional): The number of steps to take in the simulation. Defaults to None.
-            rtol (float, optional): The relative tolerance for the solver. Defaults to 1e-5.
-            atol (float, optional): The absolute tolerance for the solver. Defaults to 1e-5.
-            saveat (Union[SaveAt, jax.Array], optional): The time points at which to save the simulation results. Defaults to None.
-            parameters (jax.Array, optional): The parameters for the simulation. Defaults to None.
-            in_axes (Tuple, optional): The axes along which to differentiate the simulation. Defaults to None.
-            max_steps (int, optional): The maximum number of steps to take in the simulation. Defaults to 4096.
-            sensitivity (InAxes, optional): The axes along which to compute sensitivities. Defaults to None.
-            return_array (bool, optional): Whether to return the simulation results as an array. Defaults to False.
+            dataset: Dataset containing initial conditions and simulation data
+            config: Optional simulation configuration parameters
+            saveat: Optional array of time points to save results at
+            parameters: Optional array of model parameters
+            in_axes: Axes specification for vectorized operations
+            return_array: Whether to return raw arrays instead of Dataset
 
         Returns:
-            (jax.Array, jax.Array): The simulation results (time, trajectories)
+            Either a tuple of (time points, results) arrays or a Dataset object
         """
 
-        if isinstance(in_axes, InAxes):
-            in_axes = in_axes.value
+        if config.nsteps is not None and isinstance(saveat, jax.Array):
+            raise ValueError("Cannot specify both nsteps and saveat")
 
-        if nsteps and saveat:
-            raise ValueError(
-                "Cannot specify both nsteps and saveat. Please choose one."
-            )
-        elif nsteps is None and saveat is None:
-            raise ValueError("Must specify either nsteps or saveat.")
-
-        if dataset:
-            dataset = copy.deepcopy(dataset)
-            y0 = dataset.to_y0_matrix(species_order=self.get_species_order())
-        elif initial_conditions:
-            dataset = Dataset(species=self.get_species_order())
-            y0 = self._assemble_y0_array(initial_conditions, in_axes)
-        elif dataset and initial_conditions:
-            raise ValueError(
-                "Please specify either a dataset or initial conditions, not both."
-            )
-
+        # Initialize simulation data from dataset
+        y0, constants = self._initialize_simulation_data(dataset)
         parameters = self._get_parameters(parameters)
+        saveat = self._setup_saveat(config, saveat)
 
-        # Setup save points
-        if nsteps is not None:
-            saveat = jnp.linspace(t0, t1, nsteps)  # type: ignore
-            t0 = saveat[0]  # type: ignore
-            t1 = saveat[-1]  # type: ignore
-        elif saveat is None:
-            raise ValueError("Must specify either nsteps or saveat.")
+        if saveat.ndim != 1:
+            inaxes: Tuple = in_axes + InAxes.TIME  # type: ignore
+        else:
+            inaxes: Tuple = in_axes.value  # type: ignore
 
-        if self._model_changed(in_axes, dt0, sensitivity) or self._sim_func is None:
-            self._setup_system(
-                in_axes=in_axes,
-                t0=t0,
-                t1=t1,
-                dt0=dt0,
-                solver=solver,
-                rtol=rtol,
-                atol=atol,
-                max_steps=max_steps,
-                sensitivity=sensitivity,
+        # Setup and run simulation
+        if self._model_changed(inaxes, config.dt0) or self._sim_func is None:
+            self._setup_simulation(config, inaxes)
+
+        result = self._run_simulation(y0, parameters, constants, saveat)
+
+        return self._format_simulation_results(
+            result,
+            saveat,
+            return_array,
+            y0,
+            constants,
+        )  # type: ignore
+
+    def predict(
+        self,
+        dataset: Dataset,
+        config: SimulationConfig | None = None,
+        n_steps: int = 100,
+    ) -> Dataset:
+        """Predict model behavior using the given dataset.
+
+        This is a convenience wrapper around the `simulate` method that automatically
+        creates a simulation configuration if one is not provided.
+
+        Args:
+            dataset: Dataset containing initial conditions for prediction
+            config: Optional simulation configuration parameters. If None,
+                   a configuration will be created from the dataset.
+            nsteps: Number of time steps for the simulation. This will override
+                   the nsteps value in the provided config if both are specified.
+
+        Returns:
+            A Dataset object containing the prediction results
+        """
+        if config is None:
+            config = dataset.to_config(nsteps=n_steps)
+
+        if config.nsteps != n_steps:
+            config.nsteps = n_steps
+
+        return self.simulate(dataset, config)
+
+    def _initialize_simulation_data(
+        self,
+        dataset: Dataset,
+    ) -> Tuple[jax.Array, jax.Array]:
+        """Initialize simulation data from dataset."""
+        dataset = copy.deepcopy(dataset)
+        return (
+            dataset.to_y0_matrix(species_order=self.get_species_order()),
+            dataset.to_y0_matrix(species_order=self.get_constants_order()),
+        )
+
+    def _setup_saveat(
+        self,
+        config: SimulationConfig,
+        saveat: Optional[jax.Array],
+    ) -> jax.Array:
+        """Setup save points for simulation."""
+        if config.nsteps is not None:
+            saveat = jnp.linspace(config.t0, config.t1, config.nsteps).T
+
+        if isinstance(saveat, jax.Array):
+            return saveat
+        else:
+            raise ValueError(
+                "No saveat or config.nsteps provided. Please provide one of the two."
             )
 
-            # Set markers to check whether the conditions have changed
-            # This is done to avoid recompilation of the simulation function
-            self._in_axes = in_axes
-            self._dt0 = dt0
-            self._sensitivity = sensitivity
+    def _setup_simulation(
+        self,
+        config: SimulationConfig,
+        in_axes: Tuple,
+    ) -> None:
+        """Setup the simulation function with given configuration."""
+        self._setup_system(
+            in_axes=in_axes,
+            t0=config.t0,
+            t1=config.t1,
+            dt0=config.dt0,
+            solver=config.solver,
+            rtol=config.rtol,
+            atol=config.atol,
+            max_steps=config.max_steps,
+        )
 
-            # Warmup the simulation to make use of jit compilation
-            self._warmup_simulation(y0, parameters, saveat, in_axes)
+        self._in_axes = in_axes
+        self._dt0 = config.dt0  # type: ignore
 
-        result = self._sim_func(y0, parameters, saveat)
+    def _run_simulation(
+        self,
+        y0: jax.Array,
+        parameters: jax.Array,
+        constants: jax.Array,
+        saveat: jax.Array,
+    ) -> jax.Array:
+        """Run the simulation with given parameters."""
+        if self._sim_func is None:
+            raise RuntimeError("Simulation function not initialized")
 
+        result = self._sim_func(y0, parameters, constants, saveat)
         if len(result.shape) != 3:
             result = jnp.expand_dims(result, axis=0)
+        return result
 
-        # For now create a new dataset
-        dataset = Dataset.from_model(self)
-
+    def _format_simulation_results(
+        self,
+        result: jax.Array,
+        saveat: jax.Array,
+        return_array: bool,
+        y0: jax.Array,
+        constants: jax.Array,
+    ) -> Union[tuple[Array, Array], Dataset]:
+        """Format simulation results according to return type."""
         if return_array:
             return saveat, result
-        else:
-            for y0_i in range(result.shape[0]):
-                init_conc = {
-                    species: float(y0[y0_i, sp_j])
-                    for sp_j, species in enumerate(self.get_species_order())
-                }
 
-                dataset.add_from_jax_array(
-                    model=self,
-                    data=result[y0_i, :, :],
-                    time=saveat,
-                    initial_condition=init_conc,
-                )
+        dataset = Dataset.from_model(self)
+        for y0_i in range(result.shape[0]):
+            init_conc = {
+                species: float(y0[y0_i, sp_j])
+                for sp_j, species in enumerate(self.get_species_order())
+            }
 
-            return dataset
+            for cons_i, constant in enumerate(self.get_constants_order()):
+                init_conc[constant] = float(constants[y0_i, cons_i])
+
+            if saveat.ndim == 1:
+                local_saveat = saveat
+            else:
+                local_saveat = saveat[y0_i, :]
+
+            dataset.add_from_jax_array(
+                species_order=self.get_species_order(),
+                data=result[y0_i, :, :],
+                time=local_saveat,
+                initial_condition=init_conc,
+            )
+        return dataset
+
+    def _model_changed(
+        self,
+        in_axes: Tuple,
+        dt0: float,
+    ) -> bool:
+        """Check if model configuration has changed."""
+        return self._in_axes != in_axes or self._dt0 != dt0
 
     def _get_stoich_mat(self) -> jax.Array:
         """Creates the stoichiometry matrx based on the given model.
@@ -366,20 +483,6 @@ class Model(CatalaxBase):
 
         return stoich_mat.at[diag_indices].set(1)
 
-    def _model_changed(self, in_axes: Tuple, dt0, sensitivity: InAxes) -> bool:
-        """Checks whether the model has changed since the last simulation"""
-
-        if self._in_axes != in_axes:
-            return True
-
-        if self._dt0 != dt0:
-            return True
-
-        if self._sensitivity != sensitivity:
-            return True
-
-        return False
-
     def _setup_system(self, in_axes: Tuple = (0, None, None), **kwargs):
         """Converts given SymPy equations into Equinox modules, used for simulation.
 
@@ -397,6 +500,7 @@ class Model(CatalaxBase):
             odes=odes,
             parameters=self.get_parameter_order(),
             stoich_mat=self._get_stoich_mat(),
+            constants=self.get_constants_order(),
             **kwargs,
         )
 
@@ -424,43 +528,29 @@ class Model(CatalaxBase):
         return sorted(self.parameters.keys())
 
     def get_species_order(self) -> List[str]:
-        """Returns the order of the species in the model"""
-        return sorted(self.species.keys())
+        """Returns the order of the species ad constants in the model"""
+        return sorted(list(self.species.keys()))
 
     def get_observable_species_order(self) -> List[str]:
         """Returns the order of the observable species in the model"""
+        if not self.odes:
+            # When there are no ODEs, all species are observable
+            return self.get_species_order()
+
         return sorted([key for key in self.species.keys() if self.odes[key].observable])
 
-    def _assemble_y0_array(
-        self, initial_conditions: List[Dict[str, float]], in_axes: Tuple
-    ) -> jax.Array:
-        """Assembles the initial conditions into an array"""
+    def get_constants_order(self) -> List[str]:
+        """Returns the order of the constants in the model"""
+        return sorted(list(self.constants.keys()))
 
-        # Turn initial conditions dict into a dataframe
-        df_inits = pd.DataFrame(initial_conditions)
-
-        # Check whether all species have initial conditions and
-        # if there are more than in the model
-        if not all(species in self.species.keys() for species in df_inits.columns):
-            raise ValueError(
-                f"Not all species have initial conditions specified or there are ones that havent been specified yet. Please specify initial conditions or remove these for the following species: {set(self.species.keys()) - set(df_inits.columns)}"
-            )
-
-        if in_axes is not None and len(initial_conditions) > 1:
-            return jnp.stack(
-                [df_inits[s].values for s in self.get_species_order()],
-                axis=-1,  # type: ignore
-            )
-        elif in_axes and len(initial_conditions) > 1:
-            raise ValueError(
-                "If in_axes is set to None, only one initial condition can be specified."
-            )
-
-        return jnp.array(
-            [initial_conditions[0][species] for species in self.get_species_order()]
-        )
-
-    def _warmup_simulation(self, y0, parameters, saveat, in_axes):
+    def _warmup_simulation(
+        self,
+        y0,
+        parameters,
+        constants,
+        saveat,
+        in_axes,
+    ):
         """Warms up the simulation to make use of jit compilation"""
 
         if self._sim_func is None:
@@ -469,19 +559,24 @@ class Model(CatalaxBase):
             )
 
         if in_axes is None:
-            self._sim_func(y0, parameters, saveat)
+            self._sim_func(y0, parameters, constants, saveat)
             return
 
-        y0_axis, parameters_axis, saveat_axis = in_axes
+        y0_axis, parameters_axis, constants_axis, saveat_axis = in_axes
 
-        if y0_axis is not None:
-            y0 = jnp.expand_dims(y0[0, :], axis=0)
-        if parameters_axis is not None:
-            parameters = jnp.expand_dims(parameters[0, :], axis=0)
-        if saveat_axis is not None:
-            saveat = jnp.expand_dims(saveat[0, :], axis=0)
+        # if y0_axis is not None:
+        #     y0 = jnp.expand_dims(y0[0, :], axis=0)
+        # if parameters_axis is not None:
+        #     parameters = jnp.expand_dims(parameters[0, :], axis=0)
+        # if saveat_axis is not None:
+        #     saveat = jnp.expand_dims(saveat[0, :], axis=0)
 
-        self._sim_func(y0, parameters, saveat)
+        self._sim_func(
+            y0=y0,
+            parameters=parameters,
+            constants=constants,
+            time=saveat,
+        )
 
     def _setup_rate_function(self, in_axes=None):
         """Prepares a function to evaluate the rates of the vector field.
@@ -497,12 +592,16 @@ class Model(CatalaxBase):
             model (Model): Catalax model to prepare the rate function for.
         """
 
-        assert in_axes is None or len(in_axes) == 3, (
-            "Got invalid dimension for 'in_axes' - Needs to have three ints/Nones"
+        assert in_axes is None or len(in_axes) == 4, (
+            "Got invalid dimension for 'in_axes' - Needs to have four ints/Nones"
         )
 
         odes = [self.odes[species] for species in self.get_species_order()]
-        fun = Stack(odes=odes, parameters=self.get_parameter_order())
+        fun = Stack(
+            odes=odes,
+            parameters=self.get_parameter_order(),
+            constants=self.get_constants_order(),
+        )
 
         if in_axes is None:
             return fun
@@ -517,7 +616,11 @@ class Model(CatalaxBase):
 
     # ! Derivatives
 
-    def jacobian_parameters(self, y, parameters, t=0):
+    def jacobian_parameters(
+        self,
+        dataset: Dataset,
+        parameters: jax.Array,
+    ):
         """Sets up and calculates the jacobian of the model with respect to the parameters.
 
         Args:
@@ -528,13 +631,18 @@ class Model(CatalaxBase):
             Array: The jacobian of the model with respect to the parameters.
         """
 
+        _, y0s, time = dataset.to_jax_arrays(
+            self.get_species_order(),
+            inits_to_array=True,
+        )
+
         if self._jacobian_parameters is not None:
-            return self._jacobian_parameters(t, y, parameters)
+            return self._jacobian_parameters(time, y0s, parameters)
 
         stoich_mat = self._get_stoich_mat()
 
         def _vector_field(t, y, parameters):
-            return self._setup_rate_function()(t, y, (parameters, stoich_mat))
+            return self._sim_func(y, parameters, constants, saveat)
 
         self._jacobian_parameters = jax.jacfwd(_vector_field, argnums=2)
 
@@ -553,24 +661,22 @@ class Model(CatalaxBase):
 
         if self._jacobian_states is not None:
             return self._jacobian_states(y, parameters)
-        elif self.term is None:
-            self._setup_term()
 
-        species_maps = {symbol: i for i, symbol in enumerate(self.get_species_order())}
-        parameter_maps = {
-            symbol: i for i, symbol in enumerate(self.get_parameter_order())
-        }
+        if self._sim_func is None:
+            self._setup_system(in_axes=InAxes.Y0.value)
 
         def _vector_field(y, parameters):
-            return self.term.vector_field(
-                0, y, (species_maps, parameter_maps, parameters)
-            )
+            return self._sim_func(y, parameters, constants, saveat)
 
         self._jacobian_states = jax.jacfwd(_vector_field, argnums=0)
 
         return self._jacobian_states(y, parameters)
 
     # ! Helper methods
+    def has_hdi(self):
+        """Checks whether the model has HDI values for any of the parameters"""
+
+        return any(parameter.hdi is not None for parameter in self.parameters.values())
 
     def __repr__(self):
         """Prints a summary of the model"""
@@ -665,10 +771,13 @@ class Model(CatalaxBase):
 
     def to_dict(self):
         """Converts the model into a serializable dictionary."""
-        model_dict = DottedDict(self.dict(exclude_none=True))
-        return {
+        model_dict = DottedDict(self.model_dump(exclude_none=True))
+        res = {
             "name": model_dict.name,
             "species": [species.to_dict() for species in model_dict.species.values()],
+            "constants": [
+                constant.to_dict() for constant in model_dict.constants.values()
+            ],
             "odes": [
                 {**ode.to_dict(), "species": species}
                 for species, ode in model_dict.odes.items()
@@ -678,32 +787,37 @@ class Model(CatalaxBase):
             ],
         }
 
+        if not res["constants"]:
+            res.pop("constants")
+
+        return res
+
     # ! Metrics
     def calculate_aic(
         self,
-        data: jax.Array,
-        initial_conditions: List[Dict[str, float]],
-        times: jax.Array,
-    ):
+        dataset: Dataset,
+    ) -> float:
         """Calculates the AIC value to the given data if parameters have values.
 
         Args:
-            data (jax.Array): Data to check against.
-            initial_conditions (List[Dict[str, float]]): Initial conditions to perform the integration.
-            times (jax.Array): Time points to evaluate
+            dataset (Dataset): Dataset to calculate the AIC for.
 
         Returns:
             float: AIC criterion of the model given the data.
-        """
 
+        Raises:
+            AssertionError: If the model hasn't been fitted yet (parameters have no values).
+        """
         assert self.parameters and all(
             parameter.value is not None for parameter in self.parameters.values()
-        ), "Cannot calculate AIC, because this model hasnt been fitted yet."
+        ), "Cannot calculate AIC, because this model hasn't been fitted yet."
 
+        # Simulate using the dataset
         _, states = self.simulate(
-            initial_conditions=initial_conditions,
-            saveat=times,
+            dataset=dataset,
+            saveat=dataset.time,
             in_axes=(0, None, 0),
+            return_array=True,
         )
 
         # Get observables
@@ -713,6 +827,10 @@ class Model(CatalaxBase):
             if self.odes[species].observable
         ]
 
+        # Get the actual data from the dataset
+        data = dataset.to_array()
+
+        # Calculate residuals and AIC
         residual = states[..., observables] - data
         chisqr = (residual**2).sum()
         ndata = len(residual.ravel())
@@ -720,6 +838,28 @@ class Model(CatalaxBase):
         aic = _neg2_log_likel + 2 * len(self.parameters)
 
         return aic
+
+    # ! Updaters
+    def from_samples(
+        self,
+        samples: Dict[str, Array],
+        hdi_prob: float = 0.95,
+    ) -> "Model":
+        """Create a new model from samples drawn from the posterior distribution.
+
+        Args:
+            samples (Dict[str, Array]): The samples to update the parameters with.
+        """
+
+        new_model = copy.deepcopy(self)
+        hdi = az.hdi(samples, hdi_prob=hdi_prob)
+
+        for name, parameter in new_model.parameters.items():
+            parameter.value = samples[name].mean()
+            parameter.initial_value = samples[name].mean()
+            parameter.hdi = HDI(lower=hdi[name][0], upper=hdi[name][1], q=hdi_prob)
+
+        return new_model
 
     # ! Importers
     @classmethod
@@ -752,6 +892,9 @@ class Model(CatalaxBase):
 
         # Add Species
         model.add_species(**{sp.symbol: sp.name for sp in model_dict.species})
+
+        if "constants" in model_dict and model_dict.constants:
+            model.add_constant(**{sp.symbol: sp.name for sp in model_dict.constants})
 
         # Add ODEs
         for ode in model_dict.odes:

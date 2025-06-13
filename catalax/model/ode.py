@@ -1,15 +1,14 @@
 from typing import Dict, Optional, Union
 
 from dotted_dict import DottedDict
-from pydantic import BaseModel, Field, PrivateAttr, validator
+from pydantic import Field, PrivateAttr
 from pydantic.config import ConfigDict
 from pydantic.functional_validators import field_validator
-from sympy import Expr, Symbol, sympify
+from sympy import Expr, sympify
 
 from catalax.model.base import CatalaxBase
-
-from .species import Species
 from .parameter import Parameter
+from .species import Species
 from .utils import parameter_exists
 
 
@@ -56,6 +55,9 @@ class ODE(CatalaxBase):
         for symbol in self.equation.free_symbols:
             if str(symbol) in self._model.species or str(symbol) == "t":
                 # Skip species and time symbol
+                continue
+            elif str(symbol) in self._model.constants:
+                # Skip constants
                 continue
             elif parameter_exists(str(symbol), self._model.parameters):
                 # Assign parameter if it is already present in the model
