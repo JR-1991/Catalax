@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 import os
 import tempfile
 import uuid
@@ -8,7 +9,7 @@ import zipfile
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, Self
 
 import jax
 import jax.numpy as jnp
@@ -17,19 +18,42 @@ import mlcroissant as mlc
 import numpy as np
 import pandas as pd
 from jax import Array
+
+import pyenzyme as pe
 from pydantic import BaseModel, Field
-from pyenzyme import EnzymeMLDocument
+
+from catalax.predictor import Predictor
+
+if TYPE_CHECKING:
+    from catalax.model.simconfig import SimulationConfig
+    from catalax.model.model import Model
 
 from .croissant import extract_record_set, json_lines_to_dict
 from .measurement import Measurement
 
 
+class DatasetType(Enum):
+    """Enumeration of dataset types in the Catalax framework."""
+
+    MEASUREMENT = "measurement"
+    SIMULATION = "simulation"
+    PREDICTION = "prediction"
+
+
 class Dataset(BaseModel):
-    """A class to represent a dataset.
+    """A class representing a collection of experimental measurements.
 
-    This class hosts multiple measurements of an experiment and can be
-    used with other Catalax functionalities.
+    This class hosts multiple measurements from an experiment and enables
+    integration with other Catalax functionalities, including data processing,
+    visualization, and model fitting.
 
+    Attributes:
+        id: Unique identifier of the dataset
+        species: List of chemical species within this dataset
+        name: Human-readable name or identifier
+        description: Longer text description of the dataset
+        measurements: Collection of experimental measurements
+        type: Classification of the dataset (measurement, simulation, or prediction)
     """
 
     id: str = Field(
@@ -56,34 +80,122 @@ class Dataset(BaseModel):
         description="A list of all measurements found in this dataset",
     )
 
-    # ! Adders
-    def add_initial(self, **kwargs) -> None:
-        """Adds initial conditions to the dataset.
+    type: DatasetType = Field(
+        default=DatasetType.MEASUREMENT,
+        description="The type of the dataset.",
+    )
+
+    # =====================
+    # Getters
+    # =====================
+
+    def get_measurement(self, id: str) -> Measurement:
+        """Retrieve a measurement from the dataset by its ID.
 
         Args:
-            **kwargs: The initial conditions to add.
+            id: The unique identifier of the measurement to retrieve
 
+        Returns:
+            The measurement object with the specified ID
+
+        Raises:
+            ValueError: If no measurement with the given ID exists
         """
+        meas = next(
+            (meas for meas in self.measurements if meas.id == id),
+            None,
+        )
 
+        if meas is None:
+            raise ValueError(f"Measurement with ID={id} not found.")
+
+        return meas
+
+    def get_observable_species_order(self) -> List[str]:
+        """Get the ordered list of species that are observed across measurements.
+
+        This method determines which species have measurement data and ensures
+        consistency across different measurements in the dataset.
+
+        Returns:
+            Ordered list of observable species names
+
+        Raises:
+            ValueError: If no common observable species exist across measurements
+        """
+        if not self.measurements:
+            return []
+
+        # Get observables from the first measurement
+        observable_ids = set(self.measurements[0].data.keys())
+
+        # Check if all measurements have the same observables
+        for meas in self.measurements[1:]:
+            meas_observables = set(meas.data.keys())
+            if meas_observables != observable_ids:
+                # Find common observables
+                common_observables = observable_ids.intersection(meas_observables)
+                warnings.warn(
+                    f"Inconsistent observables across measurements. "
+                    f"First measurement has {observable_ids}, "
+                    f"but measurement {meas.id} has {meas_observables}. "
+                    f"Using common observables: {common_observables}"
+                )
+
+                if not common_observables:
+                    raise ValueError(
+                        "No common observables found across measurements. "
+                        "Please check the data for consistency."
+                    )
+
+                observable_ids = common_observables
+
+        # Return sorted observable species
+        return sorted(observable_ids)
+
+    def get_observable_indices(self) -> List[int]:
+        """Get the indices of observable species within the full species list.
+
+        Returns:
+            List of integer indices corresponding to the positions of observable
+            species in the full species list
+        """
+        return [self.species.index(sp) for sp in self.get_observable_species_order()]
+
+    # =====================
+    # Data Addition Methods
+    # =====================
+
+    def add_initial(self, **kwargs) -> None:
+        """Add an empty measurement with only initial conditions.
+
+        Args:
+            **kwargs: Initial condition values as keyword arguments where
+                      keys are species names and values are concentrations
+        """
         self.measurements.append(Measurement(initial_conditions=kwargs))
 
     def add_measurement(self, measurement: Measurement) -> None:
-        """Adds a measurement to the dataset.
+        """Add a complete measurement to the dataset.
 
         Args:
-            measurement (ctx.Measurement): The measurement object to add.
+            measurement: The measurement object to add
 
+        Raises:
+            AssertionError: If a measurement with the same ID already exists
+            ValueError: If species in the measurement are inconsistent with dataset species
         """
-
+        # Check for duplicate measurement ID
         assert not any(meas.id == measurement.id for meas in self.measurements), (
             f"Measurement with ID={measurement.id} already exists."
         )
 
+        # Check for species consistency
         unused_species = [
             sp for sp in measurement.data.keys() if sp not in self.species
         ]
         missing_species = [
-            sp for sp in self.species if sp not in measurement.data.keys()
+            sp for sp in self.species if sp not in measurement.initial_conditions.keys()
         ]
 
         if unused_species:
@@ -96,11 +208,43 @@ class Dataset(BaseModel):
 
         self.measurements.append(measurement)
 
-    # ! Exporters
+    def add_from_jax_array(
+        self,
+        species_order: List[str],
+        initial_condition: Dict[str, float],
+        data: Array,
+        time: Array,
+    ) -> None:
+        """Add a measurement from JAX arrays directly.
+
+        Args:
+            species_order: Ordered list of species names matching data array columns
+            initial_condition: Dictionary mapping species names to initial concentrations
+            data: JAX array of concentration measurements (shape: time_points x species)
+            time: JAX array of time points
+        """
+        measurement = Measurement(
+            initial_conditions=initial_condition,
+            time=time,
+            data={
+                species: data[:, i].squeeze() for i, species in enumerate(species_order)
+            },
+        )
+
+        self.add_measurement(measurement)
+
+    # =====================
+    # Data Export Methods
+    # =====================
 
     def to_dataframe(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Exports a dataset into two DataFrames (measurement)"""
+        """Export dataset as two pandas DataFrames for data and initial conditions.
 
+        Returns:
+            Tuple containing:
+            - DataFrame with time course data (columns: measurementId, time, species...)
+            - DataFrame with initial conditions (columns: measurementId, species...)
+        """
         data = pd.concat([meas.to_dataframe() for meas in self.measurements])
         inits = pd.DataFrame(
             {"measurementId": meas.id, **meas.initial_conditions}
@@ -113,25 +257,21 @@ class Dataset(BaseModel):
         self,
         species_order: List[str],
         inits_to_array: bool = False,
-    ) -> (
-        tuple[Array, Array, Array] | tuple[Array, Array, list[Array | dict[str, float]]]
-    ):
-        """Converts the dataset to a JAX arrays
-
-        This method requires a species order to arrange the data in the correct order.
-
-        - The shape of the data is (n_measurements, n_time_points, n_species).
-        - The shape of the time is (n_measurements, n_time_points).
-        - The initial conditions is (n_measurements, n_species).
+    ) -> tuple[Array, Array, Union[Array, List[Union[Array, Dict[str, float]]]]]:
+        """Convert dataset to JAX arrays for computational use.
 
         Args:
-            species_order (List[str]): The order of the species in the array.
-            inits_to_array (bool, optional): Whether to convert the initial conditions to an array. Defaults to False.
+            species_order: Ordered list of species names to ensure consistent array structure
+            inits_to_array: Whether to convert initial conditions to a JAX array
 
         Returns:
-            Tuple[jax.Array, jax.Array, List[Dict[str, float]]]: The data array, time array, and initial conditions.
+            A tuple containing:
+            - data: JAX array of shape (n_measurements, n_time_points, n_species)
+            - time: JAX array of shape (n_measurements, n_time_points)
+            - initial_conditions: Either a JAX array of shape (n_measurements, n_species)
+              if inits_to_array=True, or a list of dictionaries mapping species names
+              to initial concentrations
         """
-
         data = []
         time = []
         initial_conditions = []
@@ -160,12 +300,15 @@ class Dataset(BaseModel):
             )
 
     def to_y0_matrix(self, species_order: List[str]) -> Array:
-        """Assembles the initial conditions of the dataset into a dictionary.
+        """Create a matrix of initial conditions for all measurements.
+
+        Args:
+            species_order: Ordered list of species names for the matrix columns
 
         Returns:
-            Dict[str, Array]: The initial conditions.
+            JAX array of shape (n_measurements, n_species) containing initial
+            conditions for all measurements
         """
-
         inits = []
 
         for meas in self.measurements:
@@ -181,35 +324,23 @@ class Dataset(BaseModel):
         name: Optional[str] = None,
         cite_as: Optional[str] = None,
         url: Optional[str] = None,
-        date_published: datetime = datetime.now(),  # type: ignore
+        date_published: datetime = datetime.now(),
     ) -> None:
-        """Exports a Dataset to a Croissant (https://github.com/mlcommons/croissant) archive.
+        """Export dataset to a Croissant archive.
 
-        The croissant format is a JSON-LD standard to describe datasets and enable
-        interoperability between different tools and platforms. The format is
-        designed to be simple and easy to use, while still providing the necessary
-        information to describe a dataset.
-
-        This implementation breaks up all measurements found in a dataset into
-        individual JSON Lines files, and then zips them up with a metadata file in
-        the Croissant format. Initial conditions are stored within the croissant metadata.
-
-        Catalax support a method to read in Croissant archives, so this method can be
-        used to export a dataset to a format that can be read back in. However, you can also
-        use the official Croissant tools to read in the dataset. For this to do, you
-        can use the `mlcommons/croissant` Python package to parse the unzipped files.
+        The Croissant format is a JSON-LD standard for describing datasets that enables
+        interoperability between different tools and platforms. This method exports
+        the dataset to a directory structure compatible with the Croissant specification.
 
         Args:
-            dataset (Dataset): The Dataset to export.
-            name (str, optional): The name of the dataset. Defaults to None.
-            dirpath (str): The directory to save the Croissant archive to.
-            license (str, optional): The license for the dataset. Defaults to "CC BY-SA 4.0".
-            version (str, optional): The version of the dataset. Defaults to "1.0.0".
-            cite_as (Optional[str], optional): The citation for the dataset. Defaults to None.
-            url (Optional[str], optional): The URL for the dataset. Defaults to None.
-            date_published (datetime, optional): The date the dataset was published. Defaults to datetime.now().
+            dirpath: Directory path where the Croissant archive will be saved
+            license: License identifier for the dataset
+            version: Version string for the dataset
+            name: Optional custom name for the dataset archive
+            cite_as: Citation information for the dataset
+            url: URL where the dataset is available
+            date_published: Publication date for the dataset
         """
-
         from .croissant import dataset_to_croissant
 
         os.makedirs(dirpath, exist_ok=True)
@@ -227,21 +358,23 @@ class Dataset(BaseModel):
             version=version,
             cite_as=cite_as,
             url=url,
-            date_published=date_published,  # type: ignore
+            date_published=date_published,
         )
 
-    # ! Importers
+    # =====================
+    # Data Import Methods
+    # =====================
+
     @classmethod
-    def from_enzymeml(cls, enzmldoc: EnzymeMLDocument) -> "Dataset":
-        """Creates a dataset from an EnzymeMLDocument.
+    def from_enzymeml(cls, enzmldoc: pe.EnzymeMLDocument) -> "Dataset":
+        """Create a dataset from an EnzymeML document.
 
         Args:
-            enzmldoc (EnzymeMLDocument): The EnzymeML document to create the dataset from.
+            enzmldoc: EnzymeML document containing experimental data
 
         Returns:
-            Dataset: The Dataset object.
+            A new Dataset object with measurements extracted from the EnzymeML document
         """
-
         measurements = [
             Measurement.from_enzymeml(meas)
             for meas in enzmldoc.measurements
@@ -259,28 +392,15 @@ class Dataset(BaseModel):
 
     @classmethod
     def read_enzymeml(cls, path: Path | str) -> "Dataset":
-        """Reads an EnzymeML file and returns a Dataset.
+        """Read an EnzymeML file and create a dataset.
 
         Args:
-            path (Path): The path to the EnzymeML file.
+            path: Path to the EnzymeML file
 
         Returns:
-            Dataset: The Dataset object.
+            A new Dataset object with data from the EnzymeML file
         """
-
-        if not isinstance(path, Path):
-            path = Path(path)
-
-        # If it ends with .json, it's a v2 file
-        if path.suffix == ".json":
-            enzmldoc = EnzymeMLDocument.read(path)
-        elif path.suffix == ".omex":
-            enzmldoc = EnzymeMLDocument.from_sbml(path)
-        else:
-            raise ValueError(
-                "Unknown file format. Please provide a .json or .omex file."
-            )
-
+        enzmldoc = pe.read_enzymeml(str(path))
         return cls.from_enzymeml(enzmldoc)
 
     @classmethod
@@ -291,50 +411,26 @@ class Dataset(BaseModel):
         inits: pd.DataFrame,
         meas_id: Optional[str] = None,
         description: Optional[str] = "",
-    ):
-        """Creates a dataset from Pandas DataFrames
-
-        - Data is expected in the following format:
-            measurementId | time | species1 | species2 ...
-
-        - Inits are expected in the following format:
-            measurementId | species1 | species2
-
-        Please note, that 'measurementId' should be consistent and
-        non-ambigous in bot tables. Consistency will be checked though.
-        Also, the inits table should have unique 'measurementId' entries.
-        Duplicates will throw an exception.
-
-        Example:
-
-            data = [
-                {"A": 0.0, "time": 0.0, "measurementId": "m1"},
-                {"A": 0.5, "time": 1.0, "measurementId": "m1"},
-                {"A": 1.0, "time": 2.0, "measurementId": "m1"},
-                {"A": 1.0, "time": 0.0, "measurementId": "m2"},
-                {"A": 2.5, "time": 1.0, "measurementId": "m2"},
-                {"A": 4.5, "time": 2.0, "measurementId": "m2"},
-            ]
-
-            inits = [
-                {"A": 0.0, "measurementId": "m1"},
-                {"A": 1.0, "measurementId": "m2"},
-            ]
-
-            data = pd.DataFrame(data)
-            inits = pd.DataFrame(inits)
-
-            Dataset.from_dataframe(data=data, inits=inits)
+    ) -> "Dataset":
+        """Create a dataset from pandas DataFrames.
 
         Args:
-            name (str): The name of the dataset.
-            data (pandas.DataFrame): Contains all time courses.
-            inits (pandas.DataFrame): Containse all initial concentrations.
-            meas_id (Optional[str], optional): The ID of the dataset. Defaults to None.
-            description (Optional[str], optional): The description of the dataset. Defaults to "".
+            name: Name for the dataset
+            data: DataFrame containing time course data
+                  Expected columns: measurementId, time, species1, species2...
+            inits: DataFrame containing initial conditions
+                   Expected columns: measurementId, species1, species2...
+            meas_id: Optional custom ID for the dataset
+            description: Optional description for the dataset
 
+        Returns:
+            A new Dataset object populated with measurements from the DataFrames
+
+        Raises:
+            AssertionError: If required columns are missing from the DataFrames
+            ValueError: If measurement IDs are inconsistent between data and inits
         """
-
+        # Validate required columns
         assert "measurementId" in data.columns, (
             "Missing column in data table: 'measurementId'"
         )
@@ -346,10 +442,9 @@ class Dataset(BaseModel):
         if meas_id is None:
             meas_id = str(uuid.uuid4())
 
-        # Check if IDs are consistent
+        # Check ID consistency between data and initial conditions
         data_ids = set(data["measurementId"])
         init_ids = set(inits["measurementId"])
-
         id_diff = set(
             list(data_ids.difference(init_ids)) + list(init_ids.difference(data_ids))
         )
@@ -363,11 +458,15 @@ class Dataset(BaseModel):
             ]
 
             raise ValueError(
-                f"Measurement IDs are incosistent in between both tables:\n\t- Data: {missing_in_data}\n\t- Inits: {missing_in_inits}"
+                f"Measurement IDs are inconsistent between tables:\n"
+                f"- Missing in data: {missing_in_data}\n"
+                f"- Missing in initial conditions: {missing_in_inits}"
             )
 
-        # Initialize dataset
+        # Extract species names (all columns except measurementId)
         species = [sp for sp in inits.columns if sp != "measurementId"]
+
+        # Create the dataset
         dataset = cls(
             species=species,
             name=name,
@@ -375,16 +474,16 @@ class Dataset(BaseModel):
             id=meas_id,
         )
 
-        # Extract data and inits by measurement IDs
+        # Add measurements for each unique ID
         for meas_id in data_ids:
-            sub_inits = inits[inits.measurementId == meas_id].to_dict("records")[0]  # type: ignore
+            sub_inits = inits[inits.measurementId == meas_id].to_dict("records")[0]
             sub_data = data[data.measurementId == meas_id]
             meas_id = sub_inits.pop("measurementId")
 
             dataset.add_measurement(
                 measurement=Measurement.from_dataframe(
-                    df=sub_data,  # type: ignore
-                    initial_conditions=sub_inits,
+                    df=sub_data,
+                    initial_conditions=sub_inits,  # type: ignore
                     id=meas_id,
                 )
             )
@@ -392,16 +491,18 @@ class Dataset(BaseModel):
         return dataset
 
     @classmethod
-    def from_model(cls, model: "Model"):
-        """Creates a dataset from a model object.
+    def from_model(cls, model: "Model") -> "Dataset":
+        """Create an empty dataset with species from a model.
 
         Args:
-            model (Model): The model to create the dataset from.
+            model: Model object containing species information
 
         Returns:
-            Dataset: The dataset object.
-        """
+            A new Dataset object with species from the model but no measurements
 
+        Raises:
+            AssertionError: If the provided object is not a Model instance
+        """
         from ..model import Model
 
         assert isinstance(model, Model), "Expected a Model object."
@@ -413,23 +514,28 @@ class Dataset(BaseModel):
         )
 
     @classmethod
-    def from_croissant(cls, path: str):
-        """Reads a Croissant archive and returns a Dataset.
+    def from_croissant(cls, path: str) -> "Dataset":
+        """Create a dataset from a Croissant archive.
 
         Args:
-            path (str): The path to the Croissant archive.
+            path: Path to the Croissant archive file
 
         Returns:
-            Dataset: The Dataset object.
-        """
+            A new Dataset object populated from the Croissant archive
 
+        Raises:
+            AssertionError: If measurements lack corresponding initial conditions
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
+            # Extract the archive
             with zipfile.ZipFile(path, "r") as f:
                 f.extractall(tmpdir)
 
+            # Load the Croissant dataset
             croissant_path = os.path.join(tmpdir, "croissant.json")
             croissant_ds = mlc.Dataset(jsonld=croissant_path)
 
+            # Extract record sets for initial conditions and measurements
             init_rs = extract_record_set(
                 croissant_ds, lambda meas_id: "/inits" in meas_id
             )
@@ -440,22 +546,27 @@ class Dataset(BaseModel):
             species = set()
             measurements = []
 
+            # Process each measurement
             for meas_uuid, rs in meas_rs.items():
                 assert meas_uuid in init_rs, (
                     f"Initial conditions not found for {meas_uuid}"
                 )
 
-                # Extract the initial conditions and measurements
-                inits = list(init_rs[meas_uuid])[0]
-                meas_recs = croissant_ds.records(record_set=meas_uuid)
+                # Extract initial conditions
+                inits = {
+                    key.replace(f"{meas_uuid}/inits/", ""): value
+                    for key, value in list(init_rs[meas_uuid])[0].items()
+                }
 
+                # Extract measurement data
+                meas_recs = croissant_ds.records(record_set=meas_uuid)
                 data = json_lines_to_dict(meas_recs)
                 time = data.pop("time")
 
-                # Update the species set
+                # Update species set
                 species.update(inits.keys())
 
-                # Create a Measurement object
+                # Create measurement
                 measurements.append(
                     Measurement(
                         initial_conditions=inits,
@@ -465,34 +576,71 @@ class Dataset(BaseModel):
                     )
                 )
 
+        # Create dataset with metadata from Croissant
         return cls(
             id=croissant_ds.metadata.id,
             name=croissant_ds.metadata.name,
             description=croissant_ds.metadata.description,
             species=list(species),
             measurements=measurements,
-        )  # type: ignore
-
-    def add_from_jax_array(
-        self,
-        model: "Model",
-        initial_condition: Dict[str, float],
-        data: Array,
-        time: Array,
-    ):
-        species_order = model.get_species_order()
-
-        measurement = Measurement(
-            initial_conditions=initial_condition,
-            time=time,
-            data={
-                species: data[:, i].squeeze() for i, species in enumerate(species_order)
-            },
         )
 
-        self.add_measurement(measurement)
+    @classmethod
+    def from_jax_arrays(
+        cls,
+        species_order: List[str],
+        data: Array,
+        time: Array,
+        y0s: Array,
+    ) -> Self:
+        """Create a dataset directly from JAX arrays.
 
-    # ! Plotting
+        Args:
+            species_order: Ordered list of species names
+            data: JAX array of concentrations with shape (n_measurements, n_timepoints, n_species)
+            time: JAX array of timepoints with shape (n_measurements, n_timepoints)
+            y0s: JAX array of initial conditions with shape (n_measurements, n_species)
+
+        Returns:
+            A new Dataset object with measurements constructed from the arrays
+
+        Raises:
+            AssertionError: If array shapes are incompatible
+        """
+        # Validate array shapes
+        assert data.shape[0] == time.shape[0] == y0s.shape[0], (
+            f"Incompatible shapes: data shape = {data.shape}, "
+            f"time shape = {time.shape}, y0s shape = {y0s.shape}. "
+            f"First dimensions must be equal."
+        )
+
+        # Create dataset
+        dataset = cls(
+            id=str(uuid.uuid4()),
+            name=str(uuid.uuid4()),
+            species=species_order,
+        )
+
+        # Add measurements
+        for i in range(data.shape[0]):
+            initial_conditions = {
+                species: float(y0s[i, j].squeeze())
+                for j, species in enumerate(species_order)
+            }
+
+            dataset.add_from_jax_array(
+                species_order=species_order,
+                initial_condition=initial_conditions,
+                data=data[i],
+                time=time[i],
+            )
+
+        return dataset
+
+    # =====================
+    # Plotting Methods
+    # =====================
+
     def plot(
         self,
         ncols: int = 2,
@@ -500,28 +648,71 @@ class Dataset(BaseModel):
         path: Optional[str] = None,
         measurement_ids: List[str] = [],
         figsize: Tuple[int, int] = (5, 3),
-        model: "Model" = None,
+        predictor: Optional[Predictor] = None,
+        n_steps: int = 100,
+        **kwargs,
     ):
-        """Plots all measurements in the dataset.
+        """Plot all measurements in the dataset.
+
+        Creates a multi-panel figure with one panel per measurement, with
+        optional overlay of model predictions.
 
         Args:
-            ncols (int, optional): Number of columns in the plot. Defaults to 2.
-            show (bool, optional): Whether to show the plot. Defaults to True.
-            path (Optional[str], optional): Path to save the plot. Defaults to None.
-            model (Optional[Model], optional): The model to overlay on the plot. Defaults to None.
-            measurement_ids (List[str], optional): List of measurement IDs to plot. Defaults to [].
-            figsize (Tuple[int, int], optional): Size of each individual figure. figure.
-            model (Model, optional): The model to overlay on the plot. Defaults to None.
+            ncols: Number of columns in the figure grid
+            show: Whether to display the figure
+            path: Path to save the figure (if provided)
+            measurement_ids: List of measurement IDs to plot (defaults to all measurements)
+            figsize: Size of each individual subplot
+            model: Optional model to overlay predictions
+            n_steps: Number of points to use for model prediction curves
+            **kwargs: Additional arguments passed to the measurement plot function
 
         Returns:
-            matplotlib.figure.Figure: The figure object
+            The matplotlib figure object
         """
+        # Get measurement IDs if not provided
+        measurement_ids = self._get_measurement_ids(measurement_ids)
 
+        # Setup figure and axes
+        fig, axs = self._setup_figure(measurement_ids, ncols, figsize)
+
+        # Simulate model data if model is provided
+        model_data = (
+            predictor.predict(
+                dataset=self,
+                n_steps=n_steps,
+            )
+            if predictor
+            else None
+        )
+
+        # Plot measurements
+        self._plot_measurements(
+            axs=axs,
+            measurement_ids=measurement_ids,
+            model_data=model_data,
+            kwargs=kwargs,
+        )
+
+        # Format legends
+        self._format_legends(axs, ncols, measurement_ids)
+
+        # Save or show figure
+        self._save_or_show_figure(fig, path, show)
+
+        return fig
+
+    def _get_measurement_ids(self, measurement_ids: List[str]) -> List[str]:
+        """Get measurement IDs to plot, using all measurements with data if none provided."""
+        if not measurement_ids:
+            return [meas.id for meas in self.measurements if meas.has_data()]
+        return measurement_ids
+
+    def _setup_figure(
+        self, measurement_ids: List[str], ncols: int, figsize: Tuple[int, int]
+    ):
+        """Setup the figure and axes for plotting."""
         x, y = figsize
-
-        if len(measurement_ids) == 0:
-            measurement_ids = [meas.id for meas in self.measurements if meas.has_data()]
-
         ncols, nrows = self._get_rows_cols(measurement_ids, ncols)
 
         fig, axs = plt.subplots(
@@ -535,28 +726,70 @@ class Dataset(BaseModel):
         else:
             axs = [axs]
 
-        index = 0
+        return fig, axs
 
-        for meas in self.measurements:
+    def _simulate_model_data(self, model, n_steps):
+        """Simulate model data for plotting."""
+        # Import SimulationConfig here to avoid circular imports
+        from catalax.model.simconfig import SimulationConfig
+
+        _, saveat, _ = self.to_jax_arrays(
+            species_order=self.species,
+            inits_to_array=True,
+        )
+
+        t0 = saveat.min(axis=-1)
+        t1 = saveat.max(axis=-1)
+
+        return model.simulate(
+            dataset=self,
+            config=SimulationConfig(
+                t0=t0,
+                t1=t1,
+                nsteps=n_steps,
+            ),
+        )
+
+    def _plot_measurements(
+        self,
+        axs,
+        measurement_ids: List[str],
+        model_data: Optional[Dataset],
+        kwargs: Dict[str, Any],
+    ):
+        """Plot each measurement on its corresponding axis."""
+        index = 0
+        for i, meas in enumerate(self.measurements):
             if meas.id not in measurement_ids:
                 continue
 
-            meas.plot(ax=axs[index], model=model)
+            sim_meas = model_data.measurements[i] if model_data else None
+
+            meas.plot(
+                ax=axs[index],
+                model_data=sim_meas,
+                **kwargs,
+            )
 
             index += 1
 
-        # Remove legend from plots that have a right neighbor
+    def _format_legends(self, axs, ncols, measurement_ids):
+        """Format legends for each subplot."""
+        # Place legends only on rightmost plots in each row
         for i, ax in enumerate(axs):
             if i % ncols == ncols - 1:
                 ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
             else:
                 ax.legend().set_visible(False)
 
+        # Hide unused axes if there's an odd number of measurements
         if len(measurement_ids) > 1 and len(measurement_ids) % 2 != 0:
             axs[-1].set_visible(False)
 
         plt.tight_layout(w_pad=4, h_pad=4)
 
+    def _save_or_show_figure(self, fig, path, show):
+        """Save figure to path if provided, otherwise show if requested."""
         if path:
             plt.savefig(
                 path,
@@ -567,19 +800,21 @@ class Dataset(BaseModel):
         elif show:
             plt.show()
 
-        return fig
-
     @staticmethod
     def _get_rows_cols(
         measurement_ids: list[str],
         ncols: int,
     ) -> Tuple[int, int]:
+        """Calculate the grid size needed for the plots."""
         if len(measurement_ids) == 1:
             return 1, 1
         else:
             return ncols, int(np.ceil(len(measurement_ids) / ncols))
 
-    # ! Data Augmentation
+    # =====================
+    # Data Augmentation
+    # =====================
+
     def augment(
         self,
         n_augmentations: int,
@@ -587,22 +822,26 @@ class Dataset(BaseModel):
         seed: int = 42,
         append: bool = True,
         multiplicative: bool = False,
-    ):
-        """Augments the dataset by adding Gaussian noise to the data.
+    ) -> "Dataset":
+        """Generate augmented versions of the dataset with added noise.
+
+        This method creates artificial variants of the dataset by adding
+        Gaussian noise to the measurements, which can be useful for
+        uncertainty quantification and model robustness testing.
 
         Args:
-            n_augmentations (int): The number of augmentations to be performed.
-            sigma (float, optional): The standard deviation of the Gaussian noise. Defaults to 0.5.
-            seed (int, optional): The seed for the random number generator. Defaults to 42.
-            append (bool, optional): Whether to append the augmented data to the dataset. Defaults to True.
-            multiplicative (bool, optional): Whether to add multiplicative noise. Defaults to False.
+            n_augmentations: Number of augmented copies to generate
+            sigma: Standard deviation of the Gaussian noise
+            seed: Random seed for reproducibility
+            append: Whether to include original measurements in the result
+            multiplicative: Whether to use multiplicative rather than additive noise
 
         Returns:
-            Dataset: The augmented dataset.
+            A new Dataset containing the augmented measurements
         """
-
+        # Create new dataset or copy existing
         if append:
-            augmented_dataset = deepcopy(self)  # type: ignore
+            augmented_dataset = deepcopy(self)
         else:
             augmented_dataset = Dataset(
                 id=self.id,
@@ -610,8 +849,9 @@ class Dataset(BaseModel):
                 description=self.description,
                 species=self.species,
             )
-        augmented_meas = []
 
+        # Generate augmented measurements
+        augmented_meas = []
         for i in range(n_augmentations):
             for meas in self.measurements:
                 augmented_meas.append(
@@ -622,28 +862,70 @@ class Dataset(BaseModel):
                     )
                 )
 
+        # Add augmented measurements to dataset
         augmented_dataset.measurements += augmented_meas
 
         return augmented_dataset
 
-    # ! Utilities
+    # =====================
+    # Utility Methods
+    # =====================
+
     @staticmethod
     def get_vmap_dims(
         data: jax.Array,
         time: jax.Array,
-        y0s: Union[jax.Array, Dict[str, float]],
+        y0s: Union[jax.Array, List[Dict[str, float]]],
     ) -> Tuple[Optional[int], None, Optional[int]]:
-        """Determines the axes in which vmap will be applies"""
+        """Determines the dimensions for JAX's vmap operation based on input array shapes.
 
+        This method analyzes the shapes of data, time, and initial condition arrays to determine
+        which dimensions should be mapped over when using JAX's vectorized mapping.
+
+        Args:
+            data: JAX array of concentration time courses with shape
+                 (n_measurements, n_timepoints, n_species) or (n_timepoints, n_species)
+            time: JAX array of time points with shape (n_measurements, n_timepoints) or (n_timepoints,)
+            y0s: Either a JAX array of initial conditions with shape (n_measurements, n_species)
+                 or a list of dictionaries mapping species names to initial concentrations
+
+        Returns:
+            A tuple of three elements:
+            - First element: 0 if data has 3 dimensions (batched), None otherwise
+            - Second element: Always None (time dimension is not mapped over)
+            - Third element: 0 if multiple initial conditions are present, None otherwise
+
+        Raises:
+            TypeError: If y0s is not a list or JAX array
+        """
+        # Check if data is batched (has 3 dimensions)
+        data_in_batch = 0 if len(data.shape) == 3 else None
+
+        # Check if there are multiple initial conditions
         if isinstance(y0s, list):
-            multiple_y0s = len(y0s) > 1
+            multiple_y0s = 0 if len(y0s) > 1 else None
         elif isinstance(y0s, jax.Array):
-            multiple_y0s = len(y0s.shape) == 2
+            multiple_y0s = 0 if len(y0s.shape) == 2 else None
         else:
-            raise TypeError(f"Expected array for 'y0s' but got {type(y0s)}")
+            raise TypeError(f"Expected list or JAX array for 'y0s' but got {type(y0s)}")
 
-        return (
-            0 if len(data.shape) == 3 else None,
-            None,
-            0 if multiple_y0s else None,
+        # Return mapping dimensions for data, time, and y0s
+        return (data_in_batch, None, multiple_y0s)
+
+    def to_config(self, nsteps: int = 100) -> SimulationConfig:
+        """Convert dataset to a SimulationConfig object."""
+        from catalax.model.simconfig import SimulationConfig
+
+        t0, t1 = [], []
+
+        for meas in self.measurements:
+            if meas.time is None:
+                raise ValueError("Measurement has no time data.")
+            t0.append(meas.time[0])
+            t1.append(meas.time[-1])
+
+        return SimulationConfig(
+            t0=jnp.array(t0),
+            t1=jnp.array(t1),
+            nsteps=nsteps,
         )

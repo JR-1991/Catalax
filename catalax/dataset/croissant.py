@@ -72,7 +72,7 @@ def dataset_to_croissant(
             distribution.append(file_obj)
 
         metadata = mlc.Metadata(
-            name=dataset.name,
+            name=dataset.name or "Untitled Dataset",
             description=dataset.description,
             cite_as=cite_as,
             url=url,
@@ -123,11 +123,11 @@ def json_lines_to_dict(record_set: mlc.Records) -> Dict[str, List[float]]:
     """
 
     rows: List[Dict[str, float]] = list(record_set)  # type: ignore
-    data = {}
 
     df = pd.DataFrame(rows)
+    data = df.to_dict(orient="list")  # type: ignore
 
-    return df.to_dict(orient="list")  # type: ignore
+    return {key.split("/", 1)[-1]: value for key, value in data.items()}  # type: ignore
 
 
 def _md5_hash_file(handler: StringIO) -> str:
@@ -254,6 +254,7 @@ def _create_initial_condition_record_set(measurement: Measurement) -> mlc.Record
     if measurement.name is None:
         measurement.name = measurement.id
 
+    # Create field objects for each species in initial conditions
     fields = [
         mlc.Field(
             id=f"{measurement.id}/inits/{species}",
@@ -264,10 +265,15 @@ def _create_initial_condition_record_set(measurement: Measurement) -> mlc.Record
         for species in measurement.initial_conditions.keys()
     ]
 
+    # Prepare data with field IDs matching the expected structure
+    data_with_prefixed_keys = {}
+    for species, value in measurement.initial_conditions.items():
+        data_with_prefixed_keys[f"{measurement.id}/inits/{species}"] = value
+
     return mlc.RecordSet(
         id=f"{measurement.id}/inits",
         name=f"{measurement.id}_inits",
         description=f"Initial Conditions for {measurement.id}",
-        data=[measurement.initial_conditions],
+        data=[data_with_prefixed_keys],
         fields=fields,
     )
