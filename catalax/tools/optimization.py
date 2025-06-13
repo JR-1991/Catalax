@@ -1,13 +1,14 @@
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Callable
 
 import jax
 import jax.numpy as jnp
+import optax
 from lmfit import Parameters, minimize
 from lmfit.minimizer import MinimizerResult
 
 from catalax.dataset.dataset import Dataset
-from catalax.model import Model
+from catalax.model import Model, SimulationConfig
 
 
 def optimize(
@@ -16,6 +17,7 @@ def optimize(
     global_upper_bound: Optional[float] = 1e5,
     global_lower_bound: Optional[float] = 1e-6,
     dt0: float = 0.01,
+    objective_fun: Callable[[jax.Array, jax.Array], float] = optax.l2_loss,
     max_steps: int = 64**4,
     method: str = "bfgs",
 ) -> Tuple[MinimizerResult, Model]:
@@ -39,12 +41,12 @@ def optimize(
         dataset (Dataset): The dataset to fit the model to.
         global_upper_bound (Optional[float], optional): Global upper bound - Only applies to unspecified params. Defaults to 1e5.
         global_lower_bound (Optional[float], optional): Global lower bound - Only applies to unspecified params. Defaults to 1e-6.
-        dt0 (float, optional): Inetgration step width. Defaults to 0.01.
+        dt0 (float, optional): Integration step width. Defaults to 0.01.
         max_steps (int, optional): Maximum number of integration steps. Defaults to 64**4.
-        method (str, optional): _description_. Defaults to "bfgs".
+        method (str, optional): Optimization method. Defaults to "bfgs".
 
     Returns:
-        _type_: _description_
+        Tuple[MinimizerResult, Model]: Results object and updated model with inferred parameters
     """
 
     params = _initialize_params(model, global_upper_bound, global_lower_bound)
@@ -56,27 +58,27 @@ def optimize(
         ]
     )
 
-    assert set(dataset.species) == set(
-        model.get_species_order()
-    ), "Species in dataset and model do not match."
-
-    data, times, initial_conditions = dataset.to_jax_arrays(model.get_species_order())
-
-    in_axes = dataset.get_vmap_dims(
-        data=data,
-        time=times,
-        y0s=initial_conditions,
+    assert set(dataset.species) == set(model.get_species_order()), (
+        "Species in dataset and model do not match."
     )
+
+    # Extract data arrays for the residual computation
+    data, times, _ = dataset.to_jax_arrays(model.get_species_order())
+
+    # Create simulation config from dataset
+    config = dataset.to_config()
+    config.dt0 = dt0
+    config.max_steps = max_steps
+    config.nsteps = None
 
     minimize_args = (
         model,
-        initial_conditions,
+        dataset,
+        config,
         data,
         times,
         observables,
-        in_axes,
-        dt0,
-        max_steps,
+        objective_fun,
     )
 
     _ipython_print(params)
@@ -134,18 +136,18 @@ def _initialize_params(
 
     for param in model.parameters.values():
         if param.lower_bound is None:
-            assert (
-                global_lower_bound is not None
-            ), f"Neither a global lower bound nor lower bound for parameter '{param.name}' is given. \
+            assert global_lower_bound is not None, (
+                f"Neither a global lower bound nor lower bound for parameter '{param.name}' is given. \
                 Please specify either a global lower bound or a lower bound for the parameter."
+            )
 
             param.lower_bound = global_lower_bound
 
         if param.upper_bound is None:
-            assert (
-                global_upper_bound is not None
-            ), f"Neither a global upper bound nor upper bound for parameter '{param.name}' is given. \
+            assert global_upper_bound is not None, (
+                f"Neither a global upper bound nor upper bound for parameter '{param.name}' is given. \
                 Please specify either a global upper bound or a upper bound for the parameter."
+            )
 
             param.upper_bound = global_upper_bound
 
@@ -171,41 +173,40 @@ def _initialize_params(
 def _residual(
     params: Parameters,
     model: Model,
-    y0s: List[Dict[str, float]],
+    dataset: Dataset,
+    config: SimulationConfig,
     data: jax.Array,
     times: jax.Array,
     observables: jax.Array,
-    in_axes: Tuple[Optional[int], None, Optional[int]],
-    dt0: float = 0.01,
-    max_steps: int = 64**4,
+    objective_fun: Callable[[jax.Array, jax.Array], float],
 ):
     """Performs a simulation of the model and returns the residual between the
     data and the simulation.
 
     Args:
-        model (Model): Model to used to simulate the data.
         params (Parameters): Parameters to optimize.
-        y0s (List[Dict[str, float]]): _description_
+        model (Model): Model to used to simulate the data.
+        dataset (Dataset): Dataset containing initial conditions and time points.
+        config (SimulationConfig): Simulation configuration.
         data (jax.Array): Data to fit.
         times (jax.Array): Time points of the data.
-        dt0 (float, optional): Time step of the simulation. Defaults to 0.01.
-        max_steps (int, optional): Maximum number of integration steps. Defaults to 64**4.
+        observables (jax.Array): Indices of observable species.
+        objective_fun (Callable): Objective function for residual calculation.
 
     Returns:
         jax.Array: Residuals between data and simulation
     """
 
-    params = {**params.valuesdict()}  # type: ignore
-    parameters = jnp.array([params[param] for param in model.get_parameter_order()])
+    param_dict = {**params.valuesdict()}  # type: ignore
+    parameters = jnp.array([param_dict[param] for param in model.get_parameter_order()])
 
+    # Use the new simulate API
     _, states = model.simulate(
-        initial_conditions=y0s,
-        dt0=dt0,
-        in_axes=(0, None, 0),
-        saveat=times,  # type: ignore
-        max_steps=max_steps,
+        dataset=dataset,
+        config=config,
+        saveat=times,
         parameters=parameters,
         return_array=True,
     )
 
-    return data - states[:, :, observables]
+    return objective_fun(data, states[:, :, observables])  #
