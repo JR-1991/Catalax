@@ -15,15 +15,15 @@
   ],
   "parameters": [
     {
-      "name": "v_max",
-      "symbol": "v_max",
-      "value": 7.0,
-      "constant": false
-    },
-    {
       "name": "K_m",
       "symbol": "K_m",
       "value": 100.0,
+      "constant": false
+    },
+    {
+      "name": "v_max",
+      "symbol": "v_max",
+      "value": 7.0,
       "constant": false
     }
   ]
