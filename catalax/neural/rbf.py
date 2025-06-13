@@ -29,4 +29,10 @@ class RBFLayer(eqx.Module):
         self.gamma = gamma
 
     def __call__(self, x):
-        return jnp.exp(-self.gamma * jnp.square(x - self.mu))
+        # For vector inputs, compute pairwise distances
+        # x shape: (batch_size, input_dim)
+        # mu shape: (n_centers, input_dim)
+        # Broadcast to compute distances between all pairs
+        diff = jnp.expand_dims(x, axis=1) - jnp.expand_dims(self.mu, axis=0)
+        sq_dist = jnp.sum(jnp.square(diff), axis=-1)
+        return jnp.exp(-self.gamma * sq_dist)

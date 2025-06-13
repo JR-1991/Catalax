@@ -20,7 +20,7 @@ class MLP(eqx.Module):
         max_time: float = 1.0,
         *,
         key,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.max_time = max_time

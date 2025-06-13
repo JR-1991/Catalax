@@ -4,9 +4,7 @@ import jax
 import diffrax
 
 from catalax import Model
-from .mlp import MLP
 from .neuralbase import NeuralBase
-from .rbf import RBFLayer
 
 
 class NeuralODE(NeuralBase):
@@ -34,7 +32,6 @@ class NeuralODE(NeuralBase):
             activation=activation,
             key=key,
             use_final_bias=use_final_bias,
-            **kwargs,
         )
 
     def __call__(self, ts, y0):

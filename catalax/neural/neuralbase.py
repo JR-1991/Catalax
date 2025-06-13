@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import os
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import diffrax
 import equinox as eqx
@@ -10,12 +12,19 @@ import jax.numpy as jnp
 import jax.random as jrandom
 
 from catalax import Model
+from catalax.model.model import SimulationConfig
 from catalax.neural.rbf import RBFLayer
+from catalax.dataset import Dataset
+from catalax.predictor import Predictor
+from catalax.surrogate import Surrogate
 from catalax.tools.simulation import Stack
 from .mlp import MLP
 
+if TYPE_CHECKING:
+    from catalax.dataset import Dataset
 
-class NeuralBase(eqx.Module):
+
+class NeuralBase(eqx.Module, Predictor, Surrogate):
     func: MLP
     observable_indices: List[int]
     hyperparams: Dict
@@ -28,7 +37,7 @@ class NeuralBase(eqx.Module):
         data_size: int,
         width_size: int,
         depth: int,
-        model: Model,
+        model: Model | Dataset,
         observable_indices: List[int],
         activation=jax.nn.softplus,
         solver=diffrax.Tsit5,
@@ -40,17 +49,16 @@ class NeuralBase(eqx.Module):
         super().__init__(**kwargs)
 
         # Save solver and observable indices
-        self.solver = solver
+        self.solver = solver  # type: ignore
         self.observable_indices = observable_indices
         self.vector_field = None
-        self.species_order = model.get_species_order()
+        self.species_order = model.get_observable_species_order()
 
         # Keep hyperparams for serialisation
         self.hyperparams = {
             "data_size": data_size,
             "width_size": width_size,
             "depth": depth,
-            "model": model.to_dict(),
             "rbf": isinstance(activation, RBFLayer),
             "use_final_bias": use_final_bias,
             "observable_indices": observable_indices,
@@ -65,40 +73,68 @@ class NeuralBase(eqx.Module):
             activation=activation,
             key=key,
             use_final_bias=use_final_bias,
-        )  # type: ignore
+        )
 
     def predict(
         self,
-        y0s: jax.Array,
-        t0: int = 0,
-        t1: Optional[int] = None,
-        nsteps: int = 1000,
-        times: Optional[jax.Array] = None,
+        dataset: Dataset,
+        config: Optional[SimulationConfig] = None,
+        n_steps: int = 100,
     ):
-        if times is None:
-            assert t1 is not None, "Either times or t1 must be given."
+        """Predict model behavior using the given dataset.
 
-            # Generate time points, if not explicitly given
-            times = jnp.linspace(t0, t1, nsteps)
+        This is a convenience wrapper around the `simulate` method that automatically
+        creates a simulation configuration if one is not provided.
 
-        if y0s.shape[0] > 1 and len(times.shape) == 1:
-            # If multiple initial conditions are given, repeat time points
-            times = jnp.stack([times] * y0s.shape[0], axis=0)
+        Args:
+            dataset: Dataset containing initial conditions for prediction
+            config: Optional simulation configuration parameters. If None,
+                   a configuration will be created from the dataset.
+            n_steps: Number of time steps for the simulation. This will override
+                   the nsteps value in the provided config if both are specified.
 
-        # Single simulation case
-        if len(times.shape) == 1 and len(y0s.shape) == 1:
-            return times, self(times, y0s)  # type: ignore
+        Returns:
+            A Dataset object containing the prediction results
+        """
 
-        # Batch simulation case
-        assert (
-            len(times.shape) == 2 and len(y0s.shape) == 2
-        ), f"Incompatible shapes: time shape = {times.shape}, y0 shape = {y0s.shape}. Both must be 2D."
+        if config is None:
+            config = dataset.to_config(nsteps=n_steps)
+        if config.nsteps != n_steps:
+            config.nsteps = n_steps
 
-        assert (
-            times.shape[0] == y0s.shape[0]
-        ), f"Incompatible shapes: time shape = {times.shape}, y0.shape = {y0s.shape}. First dimension must be equal in case of batches."
+        _, times, y0s = dataset.to_jax_arrays(
+            self.species_order,
+            inits_to_array=True,
+        )
 
-        return times, jax.vmap(self, in_axes=(0, 0))(times, y0s)  # type: ignore
+        if config:
+            times = jnp.linspace(config.t0, config.t1, config.nsteps).T
+
+        predictions = jax.vmap(self, in_axes=(0, 0))(times, y0s)  # type: ignore
+
+        return Dataset.from_jax_arrays(
+            species_order=self.species_order,
+            data=predictions,
+            time=times,
+            y0s=y0s,  # type: ignore
+        )
+
+    def predict_rates(self, dataset: Dataset) -> jax.Array:
+        """Predict rates using the given dataset.
+
+        Args:
+            dataset: Dataset containing initial conditions for prediction
+
+        Returns:
+            A Dataset object containing the prediction results
+        """
+        data, times, _ = dataset.to_jax_arrays(self.species_order)
+        dataset_size, time_size, _ = data.shape
+        ins = data.reshape(dataset_size * time_size, -1)
+        times = times.ravel()
+        return jax.vmap(self.func, in_axes=(0, 0, None))(times, ins, 0.0).reshape(
+            dataset_size * time_size, -1
+        )
 
     @classmethod
     def from_model(
@@ -121,11 +157,14 @@ class NeuralBase(eqx.Module):
         key = jrandom.PRNGKey(seed)
 
         # Get observable indices
-        observable_indices = [
-            index
-            for index, species in enumerate(model.get_species_order())
-            if model.odes[species].observable
-        ]
+        if model.odes:
+            observable_indices = [
+                index
+                for index, species in enumerate(model.get_species_order())
+                if model.odes[species].observable
+            ]
+        else:
+            observable_indices = list(range(len(model.get_species_order())))
 
         return cls(
             data_size=len(model.species),
@@ -135,6 +174,40 @@ class NeuralBase(eqx.Module):
             observable_indices=observable_indices,
             key=key,
             model=model,
+            use_final_bias=use_final_bias,
+            activation=activation,
+            **kwargs,
+        )
+
+    @classmethod
+    def from_dataset(
+        cls,
+        dataset: Dataset,
+        width_size: int,
+        depth: int,
+        seed: int = 0,
+        use_final_bias: bool = True,
+        solver=diffrax.Tsit5,
+        activation=jax.nn.softplus,
+        **kwargs,
+    ):
+        """Intializes a NeuralODE from a catalax.Model
+
+        Args:
+            model (Model): Model to initialize NeuralODE from
+        """
+
+        key = jrandom.PRNGKey(seed)
+        observable_indices = dataset.get_observable_indices()
+
+        return cls(
+            data_size=len(observable_indices),
+            width_size=width_size,
+            depth=depth,
+            solver=solver,
+            observable_indices=observable_indices,
+            key=key,
+            model=dataset,
             use_final_bias=use_final_bias,
             activation=activation,
             **kwargs,

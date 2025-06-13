@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Type
 
 import equinox as eqx
 import jax
@@ -26,7 +26,6 @@ def train_neural_ode(
     milestone_dir: str = "./milestones",
     weight_scale: float = 1e-2,
 ) -> NeuralBase:
-
     # Extract data from dataset
     data, times, inital_conditions = dataset.to_jax_arrays(
         species_order=model.species_order,
@@ -59,9 +58,9 @@ def train_neural_ode(
     print(f"\n🚀 Training {model.__class__.__name__}...\n")
 
     for strat_index, strat in enumerate(strategy):
-        assert (
-            strat.batch_size < data.shape[0]
-        ), f"Batch size of strategy #{strat_index} ({strat.batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
+        assert strat.batch_size < data.shape[0], (
+            f"Batch size of strategy #{strat_index} ({strat.batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
+        )
 
         # Prepare optimizer per strategy
         optim = optimizer(strat.lr)
@@ -204,7 +203,7 @@ def _prepare_step_and_loss(loss):
 def _log_progress(strat_index, step, loss, mae, log):
     if log is not None:
         with open(log, "a") as log_file:
-            log_file.write(f"{strat_index+1}\t{step}\t{loss}\t{mae}\n")
+            log_file.write(f"{strat_index + 1}\t{step}\t{loss}\t{mae}\n")
 
 
 def _calculate_metrics(
@@ -290,7 +289,7 @@ def _serialize_milestone(
 
     model.save_to_eqx(
         path=milestone_dir,
-        name=f"run_{str(datetime.now())}_strategy_{strat_index+1}",
+        name=f"run_{str(datetime.now())}_strategy_{strat_index + 1}",
         **{"strategy": strategy},
     )
 
