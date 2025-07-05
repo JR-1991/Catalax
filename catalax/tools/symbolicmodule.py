@@ -356,11 +356,11 @@ class SymbolicModule(eqx.Module):
             f"Expected lists as positional - Received types {set(type(kw) for kw in positionals.values())}"
         )
 
-        def _has_single_type(l):
-            if len(l) == 0:
+        def _has_single_type(ps: list):
+            if len(ps) == 0:
                 # Empty list is allowed
                 return True
-            return len(set([type(e) for e in l])) == 1
+            return len(set([type(e) for e in ps])) == 1
 
         assert all(_has_single_type(pos) for pos in positionals.values()), (
             "Received mixed types within positionals. Please make sure to pass lists of strings."
