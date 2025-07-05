@@ -33,6 +33,7 @@ class RBFLayer(eqx.Module):
         # x shape: (batch_size, input_dim)
         # mu shape: (n_centers, input_dim)
         # Broadcast to compute distances between all pairs
+        assert self.mu is not None, "Mu must be set before calling the RBF layer."
         diff = jnp.expand_dims(x, axis=1) - jnp.expand_dims(self.mu, axis=0)
         sq_dist = jnp.sum(jnp.square(diff), axis=-1)
         return jnp.exp(-self.gamma * sq_dist)
