@@ -1,6 +1,4 @@
-import catalax as ctx
 import catalax.neural as ctn
-import rich
 
 
 class TestNeuralODE:
@@ -14,18 +12,22 @@ class TestNeuralODE:
             depth=1,
         )
 
+        penalties = ctn.Penalties.for_neural_ode(
+            l2_alpha=1e-3,
+            l1_alpha=1e-3,
+        )
         strategy = ctn.Strategy()
         strategy.add_step(
             lr=1e-3,
             steps=200,
             batch_size=5,
-            alpha=0.01,
+            penalties=penalties,
         )
         strategy.add_step(
             lr=1e-4,
             steps=200,
             batch_size=5,
-            alpha=0.01,
+            penalties=penalties,
         )
         neural_ode = ctn.train_neural_ode(
             model=neural_ode,
@@ -50,19 +52,24 @@ class TestNeuralODE:
             activation=ctn.RBFLayer(0.2),  # type: ignore
         )
 
+        penalties = ctn.Penalties.for_neural_ode(
+            l2_alpha=1e-3,
+            l1_alpha=1e-3,
+        )
+
         strategy = ctn.Strategy()
         strategy.add_step(
             lr=1e-3,
             steps=200,
             length=0.1,
             batch_size=5,
-            alpha=0.01,
+            penalties=penalties,
         )
         strategy.add_step(
             lr=1e-4,
             steps=200,
             batch_size=5,
-            alpha=0.01,
+            penalties=penalties,
         )
 
         neural_ode = ctn.train_neural_ode(

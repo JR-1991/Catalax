@@ -36,13 +36,18 @@ class TestMCMC:
             activation=rbf,  # type: ignore
         )
 
+        penalties = ctn.Penalties.for_neural_ode(
+            l2_alpha=1e-3,
+            l1_alpha=1e-3,
+        )
+
         strategy = ctn.Strategy()
         strategy.add_step(
             lr=1e-2,
             length=0.1,
             steps=200,
             batch_size=15,
-            alpha=0.1,
+            penalties=penalties,
             loss=optax.log_cosh,
         )
 
