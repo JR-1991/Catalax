@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, ConfigDict
+from pydantic import field_validator, ConfigDict
 from sympy import Expr, symbols
 
 from catalax.model.base import CatalaxBase

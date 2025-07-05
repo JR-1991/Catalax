@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Union
 
 from pydantic import PrivateAttr, model_validator
 from sympy import Expr
@@ -42,7 +42,7 @@ class Parameter(CatalaxBase):
 
         return self
 
-    _repr_fields = PrivateAttr(
+    _repr_fields: List[str] = PrivateAttr(
         default=[
             "name",
             "symbol",

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from dotted_dict import DottedDict
@@ -9,21 +10,19 @@ from sympy import Expr, sympify
 
 from catalax.model.base import CatalaxBase
 from .parameter import Parameter
-from .species import Species
 from .utils import parameter_exists
 
 if TYPE_CHECKING:
     from catalax.model import Model
 
 
-class ODE(CatalaxBase):
+class Assignment(CatalaxBase):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
 
-    species: Species = Field(..., exclude=True)
+    symbol: str
     equation: Expr
-    observable: bool = True
     parameters: Dict[Union[str, Expr], Parameter] = Field(
         default_factory=DottedDict,
         exclude=True,
@@ -32,8 +31,8 @@ class ODE(CatalaxBase):
     _model: Optional[Model] = PrivateAttr(default=None)  # type: ignore
 
     @field_validator("equation", mode="before")
-    def converts_ode_to_sympy(cls, value):
-        """Convertes a string"""
+    def converts_assignment_to_sympy(cls, value):
+        """Convertes a string to a sympy expression"""
 
         return sympify(value)
 
