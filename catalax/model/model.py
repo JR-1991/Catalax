@@ -3,14 +3,13 @@ from __future__ import annotations
 import copy
 import json
 import os
-from pathlib import Path
-import re
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
 
 import arviz as az
+import pyenzyme as pe
 from dotted_dict import DottedDict
 from jax import Array
 from pydantic import ConfigDict, Field, PrivateAttr, field_validator
@@ -19,8 +18,11 @@ from sympy import Expr, Matrix, Symbol, symbols, sympify
 
 from catalax.dataset.dataset import Dataset
 from catalax.mcmc import priors
+from catalax.model.assignment import Assignment
 from catalax.model.base import CatalaxBase
+from catalax.model.enzymeml import from_enzymeml
 from catalax.model.simconfig import SimulationConfig
+from catalax.surrogate import Surrogate
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
 from .constant import Constant
@@ -37,7 +39,7 @@ CONSTANTS_INDEX = 2
 TIME_INDEX = 3
 
 
-class Model(CatalaxBase, Predictor):
+class Model(CatalaxBase, Predictor, Surrogate):
     """
     Model class for storing ODEs, species, and parameters, which is used
     to describe a biological system. Model classes can be passed to analysis
@@ -71,8 +73,12 @@ class Model(CatalaxBase, Predictor):
     species: Dict[str, Species] = Field(default_factory=PrettyDict)
     parameters: Dict[str, Parameter] = Field(default_factory=PrettyDict)
     constants: Dict[str, Constant] = Field(default_factory=PrettyDict)
+    assignments: Dict[str, Assignment] = Field(default_factory=PrettyDict)
 
-    _sim_func: Optional[Callable] = PrivateAttr(default=None)
+    _sim_func: Optional[
+        Callable[[jax.Array, jax.Array, jax.Array, jax.Array], jax.Array]
+    ] = PrivateAttr(default=None)
+    _stack: Optional[Stack] = PrivateAttr(default=None)
     _in_axes: Optional[Tuple] = PrivateAttr(default=None)
     _dt0: Optional[Tuple] = PrivateAttr(default=None)
     _jacobian_parameters: Optional[Callable] = PrivateAttr(default=None)
@@ -131,6 +137,23 @@ class Model(CatalaxBase, Predictor):
         )
 
         self.odes[species]._model = self
+
+    def add_assignment(self, symbol: str, equation: str):
+        """Adds an assignment to the model and converts the equation to a SymPy expression."""
+
+        if symbol in self.assignments:
+            raise ValueError(f"Assignment for symbol '{symbol}' already exists")
+
+        self.assignments[symbol] = Assignment(symbol=symbol, equation=equation)  # type: ignore
+        self.assignments[symbol]._model = self
+
+        # Remove all parameters and constants from the model
+        if symbol in self.parameters:
+            del self.parameters[symbol]
+        if symbol in self.constants:
+            del self.constants[symbol]
+        if symbol in self.species:
+            del self.species[symbol]
 
     def add_species(self, species_string: str = "", **species_map):
         """Adds a single or multiple species to the model, which can later be used in ODEs.
@@ -277,7 +300,6 @@ class Model(CatalaxBase, Predictor):
             self.constants[symbol] = Constant(name=name, symbol=Symbol(symbol))
 
     # ! Simulation methods
-
     def simulate(
         self,
         dataset: Dataset,
@@ -334,6 +356,7 @@ class Model(CatalaxBase, Predictor):
         dataset: Dataset,
         config: SimulationConfig | None = None,
         n_steps: int = 100,
+        use_times: bool = False,
     ) -> Dataset:
         """Predict model behavior using the given dataset.
 
@@ -346,17 +369,64 @@ class Model(CatalaxBase, Predictor):
                    a configuration will be created from the dataset.
             nsteps: Number of time steps for the simulation. This will override
                    the nsteps value in the provided config if both are specified.
-
+            use_times: Whether to use the time points from the dataset or to simulate at fixed time steps
         Returns:
             A Dataset object containing the prediction results
         """
         if config is None:
             config = dataset.to_config(nsteps=n_steps)
+        if use_times:
+            config.nsteps = None
+            _, times, _ = dataset.to_jax_arrays(self.get_species_order())
+        else:
+            times = None
 
-        if config.nsteps != n_steps:
+        if config.nsteps != n_steps and not use_times:
             config.nsteps = n_steps
 
-        return self.simulate(dataset, config)
+        return self.simulate(dataset, config, saveat=times)
+
+    def rates(
+        self,
+        t: Array,
+        y: Array,
+        constants: Optional[Array] = None,
+    ) -> Array:
+        """Get the rates of the model.
+
+        This method particularly useful to gather rates for quiver plots.
+
+        Args:
+            t: Time points
+            y: States
+            constants: Constants, if any
+
+        Returns:
+            Rates
+        """
+        t, y, constants = self._validate_rate_input(t, y, constants)
+
+        if self._sim_func is None:
+            raise RuntimeError("Simulation function not initialized")
+
+        parameters = self._get_parameters()
+        return self._sim_func(t, y, parameters, constants)
+
+    def predict_rates(self, dataset: Dataset) -> jax.Array:
+        """Predict rates using the given dataset.
+
+        Args:
+            dataset: Dataset containing initial conditions for prediction
+
+        Returns:
+            A Dataset object containing the prediction results
+        """
+        data, times, _ = dataset.to_jax_arrays(self.get_species_order())
+        constants = dataset.to_y0_matrix(species_order=self.get_constants_order())
+        dataset_size, time_size, _ = data.shape
+        ins = data.reshape(dataset_size * time_size, -1)
+        times = times.ravel()
+        return self.rates(times, ins, constants).reshape(dataset_size * time_size, -1)
 
     def _initialize_simulation_data(
         self,
@@ -493,6 +563,7 @@ class Model(CatalaxBase, Predictor):
             in_axes: Specifies the axes to map the simulation function across.
                      Defaults to (0, None, None).
         """
+        self._replace_assignments()
 
         # Retrieve ODEs based on species order
         odes = [self.odes[species] for species in self.get_species_order()]
@@ -504,17 +575,39 @@ class Model(CatalaxBase, Predictor):
             **kwargs,
         )
 
-        self._sim_func = simulation_setup._prepare_func(in_axes=in_axes)
+        self._sim_func, self._stack = simulation_setup._prepare_func(in_axes=in_axes)
+
+    def _replace_assignments(self):
+        """Replaces assignment symbols with their values"""
+
+        # First replace assignements in assignments
+        for symbol, assignment in self.assignments.items():
+            for other_assignment in self.assignments.values():
+                if (
+                    str(symbol) in str(other_assignment.equation)
+                    and symbol != other_assignment.symbol
+                ):
+                    other_assignment.equation = other_assignment.equation.subs(
+                        symbol,
+                        assignment.equation,  # type: ignore
+                    )
+
+        # Then replace assignements in odes
+        for symbol, assignment in self.assignments.items():
+            for ode in self.odes.values():
+                ode.equation = ode.equation.subs(symbol, assignment.equation)  # type: ignore
 
     def _get_parameters(self, parameters: Optional[jax.Array] = None) -> jax.Array:
         """Gets all the parameters for the model"""
 
-        if (
-            any(param.value is None for param in self.parameters.values())
-            and parameters is None
-        ):
-            # If no 'custom' parameters are given, raise an exception
-            raise ValueError("Missing values for parameters")
+        missing_parameters = [
+            param for param in self.parameters.values() if param.value is None
+        ]
+
+        if missing_parameters:
+            raise ValueError(
+                f"Missing values for parameters: {', '.join([param.name for param in missing_parameters])}"
+            )
 
         if parameters is not None:
             return parameters
@@ -572,7 +665,7 @@ class Model(CatalaxBase, Predictor):
         #     saveat = jnp.expand_dims(saveat[0, :], axis=0)
 
         self._sim_func(
-            y0=y0,
+            y0=y0,  # type: ignore
             parameters=parameters,
             constants=constants,
             time=saveat,
@@ -613,64 +706,6 @@ class Model(CatalaxBase, Predictor):
 
         self._sim_func = None
         self._in_axes = None
-
-    # ! Derivatives
-
-    def jacobian_parameters(
-        self,
-        dataset: Dataset,
-        parameters: jax.Array,
-    ):
-        """Sets up and calculates the jacobian of the model with respect to the parameters.
-
-        Args:
-            y (Array): The inital conditions of the model.
-            parameters (Array): The parameters that are inserted into the model.
-
-        Returns:
-            Array: The jacobian of the model with respect to the parameters.
-        """
-
-        _, y0s, time = dataset.to_jax_arrays(
-            self.get_species_order(),
-            inits_to_array=True,
-        )
-
-        if self._jacobian_parameters is not None:
-            return self._jacobian_parameters(time, y0s, parameters)
-
-        stoich_mat = self._get_stoich_mat()
-
-        def _vector_field(t, y, parameters):
-            return self._sim_func(y, parameters, constants, saveat)
-
-        self._jacobian_parameters = jax.jacfwd(_vector_field, argnums=2)
-
-        return self._jacobian_parameters(t, y, parameters)
-
-    def jacobian_states(self, y, parameters):
-        """Sets up and calculates the jacobian of the model with respect to the states.
-
-        Args:
-            y (Array): The inital conditions of the model.
-            parameters (Array): The parameters that are inserted into the model.
-
-        Returns:
-            Array: The jacobian of the model with respect to the states.
-        """
-
-        if self._jacobian_states is not None:
-            return self._jacobian_states(y, parameters)
-
-        if self._sim_func is None:
-            self._setup_system(in_axes=InAxes.Y0.value)
-
-        def _vector_field(y, parameters):
-            return self._sim_func(y, parameters, constants, saveat)
-
-        self._jacobian_states = jax.jacfwd(_vector_field, argnums=0)
-
-        return self._jacobian_states(y, parameters)
 
     # ! Helper methods
     def has_hdi(self):
@@ -744,8 +779,11 @@ class Model(CatalaxBase, Predictor):
             for y0 in y0_array
         ]
 
-    # ! Exporters
+    def n_parameters(self) -> int:
+        """Get the number of parameters of the model."""
+        return len(self.get_parameter_order())
 
+    # ! Exporters
     def save(self, path: str, name: Optional[str] = None, **json_kwargs):
         """Saves a model to a JSON file.
 
@@ -785,59 +823,18 @@ class Model(CatalaxBase, Predictor):
             "parameters": [
                 parameter.to_dict() for parameter in model_dict.parameters.values()
             ],
+            "assignments": [
+                assignment.to_dict() for assignment in model_dict.assignments.values()
+            ],
         }
 
         if not res["constants"]:
             res.pop("constants")
 
+        if not res["assignments"]:
+            res.pop("assignments")
+
         return res
-
-    # ! Metrics
-    def calculate_aic(
-        self,
-        dataset: Dataset,
-    ) -> float:
-        """Calculates the AIC value to the given data if parameters have values.
-
-        Args:
-            dataset (Dataset): Dataset to calculate the AIC for.
-
-        Returns:
-            float: AIC criterion of the model given the data.
-
-        Raises:
-            AssertionError: If the model hasn't been fitted yet (parameters have no values).
-        """
-        assert self.parameters and all(
-            parameter.value is not None for parameter in self.parameters.values()
-        ), "Cannot calculate AIC, because this model hasn't been fitted yet."
-
-        # Simulate using the dataset
-        _, states = self.simulate(
-            dataset=dataset,
-            saveat=dataset.time,
-            in_axes=(0, None, 0),
-            return_array=True,
-        )
-
-        # Get observables
-        observables = [
-            index
-            for index, species in enumerate(self.get_species_order())
-            if self.odes[species].observable
-        ]
-
-        # Get the actual data from the dataset
-        data = dataset.to_array()
-
-        # Calculate residuals and AIC
-        residual = states[..., observables] - data
-        chisqr = (residual**2).sum()
-        ndata = len(residual.ravel())
-        _neg2_log_likel = ndata * jnp.log(chisqr / ndata)
-        aic = _neg2_log_likel + 2 * len(self.parameters)
-
-        return aic
 
     # ! Updaters
     def from_samples(
@@ -855,8 +852,8 @@ class Model(CatalaxBase, Predictor):
         hdi = az.hdi(samples, hdi_prob=hdi_prob)
 
         for name, parameter in new_model.parameters.items():
-            parameter.value = samples[name].mean()
-            parameter.initial_value = samples[name].mean()
+            parameter.value = samples[name].mean()  # type: ignore
+            parameter.initial_value = samples[name].mean()  # type: ignore
             parameter.hdi = HDI(lower=hdi[name][0], upper=hdi[name][1], q=hdi_prob)
 
         return new_model
@@ -896,6 +893,10 @@ class Model(CatalaxBase, Predictor):
         if "constants" in model_dict and model_dict.constants:
             model.add_constant(**{sp.symbol: sp.name for sp in model_dict.constants})
 
+        if "assignments" in model_dict and model_dict.assignments:
+            for assignment in model_dict.assignments:
+                model.add_assignment(**assignment)
+
         # Add ODEs
         for ode in model_dict.odes:
             model.add_ode(**ode)
@@ -917,53 +918,20 @@ class Model(CatalaxBase, Predictor):
         return model
 
     @classmethod
-    def from_enzymeml(cls, path: Path | str, name: str | None = None):
-        with open(path, "r") as f:
-            enzmldoc = EnzymeMLDocument.model_validate_json(f.read())
+    def from_enzymeml(
+        cls,
+        enzmldoc: pe.EnzymeMLDocument,
+        name: str | None = None,
+        from_reactions: bool = False,
+    ):
+        """Initializes a model from an EnzymeML document.
 
-        if name is None:
-            name = enzmldoc.name
-
-        model = cls(name=name)
-
-        # get observables
-        observables = set()
-        non_observables = set()
-        for measurement in enzmldoc.measurements:
-            for species_data in measurement.species_data:
-                if species_data.data:
-                    observables.add(species_data.species_id)
-                else:
-                    non_observables.add(species_data.species_id)
-
-        all_species = observables | non_observables
-
-        # create regex match objects for all species
-        species_regex = re.compile(r"|".join(map(re.escape, all_species)))
-
-        for reaction in enzmldoc.reactions:
-            # get species from reaction
-            match_species = species_regex.findall(reaction.kinetic_law.equation)
-
-            # add species to model
-            for species in set(match_species):
-                model.add_species(species)
-
-            # add ode to model
-            model.add_ode(
-                species=reaction.kinetic_law.species_id,
-                equation=reaction.kinetic_law.equation,
-                observable=True
-                if reaction.kinetic_law.species_id in observables
-                else False,
-            )
-
-        # add for all model.species that don't have an ode, a constant rate of 0
-        for species in model.species:
-            if species not in model.odes:
-                model.add_ode(species=species, equation="0", observable=False)
-
-        return model
+        Args:
+            enzmldoc (pe.EnzymeMLDocument): EnzymeML document to initialize the model from.
+            name (str | None): Name of the model.
+            from_reactions (bool): Whether to initialize the model from reactions.
+        """
+        return from_enzymeml(cls, enzmldoc, name, from_reactions)
 
     def update_enzymeml_parameters(self, enzmldoc: EnzymeMLDocument):
         """Updates model parameters of enzymeml document with model parameters.
@@ -984,8 +952,8 @@ class Model(CatalaxBase, Predictor):
                 enzymeml_param.value = parameter.value
                 enzymeml_param.initial_value = parameter.initial_value
                 enzymeml_param.constant = parameter.constant
-                enzymeml_param.upper = parameter.upper_bound
-                enzymeml_param.lower = parameter.lower_bound
+                enzymeml_param.upper_bound = parameter.upper_bound
+                enzymeml_param.lower_bound = parameter.lower_bound
 
             # add new parameter
             else:
