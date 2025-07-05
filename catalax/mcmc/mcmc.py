@@ -9,15 +9,12 @@ import numpyro.distributions as dist
 from jax import Array
 from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
-from diffrax import Dopri5
 
 from catalax.dataset.dataset import Dataset
-from catalax.model.inaxes import InAxes
 from catalax.surrogate import Surrogate
 
 if TYPE_CHECKING:
     from catalax.model.model import Model
-    from catalax.neural.neuralbase import NeuralBase
 
 
 @dataclass
@@ -84,7 +81,6 @@ def run_mcmc(
     _validate_parameter_priors(model)
 
     # Setup model and prepare data
-    model_setup = _setup_model_system(model, config)
     data_prep = _prepare_mcmc_data(dataset, model, config, surrogate)
 
     # Create Bayesian model
@@ -118,31 +114,6 @@ class DataPreparation:
     y0s: Array
     constants: Array
     sim_func: Callable
-
-
-def _setup_model_system(model: Model, config: MCMCConfig) -> ModelSetup:
-    """Setup the model system for MCMC simulation.
-
-    Args:
-        model: Model to setup
-        config: MCMC configuration
-
-    Returns:
-        ModelSetup containing prepared model components
-    """
-    # Setup model system and simulation function
-    in_axes = InAxes.Y0 + InAxes.TIME
-    model._setup_system(
-        in_axes=in_axes, dt0=config.dt0, max_steps=config.max_steps, solver=Dopri5
-    )
-
-    # Extract parameter priors
-    priors = [
-        (model.parameters[param].name, model.parameters[param].prior._distribution_fun)
-        for param in model.get_parameter_order()
-    ]
-
-    return ModelSetup(priors=priors)
 
 
 def _prepare_mcmc_data(
@@ -312,9 +283,8 @@ def _configure_simulation_function(
         rate_fun = model._setup_rate_function(in_axes=None)
         y0s = data.reshape(-1, data.shape[-1])
 
-        sim_func = lambda y0s, theta, constants, times: rate_fun(
-            times, y0s, (theta, constants)
-        )
+        def sim_func(y0s, theta, constants, times):
+            return rate_fun(times, y0s, (theta, constants))
 
         sim_func = jax.jit(jax.vmap(sim_func, in_axes=(0, None, None, 0)))
         times = times.ravel()
