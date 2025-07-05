@@ -1,22 +1,32 @@
 import os
 from datetime import datetime
-from typing import Dict, Optional, Tuple, Type
+from typing import Callable, Dict, Optional, Tuple, TypeVar
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
-import jax.tree_util as jtn
 import optax
 import tqdm
 
 from catalax.dataset.dataset import Dataset
 from catalax.neural.neuralbase import NeuralBase
+from catalax.neural.penalties.penalties import Penalties
 from catalax.neural.strategy import Step, Strategy
+
+T = TypeVar("T", bound=NeuralBase)
+MakeStep = Callable[
+    ...,
+    Tuple[jax.Array, T, optax.OptState],
+]
+GradLoss = Callable[
+    [T, T, jax.Array, jax.Array, jax.Array, Penalties],
+    jax.Array,
+]
 
 
 def train_neural_ode(
-    model: NeuralBase,
+    model: T,
     dataset: Dataset,
     strategy: Strategy,
     optimizer=optax.adabelief,
@@ -25,7 +35,8 @@ def train_neural_ode(
     save_milestones: bool = False,
     milestone_dir: str = "./milestones",
     weight_scale: float = 1e-2,
-) -> NeuralBase:
+    seed: int = 420,
+) -> T:
     # Extract data from dataset
     data, times, inital_conditions = dataset.to_jax_arrays(
         species_order=model.species_order,
@@ -33,8 +44,8 @@ def train_neural_ode(
     )
 
     # Set up PRNG keys
-    key = jrandom.PRNGKey(420)
-    _, _, loader_key = jrandom.split(key, 3)
+    key = jrandom.PRNGKey(seed)
+    _, batch_key, loader_key = jrandom.split(key, 3)
     _, length_size, _ = data.shape
 
     # Scale weights and set maximum time
@@ -87,6 +98,9 @@ def train_neural_ode(
         pbar = tqdm.tqdm(total=strat.steps, desc="╰── startup")
 
         for step, (yi, y0i, ti) in zip(range(strat.steps), batches):
+            # Generate new keys for each batch
+            batch_key = jrandom.fold_in(batch_key, step)
+
             loss, model, opt_state = make_step(
                 ti=ti,
                 yi=yi,
@@ -95,7 +109,7 @@ def train_neural_ode(
                 opt_state=opt_state,
                 optimizer=optim,
                 partitioned_model=strat._partition_model(model),
-                alpha=strat.alpha,
+                penalties=strat.penalties,
             )
 
             if (step % print_every) == 0 or step == strat.steps - 1:
@@ -105,7 +119,7 @@ def train_neural_ode(
                     model,
                     _times,
                     _data,
-                    inital_conditions,
+                    inital_conditions,  # type: ignore
                     grad_loss,
                 )
 
@@ -129,7 +143,7 @@ def train_neural_ode(
     return model
 
 
-def _prepare_step_and_loss(loss):
+def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
     """Based on a strategy, prepares the step and loss function.
 
     This function is meant to prepare the step and loss function based on a
@@ -149,7 +163,7 @@ def _prepare_step_and_loss(loss):
         ti: jax.Array,
         yi: jax.Array,
         y0i: jax.Array,
-        alpha: float,
+        penalties: Penalties,
     ):
         """Calculates the L2 loss of the model.
 
@@ -165,8 +179,9 @@ def _prepare_step_and_loss(loss):
 
         model = eqx.combine(diff_model, static_model)
         y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
+        loss_value = jnp.mean(loss(y_pred, yi))
 
-        return jnp.mean(loss(y_pred, yi)) + _l2_regularisation(model, alpha)
+        return jnp.mean(loss_value + penalties(model))
 
     @eqx.filter_jit
     def make_step(
@@ -177,7 +192,7 @@ def _prepare_step_and_loss(loss):
         opt_state,
         optimizer,
         partitioned_model,
-        alpha,
+        penalties,
     ):
         """Calculates the loss, gradient and updates the model.
 
@@ -188,10 +203,18 @@ def _prepare_step_and_loss(loss):
             model (NeuralODE): NeuralODE model to train.
             opt_state (...): State of the optimizer.
             optimizer (...): Optimizer of this session.
+            keys (jax.Array): Keys for the batch.
         """
 
         diff_model, static_model = partitioned_model
-        loss, grads = grad_loss(diff_model, static_model, ti, yi, y0i, alpha)
+        loss, grads = grad_loss(
+            diff_model,
+            static_model,
+            ti,
+            yi,
+            y0i,
+            penalties,
+        )
         updates, opt_state = optimizer.update(grads, opt_state)
         model = eqx.apply_updates(model, updates)
 
@@ -235,10 +258,10 @@ def _calculate_metrics(
         times,
         data,
         inital_conditions,
-        alpha=0.0,
+        penalties=Penalties(),
     )
 
-    preds = jax.vmap(model, in_axes=(0, 0))(times, inital_conditions)
+    preds = jax.vmap(model, in_axes=(0, 0))(times, inital_conditions)  # type: ignore
     mae = jnp.mean(jnp.abs(data - preds))
 
     return loss, mae
@@ -273,7 +296,7 @@ def dataloader(arrays, batch_size, *, key):
 
 
 def _serialize_milestone(
-    model: "NeuralODE",
+    model: NeuralBase,
     milestone_dir: str,
     strat_index: int,
     strategy: Dict,
@@ -294,20 +317,7 @@ def _serialize_milestone(
     )
 
 
-def _l2_regularisation(model: NeuralBase, alpha: float):
-    """Performs L2 regularization to control weights of an MLP"""
-    return alpha * _sum_of_squared_weights(model)
-
-
-def _sum_of_squared_weights(model):
-    return sum(
-        jnp.sum(layer**2)
-        for layer in jtn.tree_flatten(model)[0]
-        if isinstance(layer, jax.Array)
-    )
-
-
-def _scale_weights(model: NeuralBase, scale: float) -> NeuralBase:
+def _scale_weights(model: T, scale: float) -> T:
     """Rescales weights and biases for models with small rates"""
 
     num_layers = len(model.func.mlp.layers)
@@ -317,23 +327,24 @@ def _scale_weights(model: NeuralBase, scale: float) -> NeuralBase:
         if hasattr(layer, "weight")
     ]
     scaled_biases = [
-        layer.bias * scale
+        layer.bias * scale  # type: ignore
         for layer in model.func.mlp.layers[:-1]
         if hasattr(layer, "bias")
     ]
     replacements = tuple(scaled_weights + scaled_biases)
 
-    loc_fun = lambda tree: tuple(
-        [
-            tree.func.mlp.layers[i].weight
-            for i in range(num_layers)
-            if hasattr(tree.func.mlp.layers[i], "weight")
-        ]
-        + [
-            tree.func.mlp.layers[i].bias
-            for i in range(num_layers - 1)
-            if hasattr(tree.func.mlp.layers[i], "bias")
-        ]
-    )
+    def loc_fun(tree):
+        return tuple(
+            [
+                tree.func.mlp.layers[i].weight
+                for i in range(num_layers)
+                if hasattr(tree.func.mlp.layers[i], "weight")
+            ]
+            + [
+                tree.func.mlp.layers[i].bias
+                for i in range(num_layers - 1)
+                if hasattr(tree.func.mlp.layers[i], "bias")
+            ]
+        )
 
     return eqx.tree_at(loc_fun, model, replace=replacements)
