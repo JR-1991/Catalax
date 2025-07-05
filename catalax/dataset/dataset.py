@@ -2,14 +2,23 @@ from __future__ import annotations
 
 from enum import Enum
 import os
+import random
 import tempfile
 import uuid
 import warnings
 import zipfile
 from copy import deepcopy
 from datetime import datetime
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, Self
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    Self,
+)
 
 import jax
 import jax.numpy as jnp
@@ -22,6 +31,7 @@ from jax import Array
 import pyenzyme as pe
 from pydantic import BaseModel, Field
 
+from catalax.dataset.metrics import FitMetrics
 from catalax.predictor import Predictor
 
 if TYPE_CHECKING:
@@ -166,14 +176,25 @@ class Dataset(BaseModel):
     # Data Addition Methods
     # =====================
 
-    def add_initial(self, **kwargs) -> None:
+    def add_initial(
+        self,
+        time: Array | list[float] | None = None,
+        **kwargs,
+    ) -> None:
         """Add an empty measurement with only initial conditions.
 
         Args:
+            time: Time points for the initial condition. Useful if you want to predict
+                  using neural ODEs.
             **kwargs: Initial condition values as keyword arguments where
                       keys are species names and values are concentrations
         """
-        self.measurements.append(Measurement(initial_conditions=kwargs))
+        self.measurements.append(
+            Measurement(
+                time=time,
+                initial_conditions=kwargs,
+            )
+        )
 
     def add_measurement(self, measurement: Measurement) -> None:
         """Add a complete measurement to the dataset.
@@ -316,6 +337,14 @@ class Dataset(BaseModel):
 
         return jnp.stack(inits, axis=0)
 
+    def has_data(self) -> bool:
+        """Check if the dataset has any data.
+
+        Returns:
+            True if the dataset has any data, False otherwise
+        """
+        return any(meas.has_data() for meas in self.measurements)
+
     def to_croissant(
         self,
         dirpath: str,
@@ -366,7 +395,11 @@ class Dataset(BaseModel):
     # =====================
 
     @classmethod
-    def from_enzymeml(cls, enzmldoc: pe.EnzymeMLDocument) -> "Dataset":
+    def from_enzymeml(
+        cls,
+        enzmldoc: pe.EnzymeMLDocument,
+        from_reactions: bool = False,
+    ) -> Tuple[Dataset, Model]:
         """Create a dataset from an EnzymeML document.
 
         Args:
@@ -375,33 +408,25 @@ class Dataset(BaseModel):
         Returns:
             A new Dataset object with measurements extracted from the EnzymeML document
         """
+        from catalax.model import Model
+
         measurements = [
             Measurement.from_enzymeml(meas)
             for meas in enzmldoc.measurements
             if any(sp.data is not None and len(sp.data) > 0 for sp in meas.species_data)
         ]
 
-        all_species = list(set(sp for meas in measurements for sp in meas.data.keys()))
+        model = Model.from_enzymeml(enzmldoc, from_reactions=from_reactions)
 
-        return cls(
+        all_species = model.get_species_order()
+        dataset = cls(
             id=enzmldoc.name,
             name=enzmldoc.name,
-            species=all_species,
+            species=list(all_species),
             measurements=measurements,
         )
 
-    @classmethod
-    def read_enzymeml(cls, path: Path | str) -> "Dataset":
-        """Read an EnzymeML file and create a dataset.
-
-        Args:
-            path: Path to the EnzymeML file
-
-        Returns:
-            A new Dataset object with data from the EnzymeML file
-        """
-        enzmldoc = pe.read_enzymeml(str(path))
-        return cls.from_enzymeml(enzmldoc)
+        return dataset, model
 
     @classmethod
     def from_dataframe(
@@ -638,6 +663,74 @@ class Dataset(BaseModel):
         return dataset
 
     # =====================
+    # Validation Methods
+    # =====================
+
+    def leave_one_out(self):
+        """Generator that yields dataset copies with one measurement left out.
+
+        This method implements leave-one-out cross-validation by yielding tuples
+        containing a copy of the dataset with one measurement removed and the ID
+        of the removed measurement.
+
+        Yields:
+            Tuple[Dataset, str]: A tuple containing:
+                - A copy of the dataset with one measurement removed
+                - The ID of the measurement that was left out
+        """
+        for measurement in self.measurements:
+            # Create a copy of the dataset
+            rest_dataset = deepcopy(self)
+            single_dataset = Dataset(
+                **self.model_dump(exclude={"measurements"}),
+                measurements=[measurement],
+            )
+
+            # Remove the current measurement from the copy
+            rest_dataset.measurements = [
+                m for m in rest_dataset.measurements if m.id != measurement.id
+            ]
+
+            yield single_dataset, rest_dataset
+
+    def train_test_split(self, test_size: float = 0.2):
+        """Split dataset into training and testing sets.
+
+        This method splits the dataset into training and testing sets based on a specified test size.
+
+        Args:
+            test_size: Proportion of dataset to include in the test set (default: 0.2)
+
+        Returns:
+            Tuple[Dataset, Dataset]: A tuple containing:
+                - Training dataset
+                - Testing dataset
+        """
+
+        assert test_size > 0 and test_size < 1, "Test size must be between 0 and 1"
+
+        # Create shuffled indices
+        indices = list(range(len(self.measurements)))
+        random.shuffle(indices)
+
+        # Calculate split index
+        split_idx = int(len(self.measurements) * (1 - test_size))
+
+        # Split indices
+        train_indices = indices[:split_idx]
+        test_indices = indices[split_idx:]
+
+        # Create training dataset
+        train_dataset = deepcopy(self)
+        train_dataset.measurements = [self.measurements[i] for i in train_indices]
+
+        # Create testing dataset
+        test_dataset = deepcopy(self)
+        test_dataset.measurements = [self.measurements[i] for i in test_indices]
+
+        return train_dataset, test_dataset
+
+    # =====================
     # Plotting Methods
     # =====================
 
@@ -870,6 +963,67 @@ class Dataset(BaseModel):
     # =====================
     # Utility Methods
     # =====================
+
+    def metrics(
+        self,
+        predictor: Predictor,
+    ) -> FitMetrics:
+        """Calculate comprehensive fit metrics for evaluating predictor performance on this dataset.
+
+        This method computes statistical metrics following the lmfit convention to assess
+        how well a predictor fits the experimental data. The metrics are calculated by comparing
+        predictions from the given predictor against the actual measurements in this dataset.
+
+        The method performs the following steps:
+        1. Generate predictions using the provided predictor
+        2. Extract observable species data from both predictions and measurements
+        3. Calculate chi-square, reduced chi-square, AIC, and BIC statistics
+
+        Args:
+            predictor (Predictor): The predictor model to evaluate. Must implement the predict()
+                method and provide parameter count information.
+
+        Returns:
+            FitMetrics: A metrics object containing:
+                - chisqr (float): Chi-square statistic
+                - redchi (float): Reduced chi-square statistic
+                - aic (float): Akaike Information Criterion
+                - bic (float): Bayesian Information Criterion
+
+        Raises:
+            ValueError: If predictor cannot generate predictions for this dataset
+            RuntimeError: If observable species orders don't match between dataset and predictions
+
+        Note:
+            Only observable species (those with actual measurement data) are included in the
+            metric calculations. This ensures fair comparison when models predict additional
+            unmeasured species.
+        """
+        pred = predictor.predict(self, use_times=True)
+        species_order = self.get_observable_species_order()
+
+        y_pred, _, _ = pred.to_jax_arrays(species_order=species_order)
+        y_true, _, _ = self.to_jax_arrays(species_order=species_order)
+
+        observable_indices = self.get_observable_indices()
+
+        # Extract observable species data for metric calculation
+        y_pred_obs = y_pred[:, :, observable_indices]
+        y_true_obs = y_true[:, :, observable_indices]
+
+        # Flatten arrays to compute metrics on all data points
+        y_pred_flat = y_pred_obs.flatten()
+        y_true_flat = y_true_obs.flatten()
+
+        # Get model complexity metrics
+        n_parameters = predictor.n_parameters()
+
+        # Calculate and return comprehensive fit metrics
+        return FitMetrics.from_predictions(
+            y_true=y_true_flat,
+            y_pred=y_pred_flat,
+            n_parameters=n_parameters,
+        )
 
     @staticmethod
     def get_vmap_dims(

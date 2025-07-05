@@ -408,6 +408,56 @@ class Measurement(BaseModel):
         )
 
     # Visualization Methods
+    def _format_title_with_initial_conditions(
+        self, initial_conditions: Dict[str, float]
+    ) -> Tuple[str, int]:
+        """Format initial conditions into a multi-line title with appropriate font size.
+
+        This function creates a formatted title string from initial conditions, automatically
+        adding line breaks and adjusting font size based on the number of entries to ensure
+        readability and proper display.
+
+        Args:
+            initial_conditions (Dict[str, float]): Dictionary mapping species names to
+                                                  their initial concentration values.
+
+        Returns:
+            Tuple[str, int]: A tuple containing:
+                - Formatted title string with appropriate line breaks
+                - Recommended font size for the title
+
+        Layout strategy:
+            - ≤3 entries: Single line, font size 12
+            - 4-6 entries: Two lines, font size 10
+            - >6 entries: Three lines, font size 9
+        """
+        init_conditions_list = [
+            f"{key}: ${value:.2f}$" for key, value in initial_conditions.items()
+        ]
+        num_entries = len(init_conditions_list)
+
+        if num_entries <= 3:
+            # Few entries: single line
+            title = " ".join(init_conditions_list)
+            fontsize = 12
+        elif num_entries <= 6:
+            # Medium entries: break into 2 lines
+            mid_point = num_entries // 2
+            line1 = " ".join(init_conditions_list[:mid_point])
+            line2 = " ".join(init_conditions_list[mid_point:])
+            title = f"{line1}\n{line2}"
+            fontsize = 10
+        else:
+            # Many entries: break into 3 lines
+            third = num_entries // 3
+            line1 = " ".join(init_conditions_list[:third])
+            line2 = " ".join(init_conditions_list[third : 2 * third])
+            line3 = " ".join(init_conditions_list[2 * third :])
+            title = f"{line1}\n{line2}\n{line3}"
+            fontsize = 9
+
+        return title, fontsize
+
     def plot(
         self,
         show: bool = True,
@@ -425,8 +475,10 @@ class Measurement(BaseModel):
         """
         is_subplot = ax is not None
         color_iter = iter(mcolors.TABLEAU_COLORS)
-        init_title = " ".join(
-            [f"{key}: ${value:.2f}$" for key, value in self.initial_conditions.items()]
+
+        # Create formatted title with initial conditions
+        init_title, title_fontsize = self._format_title_with_initial_conditions(
+            self.initial_conditions
         )
 
         if ax is None:
@@ -467,7 +519,7 @@ class Measurement(BaseModel):
         ax.grid(alpha=0.3, linestyle="--")
         ax.set_xlabel("Time", fontsize=12)
         ax.set_ylabel("Concentration", fontsize=12)
-        ax.set_title(init_title, fontsize=12)
+        ax.set_title(init_title, fontsize=title_fontsize)
 
         if self.data:
             ymax = max(max(series) for series in self.data.values() if len(series) > 0)
