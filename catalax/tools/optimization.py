@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple, Callable
+from typing import Optional, Tuple, Callable
 
 import jax
 import jax.numpy as jnp
@@ -17,7 +17,7 @@ def optimize(
     global_upper_bound: Optional[float] = 1e5,
     global_lower_bound: Optional[float] = 1e-6,
     dt0: float = 0.01,
-    objective_fun: Callable[[jax.Array, jax.Array], float] = optax.l2_loss,
+    objective_fun: Callable[[jax.Array, jax.Array], jax.Array] = optax.l2_loss,  # type: ignore
     max_steps: int = 64**4,
     method: str = "bfgs",
 ) -> Tuple[MinimizerResult, Model]:
@@ -63,7 +63,7 @@ def optimize(
     )
 
     # Extract data arrays for the residual computation
-    data, times, _ = dataset.to_jax_arrays(model.get_species_order())
+    data, times, _ = dataset.to_jax_arrays(model.get_observable_species_order())
 
     # Create simulation config from dataset
     config = dataset.to_config()
@@ -209,4 +209,4 @@ def _residual(
         return_array=True,
     )
 
-    return objective_fun(data, states[:, :, observables])  #
+    return objective_fun(data, states[:, :, observables])  # type: ignore
