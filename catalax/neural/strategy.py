@@ -10,6 +10,8 @@ from typing import Tuple
 
 from catalax.model.base import CatalaxBase
 from catalax.neural.neuralbase import NeuralBase
+from catalax.neural.rateflow import RateFlowODE
+from catalax.neural.penalties.penalties import Penalties
 
 
 class Modes(Enum):
@@ -23,7 +25,7 @@ class Step(CatalaxBase):
     batch_size: int = Field(..., gt=0)
     lr: float = Field(default=1e-3, gt=0.0)
     length: float = Field(default=1.0, le=1.0, gt=0.0)
-    alpha: float = Field(default=0.0, le=1.0, ge=0.0)
+    penalties: Penalties = Field(default=Penalties())
     loss: Any = optax.l2_loss
     train: Modes = Modes.MLP
 
@@ -39,9 +41,9 @@ class Step(CatalaxBase):
             Tuple[ClosureODE, ClosureODE]: The partitioned models.
         """
 
-        assert issubclass(
-            type(model), NeuralBase
-        ), "Model must be a subclass of NeuralBase."
+        assert issubclass(type(model), NeuralBase), (
+            "Model must be a subclass of NeuralBase."
+        )
 
         if isinstance(self.train, Modes):
             train = self.train.value
@@ -50,15 +52,27 @@ class Step(CatalaxBase):
 
         filter_spec = jtu.tree_map(lambda _: False, model)
         mlp_filter = jtu.tree_map(lambda _: True, model.func)
-        vfield_filter = jtu.tree_map(lambda _: True, model.vector_field)  # type: ignore
+        vfield_filter = jtu.tree_map(lambda _: True, model.vector_field)
+
+        if isinstance(model, RateFlowODE):
+            stoich_filter = jtu.tree_map(
+                lambda _: model.learn_stoich,
+                model.stoich_matrix,
+            )
+
+            filter_spec = eqx.tree_at(
+                lambda tree: tree.stoich_matrix,
+                filter_spec,
+                replace=stoich_filter,
+            )
 
         if train == Modes.BOTH.value:
             filter_spec = jtu.tree_map(lambda _: True, model)
 
         elif train == Modes.MLP.value:
-            assert hasattr(
-                model, "func"
-            ), "Mode is set to MLP, but the model does not have an MLP."
+            assert hasattr(model, "func"), (
+                "Mode is set to MLP, but the model does not have an MLP."
+            )
 
             filter_spec = eqx.tree_at(
                 lambda tree: tree.func,
@@ -67,9 +81,9 @@ class Step(CatalaxBase):
             )
 
         elif train == Modes.VECTOR_FIELD.value:
-            assert hasattr(
-                model, "vector_field"
-            ), "Mode is set to vector field, but the model does not have a vector field."
+            assert hasattr(model, "vector_field"), (
+                "Mode is set to vector field, but the model does not have a vector field."
+            )
 
             filter_spec = eqx.tree_at(
                 lambda tree: (tree.vector_field, tree.parameters),
@@ -95,7 +109,7 @@ class Strategy(CatalaxBase):
         steps: int,
         batch_size: int,
         length: float = 1.0,
-        alpha: float = 0.0,
+        penalties: Penalties = Penalties(),
         loss: Any = optax.l2_loss,
         train: Modes = Modes.MLP,
     ):
@@ -105,7 +119,7 @@ class Strategy(CatalaxBase):
                 steps=steps,
                 batch_size=batch_size,
                 length=length,
-                alpha=alpha,
+                penalties=penalties,
                 loss=loss,
                 train=train,
             )
@@ -130,13 +144,12 @@ class Strategy(CatalaxBase):
         statements = [
             f"🔸 Step #{index}",
         ]
-        fun = lambda name, value: f"├── \033[1m{name}\033[0m: {value}"
+        fun = lambda name, value: f"├── \033[1m{name}\033[0m: {value}"  # noqa: E731
 
         statements += [
             fun("lr", step.lr),
             fun("batch size", step.batch_size),
-            fun("length", f"{step.length*100}%"),
-            fun("l2 reg", step.alpha),
+            fun("length", f"{step.length * 100}%"),
             fun("train", step.train),
             "│",
         ]
