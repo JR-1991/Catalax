@@ -1,5 +1,15 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Type, Union, Any
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    Any,
+    Dict,
+)
 from dataclasses import dataclass
 
 import jax
@@ -50,8 +60,286 @@ class MCMCConfig:
     max_steps: int = 64**4
 
 
+class HMC:
+    """Hamiltonian Monte Carlo sampler wrapper.
+
+    This class provides a high-level interface for running HMC/NUTS sampling
+    with integrated configuration and result handling.
+    """
+
+    def __init__(
+        self,
+        num_warmup: int,
+        num_samples: int,
+        likelihood: Type[dist.Distribution] = dist.SoftLaplace,
+        dense_mass: bool = True,
+        thinning: int = 1,
+        max_tree_depth: int = 10,
+        dt0: float = 0.1,
+        chain_method: str = "sequential",
+        num_chains: int = 1,
+        seed: int = 420,
+        verbose: int = 1,
+        max_steps: int = 64**4,
+    ):
+        """Initialize HMC sampler.
+
+        Args:
+            num_warmup: Number of warmup steps before sampling
+            num_samples: Number of posterior samples to collect
+            likelihood: Likelihood distribution class
+            dense_mass: Whether to use dense mass matrix
+            thinning: Factor by which to thin samples
+            max_tree_depth: Maximum depth of NUTS binary tree
+            dt0: Time step resolution for simulation
+            chain_method: Chain execution method - "sequential", "parallel", or "vectorized"
+            num_chains: Number of Markov chains to run
+            seed: Random seed for reproducibility
+            verbose: Verbosity level; 0 for silent, 1 for progress
+            max_steps: Maximum number of integration steps
+        """
+        self.config = MCMCConfig(
+            num_warmup=num_warmup,
+            num_samples=num_samples,
+            likelihood=likelihood,
+            dense_mass=dense_mass,
+            thinning=thinning,
+            max_tree_depth=max_tree_depth,
+            dt0=dt0,
+            chain_method=chain_method,
+            num_chains=num_chains,
+            seed=seed,
+            verbose=verbose,
+            max_steps=max_steps,
+        )
+        self.likelihood = likelihood
+
+    def run(
+        self,
+        model: "Model",
+        dataset: Dataset,
+        yerrs: Union[float, Array],
+        surrogate: Optional[Surrogate] = None,
+    ) -> "HMCResults":
+        """Run HMC sampling.
+
+        Args:
+            model: Model to fit
+            dataset: Dataset containing observations
+            yerrs: Standard deviation of observed data
+            surrogate: Optional surrogate model for rate prediction
+
+        Returns:
+            HMCResults object containing samples and visualization methods
+        """
+        mcmc, bayesian_model = run_mcmc(
+            model=model,
+            dataset=dataset,
+            yerrs=yerrs,
+            config=self.config,
+            surrogate=surrogate,
+        )
+
+        return HMCResults(mcmc, bayesian_model, model)
+
+
+class HMCResults:
+    """Results container for HMC sampling with integrated visualization methods."""
+
+    def __init__(self, mcmc: MCMC, bayesian_model: "BayesianModel", model: "Model"):
+        """Initialize HMC results.
+
+        Args:
+            mcmc: MCMC object containing samples
+            bayesian_model: Bayesian model used for sampling
+            model: Original model that was fit
+        """
+        self.mcmc = mcmc
+        self.bayesian_model = bayesian_model
+        self.model = model
+
+    def get_samples(self) -> Dict[str, Array]:
+        """Get posterior samples."""
+        return self.mcmc.get_samples()
+
+    def print_summary(self):
+        """Print MCMC summary."""
+        self.mcmc.print_summary()
+
+    # Visualization methods from plotting.py
+    def plot_corner(self, quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84)):
+        """Plot corner plot of parameter correlations.
+
+        Args:
+            quantiles: Quantiles to display in the corner plot
+
+        Returns:
+            matplotlib figure
+        """
+        from catalax.mcmc.plotting import plot_corner
+
+        return plot_corner(self.mcmc, quantiles)
+
+    def plot_posterior(self, **kwargs):
+        """Plot posterior distributions.
+
+        Args:
+            **kwargs: Additional arguments passed to arviz.plot_posterior
+
+        Returns:
+            matplotlib figure
+        """
+        from catalax.mcmc.plotting import plot_posterior
+
+        return plot_posterior(self.mcmc, self.model, **kwargs)
+
+    def plot_credibility_interval(
+        self,
+        initial_condition: Dict[str, float],
+        time: Array,
+        dt0: float = 0.1,
+    ):
+        """Plot credibility intervals for model simulations.
+
+        Args:
+            initial_condition: Initial conditions for simulation
+            time: Time points for simulation
+            dt0: Time step for simulation
+
+        Returns:
+            matplotlib figure
+        """
+        from catalax.mcmc.plotting import plot_credibility_interval
+
+        return plot_credibility_interval(
+            self.mcmc, self.model, initial_condition, time, dt0
+        )
+
+    def plot_trace(self, **kwargs):
+        """Plot MCMC trace.
+
+        Args:
+            **kwargs: Additional arguments passed to arviz.plot_trace
+
+        Returns:
+            matplotlib figure
+        """
+        from catalax.mcmc.plotting import plot_trace
+
+        return plot_trace(self.mcmc, self.model, **kwargs)
+
+    def plot_forest(self, **kwargs):
+        """Plot forest plot of parameter distributions.
+
+        Args:
+            **kwargs: Additional arguments passed to arviz.plot_forest
+
+        Returns:
+            matplotlib figure
+        """
+        from catalax.mcmc.plotting import plot_forest
+
+        return plot_forest(self.mcmc, self.model, **kwargs)
+
+    def summary(self, hdi_prob: float = 0.95):
+        """Generate summary statistics.
+
+        Args:
+            hdi_prob: Probability mass for highest density interval
+
+        Returns:
+            Summary statistics
+        """
+        from catalax.mcmc.plotting import summary
+
+        return summary(self.mcmc, hdi_prob)
+
+
+class BayesianModel:
+    """Bayesian model for MCMC parameter inference.
+
+    This class creates a callable Bayesian model that can be used with NumPyro's
+    MCMC samplers. It encapsulates the model parameters, priors, and likelihood
+    configuration.
+    """
+
+    def __init__(
+        self,
+        model: "Model",
+        yerrs: Union[float, Array],
+        likelihood: Type[dist.Distribution],
+        sim_func: Callable,
+    ):
+        """Initialize the Bayesian model.
+
+        Args:
+            model: The model being fit
+            yerrs: Standard deviation of observed data
+            likelihood: Likelihood distribution class
+            sim_func: Function to simulate model with given parameters
+        """
+        self.model = model
+        self.yerrs = yerrs
+        self.likelihood = likelihood
+        self.sim_func = sim_func
+
+        # Pre-compute priors and observables
+        self.priors = [
+            (
+                model.parameters[param].name,
+                model.parameters[param].prior._distribution_fun,
+            )
+            for param in model.get_parameter_order()
+        ]
+
+        self.observables = jnp.array(
+            [
+                i
+                for i, species in enumerate(model.get_species_order())
+                if model.odes[species].observable
+            ]
+        )
+
+    def __call__(
+        self,
+        y0s: Array,
+        constants: Array,
+        times: Array,
+        data: Optional[Array] = None,
+    ):
+        """Bayesian model for parameter posterior sampling.
+
+        Samples parameters from priors, simulates the model, and compares
+        against observed data to build the posterior distribution.
+
+        Args:
+            y0s: Initial conditions
+            constants: System constants
+            times: Time points for simulation
+            data: Observed data to fit against
+
+        Returns:
+            Sampled posterior distribution
+        """
+        # Sample parameters from priors
+        theta = jnp.array(
+            [numpyro.sample(name, distribution) for name, distribution in self.priors]
+        )
+
+        # Simulate model with sampled parameters
+        states = self.sim_func(y0s, theta, constants, times)
+
+        # Sample noise parameter
+        sigma = numpyro.sample("sigma", dist.Normal(0, self.yerrs))  # type: ignore
+
+        # Compare simulation to observed data
+        numpyro.sample(
+            "y", self.likelihood(states[..., self.observables], sigma), obs=data
+        )
+
+
 def run_mcmc(
-    model: Model,
+    model: "Model",
     dataset: Dataset,
     yerrs: Union[float, Array],
     config: MCMCConfig,
@@ -116,8 +404,28 @@ class DataPreparation:
     sim_func: Callable
 
 
+def _create_bayesian_model(
+    model: "Model",
+    yerrs: Union[float, Array],
+    likelihood: Type[dist.Distribution],
+    sim_func: Callable,
+) -> BayesianModel:
+    """Create the Bayesian model for MCMC simulation.
+
+    Args:
+        model: Model being fit
+        yerrs: Standard deviation of observed data
+        likelihood: Likelihood distribution class
+        sim_func: Function to simulate model with given parameters
+
+    Returns:
+        BayesianModel instance for MCMC sampling
+    """
+    return BayesianModel(model, yerrs, likelihood, sim_func)
+
+
 def _prepare_mcmc_data(
-    dataset: Dataset, model: Model, config: MCMCConfig, surrogate: Optional[Surrogate]
+    dataset: Dataset, model: "Model", config: MCMCConfig, surrogate: Optional[Surrogate]
 ) -> DataPreparation:
     """Prepare all data components needed for MCMC simulation.
 
@@ -204,7 +512,7 @@ def _run_mcmc_simulation(
         mcmc.print_summary()
 
 
-def _validate_parameter_priors(model: Model) -> None:
+def _validate_parameter_priors(model: "Model") -> None:
     """Ensure all model parameters have specified prior distributions.
 
     Args:
@@ -222,7 +530,7 @@ def _validate_parameter_priors(model: Model) -> None:
 
 
 def _extract_dataset_components(
-    dataset: Dataset, model: Model
+    dataset: Dataset, model: "Model"
 ) -> Tuple[Array, Array, Array, Array]:
     """Extract and prepare dataset components for MCMC simulation.
 
@@ -256,7 +564,7 @@ def _extract_dataset_components(
 
 
 def _configure_simulation_function(
-    model: Model,
+    model: "Model",
     surrogate: Optional[Surrogate],
     dataset: Dataset,
     data: Array,
@@ -294,72 +602,3 @@ def _configure_simulation_function(
         sim_func = model._sim_func  # type: ignore
 
     return sim_func, data, y0s, times  # type: ignore
-
-
-def _create_bayesian_model(
-    model: Model,
-    yerrs: Union[float, Array],
-    likelihood: Type[dist.Distribution],
-    sim_func: Callable,
-) -> Callable:
-    """Create the Bayesian model for MCMC simulation.
-
-    Args:
-        model: Model being fit
-        yerrs: Standard deviation of observed data
-        likelihood: Likelihood distribution class
-        sim_func: Function to simulate model with given parameters
-
-    Returns:
-        Bayesian model function for MCMC sampling
-    """
-    # Get parameter priors
-    priors = [
-        (model.parameters[param].name, model.parameters[param].prior._distribution_fun)
-        for param in model.get_parameter_order()
-    ]
-
-    # Extract observable species indices
-    observables = jnp.array(
-        [
-            i
-            for i, species in enumerate(model.get_species_order())
-            if model.odes[species].observable
-        ]
-    )
-
-    def _bayes_model(
-        y0s: Array,
-        constants: Array,
-        times: Array,
-        data: Optional[Array] = None,
-    ):
-        """Bayesian model for parameter posterior sampling.
-
-        Samples parameters from priors, simulates the model, and compares
-        against observed data to build the posterior distribution.
-
-        Args:
-            y0s: Initial conditions
-            constants: System constants
-            times: Time points for simulation
-            data: Observed data to fit against
-
-        Returns:
-            Sampled posterior distribution
-        """
-        # Sample parameters from priors
-        theta = jnp.array(
-            [numpyro.sample(name, distribution) for name, distribution in priors]
-        )
-
-        # Simulate model with sampled parameters
-        states = sim_func(y0s, theta, constants, times)
-
-        # Sample noise parameter
-        sigma = numpyro.sample("sigma", dist.Normal(0, yerrs))  # type: ignore
-
-        # Compare simulation to observed data
-        numpyro.sample("y", likelihood(states[..., observables], sigma), obs=data)
-
-    return _bayes_model

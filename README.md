@@ -181,25 +181,28 @@ Quantify parameter uncertainty and obtain credible intervals using Hamiltonian M
 - **Multiple chains** for convergence diagnostics and robust sampling
 - **Flexible priors** supporting various probability distributions
 - **HDI intervals** (Highest Density Intervals) for credible parameter ranges
-- **Model comparison** using information criteria (AIC, BIC)
+- **Integrated visualization** with corner plots, trace plots, and credibility intervals
 
 <details>
 <summary><strong>🎯 Click to see Bayesian inference code</strong></summary>
 
 ```python
-from catalax.mcmc import MCMCConfig, run_mcmc
+from catalax.mcmc import HMC
 from catalax.mcmc.priors import Normal, LogNormal
+import numpyro.distributions as dist
 
 # Set parameter priors
 model.parameters.k1.prior = LogNormal(mu=0.0, sigma=1.0)
 model.parameters.k2.prior = LogNormal(mu=0.0, sigma=1.0)
 model.parameters.k3.prior = LogNormal(mu=0.0, sigma=1.0)
 
-# Configure MCMC
-config = MCMCConfig(
+# Create HMC sampler with configuration
+hmc = HMC(
     num_warmup=1000,
     num_samples=2000,
-    num_chains=4
+    likelihood=dist.SoftLaplace,  # or dist.Normal
+    num_chains=4,
+    chain_method="parallel"
 )
 
 # Create experimental dataset
@@ -208,16 +211,27 @@ experimental_data.add_initial(S=100, E=10, ES=0, P=0)
 # Add more experimental measurements as needed...
 
 # Run inference
-mcmc, bayes_model = run_mcmc(
+results = hmc.run(
     model=model,
     dataset=experimental_data,
-    yerrs=0.1,  # Measurement uncertainty
-    config=config
+    yerrs=0.1  # Measurement uncertainty
 )
 
-# Analyze results
-samples = mcmc.get_samples()
-posterior_model = model.from_samples(samples)
+# Analyze results with integrated visualization
+samples = results.get_samples()
+results.print_summary()
+
+# Create publication-ready plots
+fig1 = results.plot_corner()
+fig2 = results.plot_posterior()
+fig3 = results.plot_trace()
+fig4 = results.plot_credibility_interval(
+    initial_condition={"S": 100, "E": 10, "ES": 0, "P": 0},
+    time=jnp.linspace(0, 100, 200)
+)
+
+# Get summary statistics
+summary_stats = results.summary(hdi_prob=0.95)
 ```
 
 </details>
@@ -325,6 +339,9 @@ Dramatically accelerate Bayesian inference by replacing expensive mechanistic mo
 <summary><strong>🎯 Click to see surrogate MCMC code</strong></summary>
 
 ```python
+from catalax.mcmc import HMC
+from catalax.neural import train_neural_ode
+
 # Create dataset for surrogate training
 training_data = ctx.Dataset.from_model(mechanistic_model)
 training_data.add_initial(S=100, E=10, ES=0, P=0)
@@ -332,13 +349,28 @@ training_data.add_initial(S=100, E=10, ES=0, P=0)
 # Train neural surrogate
 surrogate = train_neural_ode(neural_model, training_data, strategy)
 
-# Use surrogate for fast MCMC
-mcmc, _ = run_mcmc(
+# Create HMC sampler
+hmc = HMC(
+    num_warmup=1000,
+    num_samples=2000,
+    num_chains=4,
+    chain_method="parallel"
+)
+
+# Use surrogate for fast MCMC (10-100x speedup!)
+results = hmc.run(
     model=mechanistic_model,
     dataset=experimental_data,
     yerrs=0.1,
-    config=config,
-    surrogate=surrogate  # 10-100x speedup!
+    surrogate=surrogate
+)
+
+# Analyze results
+results.print_summary()
+fig = results.plot_corner()
+credible_intervals = results.plot_credibility_interval(
+    initial_condition={"S": 100, "E": 10, "ES": 0, "P": 0},
+    time=jnp.linspace(0, 100, 200)
 )
 ```
 
@@ -414,5 +446,95 @@ Catalax builds on the excellent work of:
 ---
 
 <div align="center">
-<strong>Accelerate your biochemical modeling with Catalax! 🧬⚡</strong>
+<strong>Accelerate your biochemical modeling with Catalax! ��⚡</strong>
 </div>
+
+## 🎯 HMC Class API Reference
+
+The refactored MCMC module provides a cleaner object-oriented interface with integrated visualization and support for both standard and surrogate-accelerated inference:
+
+### **Standard HMC Inference**
+
+```python
+from catalax.mcmc import HMC
+from catalax.mcmc.priors import LogNormal
+import numpyro.distributions as dist
+import jax.numpy as jnp
+
+# Set parameter priors
+model.parameters.k1.prior = LogNormal(mu=0.0, sigma=1.0)
+model.parameters.k2.prior = LogNormal(mu=0.0, sigma=1.0)
+model.parameters.k3.prior = LogNormal(mu=0.0, sigma=1.0)
+
+# Create HMC sampler with configuration
+hmc = HMC(
+    num_warmup=1000,
+    num_samples=2000,
+    likelihood=dist.SoftLaplace,  # or dist.Normal
+    dense_mass=True,
+    num_chains=4,
+    chain_method="parallel"
+)
+
+# Run sampling
+results = hmc.run(model=model, dataset=dataset, yerrs=0.1)
+
+# Access results and create visualizations
+samples = results.get_samples()
+results.print_summary()
+
+# Create publication-ready plots
+fig1 = results.plot_corner()
+fig2 = results.plot_posterior()
+fig3 = results.plot_trace()
+fig4 = results.plot_credibility_interval(
+    initial_condition={"S": 100, "E": 10, "ES": 0, "P": 0},
+    time=jnp.linspace(0, 100, 200)
+)
+
+# Get summary statistics
+summary_stats = results.summary(hdi_prob=0.95)
+```
+
+### **Surrogate-Accelerated HMC**
+
+```python
+from catalax.mcmc import HMC
+from catalax.neural import train_neural_ode, RateFlowODE, Strategy
+
+# Train neural surrogate first
+neural_model = RateFlowODE.from_dataset(dataset, reaction_size=3)
+strategy = Strategy()
+strategy.add_step(lr=1e-3, steps=1000)
+surrogate = train_neural_ode(neural_model, dataset, strategy)
+
+# Create HMC sampler (same configuration as before)
+hmc = HMC(
+    num_warmup=1000,
+    num_samples=2000,
+    num_chains=4,
+    chain_method="parallel"
+)
+
+# Run surrogate-accelerated sampling (10-100x speedup!)
+results = hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1,
+    surrogate=surrogate  # Enable surrogate acceleration
+)
+
+# Same visualization API as standard HMC
+results.print_summary()
+fig = results.plot_corner()
+credible_intervals = results.plot_credibility_interval(
+    initial_condition={"S": 100, "E": 10, "ES": 0, "P": 0},
+    time=jnp.linspace(0, 100, 200)
+)
+```
+
+**Key Benefits:**
+
+- **Clean API**: Single class for all HMC configuration
+- **Integrated visualization**: All plotting methods built into results
+- **Flexible acceleration**: Easy surrogate integration for speedup
