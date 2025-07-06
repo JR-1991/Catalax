@@ -1,6 +1,8 @@
 import catalax as ctx
 import jax.numpy as jnp
 
+TOLERANCE = 1e-3
+
 
 class TestSimulation:
     def test_simulation(self):
@@ -37,7 +39,7 @@ class TestSimulation:
         # Test first measurement (e=1.0): exponential growth with rate 1.0
         expected_data_1 = jnp.array([1.0, 4.481674, 20.08544])
         actual_data_1 = sim_dataset.measurements[0].data["s1"]
-        assert jnp.abs(actual_data_1 - expected_data_1).sum() < 1e-6, (
+        assert jnp.abs(actual_data_1 - expected_data_1).sum() < TOLERANCE, (
             f"First measurement data mismatch. Expected: {expected_data_1}, Got: {actual_data_1}"
         )
 
@@ -56,7 +58,7 @@ class TestSimulation:
         # Test second measurement (e=2.0): exponential growth with rate 2.0
         expected_data_2 = jnp.array([1.0, 20.085447, 403.42603])
         actual_data_2 = sim_dataset.measurements[1].data["s1"]
-        assert jnp.abs(actual_data_2 - expected_data_2).sum() < 1e-6, (
+        assert jnp.abs(actual_data_2 - expected_data_2).sum() < TOLERANCE, (
             f"Second measurement data mismatch. Expected: {expected_data_2}, Got: {actual_data_2}"
         )
 

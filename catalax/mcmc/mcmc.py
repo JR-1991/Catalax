@@ -584,10 +584,9 @@ def _configure_simulation_function(
     Returns:
         Tuple of (simulation function, modified data, modified y0s, modified times)
     """
-    data, times, _ = dataset.to_jax_arrays(model.get_species_order())
-
     if surrogate is not None:
         # Use surrogate model for rate prediction
+        data, times, _ = dataset.to_jax_arrays(model.get_species_order())
         rate_fun = model._setup_rate_function(in_axes=None)
         y0s = data.reshape(-1, data.shape[-1])
 
@@ -598,7 +597,24 @@ def _configure_simulation_function(
         times = times.ravel()
         data = surrogate.predict_rates(dataset=dataset)
     else:
-        # Use standard simulation function
-        sim_func = model._sim_func  # type: ignore
+        # Create a new simulation function with correct axes for MCMC
+        # We need to vmap over measurements (axis 0) for y0s, constants, and times
+        # but not over theta (same parameters for all measurements)
+        from catalax.tools.simulation import Simulation
+
+        odes = [model.odes[species] for species in model.get_species_order()]
+        simulation_setup = Simulation(
+            odes=odes,
+            parameters=model.get_parameter_order(),
+            stoich_mat=model._get_stoich_mat(),
+            constants=model.get_constants_order(),
+            dt0=0.1,  # Default dt0
+            rtol=1e-5,
+            atol=1e-5,
+            max_steps=64**4,
+        )
+
+        # Set up simulation with correct in_axes for MCMC
+        sim_func, _ = simulation_setup._prepare_func(in_axes=(0, None, 0, 0))
 
     return sim_func, data, y0s, times  # type: ignore
