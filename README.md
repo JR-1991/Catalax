@@ -1,6 +1,6 @@
-# Catalax 🧬⚡
 
 <div align="center">
+<h1>Catalax 🧬⚡</h1>
 
 **A High-Performance JAX Framework for Biochemical Modeling, Neural ODEs, and Bayesian Inference**
 
