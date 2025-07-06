@@ -28,10 +28,6 @@ rich = "^13.8.1"
 mlcroissant = "^1.0.10"
 pyenzyme = { git = "https://github.com/EnzymeML/PyEnzyme.git", rev = "v2-migration" }
 
-
-[tool.poetry.extras]
-identifiability = ["julia", "jinja2"]
-
 [tool.setuptools.packages.find]
 where = ["catalax"]
 
