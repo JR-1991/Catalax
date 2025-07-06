@@ -14,7 +14,7 @@
 
 ## 🚀 What is Catalax?
 
-Catalax is a next-generation framework that combines the power of **JAX** with advanced numerical methods for biochemical modeling. It seamlessly integrates traditional mechanistic modeling with cutting-edge neural differential equations, enabling:
+Catalax combines the power of **JAX** with advanced numerical methods for biochemical modeling. It seamlessly integrates traditional mechanistic modeling with cutting-edge neural differential equations, enabling:
 
 - **⚡ Lightning-fast simulations** with JIT compilation and GPU acceleration
 - **🧠 Neural ODEs** for data-driven discovery of biochemical dynamics  
