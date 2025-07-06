@@ -1,32 +1,32 @@
 [tool.poetry]
 name = "catalax"
-version = "0.3.2"
+version = "0.4.1"
 description = "A JAX-based framework for (neural) ODE modelling in biocatalysis."
-authors = ["Jan Range <30547301+JR-1991@users.noreply.github.com>"]
+authors = ["Jan Range <jan.range@simtech.uni-stuttgart.de>"]
 license = "MIT License"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.10,<3.13"
 matplotlib = "^3.8.0"
 dotted-dict = "^1.1.3"
 sympy = "^1.12"
-diffrax = "^0.4.1"
 pandas = "^2.1.1"
 tqdm = "^4.66.1"
 numpy = "^1.26.0"
-numpyro = "^0.13.2"
-arviz = "^0.16.1"
+numpyro = "^0.17"
+arviz = "^0.18.0"
 corner = "^2.2.2"
-optax = "^0.1.7"
-equinox = "^0.11.0"
 lmfit = "^1.2.2"
 jinja2 = "^3.1.2"
 ipywidgets = "^8.1.1"
+optax = "^0.2.3"
+diffrax = "^0.6.0"
 pydantic = "^2.9.2"
-
-[tool.poetry.extras]
-identifiability = ["julia", "jinja2"]
+equinox = "^0.11.7"
+rich = "^13.8.1"
+mlcroissant = "^1.0.10"
+pyenzyme = { git = "https://github.com/EnzymeML/PyEnzyme.git", rev = "v2-migration" }
 
 [tool.setuptools.packages.find]
 where = ["catalax"]
@@ -34,3 +34,6 @@ where = ["catalax"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+ignore_missing_imports = true

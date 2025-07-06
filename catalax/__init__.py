@@ -1,9 +1,22 @@
-from .model import Model
-from .model import InAxes
-from .tools.optimization import optimize
-from .tools.visualization import visualize
+import os
 
-__version__ = "0.3.0"
+from .dataset import Dataset
+from .dataset import Measurement
+from .model import InAxes
+from .model import Model
+from .tools.optimization import optimize
+from .model import SimulationConfig
+
+__all__ = [
+    "SimulationConfig",
+    "Dataset",
+    "Measurement",
+    "InAxes",
+    "Model",
+    "optimize",
+]
+
+__version__ = "0.4.0"
 
 PARAMETERS = InAxes.PARAMETERS
 TIME = InAxes.TIME
@@ -18,6 +31,8 @@ def set_host_count(n: int = 1):
         n (int): The number of hosts to use. Defaults to 1.
     """
     import numpyro
+
+    os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={n}"
 
     numpyro.set_host_device_count(n)
 

@@ -1,23 +1,25 @@
-from typing import List, Optional, Any
+from typing import Callable, List, Optional, Any, Tuple
 
+import diffrax as dfx
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-
 from diffrax import (
-    AbstractSolver,
-    ODETerm,
+    ConstantStepSize,
     PIDController,
     SaveAt,
-    Tsit5,
     diffeqsolve,
 )
+from pydantic import BaseModel, PrivateAttr, ConfigDict
 
-from pydantic import BaseModel, PrivateAttr
-
-from .symbolicmodule import SymbolicModule
 from catalax.model.inaxes import InAxes
 from catalax.model.ode import ODE
+from .symbolicmodule import SymbolicModule
+
+NON_ADAPTIVE_SOLVERS = [
+    dfx.Euler,
+    dfx.Heun,
+]
 
 
 class Stack(eqx.Module):
@@ -27,22 +29,31 @@ class Stack(eqx.Module):
         self,
         parameters: List[str],
         odes: List[ODE],
+        constants: List[str],
         **kwargs,
     ):
         positionals = {
             "parameters": parameters,
+            "constants": constants,
             "states": [str(ode.species.symbol) for ode in odes],
         }
 
         self.modules = [
-            SymbolicModule(ode.equation, positionals=positionals)  # type: ignore
-            for ode in odes
+            SymbolicModule(ode.equation, positionals=positionals) for ode in odes
         ]
 
     def __call__(self, t, y, args):
-        parameters = args
+        parameters, constants = args
         rates = jnp.stack(
-            [module(t=t, parameters=parameters, states=y) for module in self.modules],  # type: ignore
+            [
+                module(  # type: ignore
+                    t=t,
+                    parameters=parameters,
+                    states=y,
+                    constants=constants,
+                )
+                for module in self.modules
+            ],
             axis=-1,
         )
 
@@ -50,69 +61,103 @@ class Stack(eqx.Module):
 
 
 class Simulation(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     odes: List[ODE]
     parameters: List[str]
+    constants: List[str]
     stoich_mat: jax.Array
     dt0: float = 0.1
-    solver: Any = Tsit5
     rtol: float = 1e-5
     atol: float = 1e-5
     max_steps: int = 64**4
     sensitivity: Optional[InAxes] = None
+    solver: Any = dfx.Tsit5
 
-    _simulation_func = PrivateAttr(default=None)
+    _simulation_func: Optional[Callable] = PrivateAttr(default=None)
 
-    def _prepare_func(self, in_axes=None):
+    def _prepare_func(self, in_axes=None) -> Tuple[Callable, Stack]:
         """Applies all the necessary transformations to the term and prepares the simulation function"""
+        stack = Stack(
+            parameters=self.parameters,
+            odes=self.odes,
+            constants=self.constants,
+        )
 
-        stack = Stack(parameters=self.parameters, odes=self.odes)
-
-        def _simulate_system(y0, parameters, time):
-            sol = diffeqsolve(
-                terms=ODETerm(stack),  # type: ignore
-                solver=self.solver(),  # type: ignore
-                t0=0,
-                t1=time[-1],
-                dt0=self.dt0,  # type: ignore
-                y0=y0,
-                args=parameters,  # type: ignore
-                saveat=SaveAt(ts=time),  # type: ignore
-                stepsize_controller=PIDController(rtol=self.rtol, atol=self.atol, step_ts=time),  # type: ignore
-                max_steps=self.max_steps,
-            )
-
-            return sol.ys
+        controller = self._create_controller()
+        simulate_system = self._create_simulate_system(stack, controller)
 
         if self.sensitivity is not None:
-            assert isinstance(
-                self.sensitivity, InAxes
-            ), "Expected sensitivity to be an instance of 'InAxes'"
+            return self._prepare_sensitivity_func(simulate_system, in_axes)  # type: ignore
 
-            sens_fun = lambda y0s, parameters, time: _simulate_system(
-                y0s,
-                parameters,
-                time,
+        return self._prepare_standard_func(simulate_system, in_axes)  # type: ignore
+
+    def _create_controller(self):
+        """Create the appropriate stepsize controller"""
+        if self.solver in NON_ADAPTIVE_SOLVERS:
+            return ConstantStepSize()
+        else:
+            return PIDController(rtol=self.rtol, atol=self.atol)
+
+    def _create_simulate_system(self, stack, controller):
+        """Create the core simulation function"""
+
+        def _simulate_system(y0, parameters, constants, time):
+            sol = diffeqsolve(
+                terms=dfx.ODETerm(stack),
+                solver=self.solver(),
+                t0=0,
+                t1=time[-1],
+                dt0=self.dt0,
+                y0=y0,
+                args=(parameters, constants),
+                saveat=SaveAt(ts=time),
+                stepsize_controller=controller,
+                max_steps=self.max_steps,
             )
+            return sol.ys
 
-            index = self.sensitivity.value.index(0)
+        return _simulate_system
 
-            if in_axes is not None:
-                return eqx.filter_jit(
-                    jax.vmap(jax.jacobian(sens_fun, argnums=index), in_axes=in_axes)
-                )
+    def _prepare_sensitivity_func(self, simulate_system, in_axes):
+        """Prepare simulation function with sensitivity analysis"""
+        assert isinstance(self.sensitivity, InAxes), (
+            "Expected sensitivity to be an instance of 'InAxes'"
+        )
 
-            return eqx.filter_jit(jax.jacobian(sens_fun, argnums=int(index)))
+        def sens_fun(y0s, parameters, constants, time):
+            return simulate_system(y0s, parameters, constants, time)
+
+        index = self.sensitivity.value.index(0)
 
         if in_axes is not None:
-            return eqx.filter_jit(jax.vmap(_simulate_system, in_axes=in_axes))
-        else:
-            return eqx.filter_jit(_simulate_system)
+            return (
+                eqx.filter_jit(
+                    jax.vmap(jax.jacobian(sens_fun, argnums=index), in_axes=in_axes)
+                ),
+                self,
+            )
 
-    def __call__(self, y0, parameters, time) -> Any:
+        return (
+            eqx.filter_jit(jax.jacobian(sens_fun, argnums=int(index))),
+            self,
+        )
+
+    def _prepare_standard_func(self, simulate_system, in_axes):
+        """Prepare standard simulation function"""
+        if in_axes is not None:
+            return (
+                eqx.filter_jit(jax.vmap(simulate_system, in_axes=in_axes)),
+                self,
+            )
+        else:
+            return (
+                eqx.filter_jit(simulate_system),
+                self,
+            )
+
+    def __call__(self, y0, parameters, constants, time) -> Any:
         if self._simulation_func is None:
             raise ValueError("Simulation function not initialized")
 
-        return self._simulation_func(y0, parameters, time)
+        return self._simulation_func(y0, parameters, constants, time)

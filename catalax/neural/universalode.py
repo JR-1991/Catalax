@@ -6,12 +6,14 @@ import jax.numpy as jnp
 import equinox as eqx
 
 from catalax import Model
+from catalax.predictor import Predictor
+from catalax.surrogate import Surrogate
 from catalax.tools import Stack
 from .mlp import MLP
 from .neuralbase import NeuralBase
 
 
-class UniversalODE(NeuralBase):
+class UniversalODE(NeuralBase, Predictor, Surrogate):
     parameters: jax.Array
     vector_field: Stack
 
@@ -71,3 +73,24 @@ class UniversalODE(NeuralBase):
             max_steps=64**4,
         )
         return solution.ys
+
+    def get_rates(
+        self,
+        t: jax.Array,
+        y: jax.Array,
+    ) -> jax.Array:
+        """Get the rates of the model.
+
+        This basically evaluates the MLP at the given time points and states, which
+        is useful for quiver plots and MCMC surrogates.
+
+        Args:
+            t: Time points
+            y: States
+
+        Returns:
+            Rates
+        """
+        t, y, _ = self._validate_rate_input(t, y, None)
+        res: jax.Array = jax.vmap(self._combined_term, in_axes=(0, 0, None))(t, y, None)
+        return res

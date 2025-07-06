@@ -20,9 +20,11 @@
       "value": 100.0,
       "constant": false,
       "prior": {
-        "type": "Uniform",
         "low": 1e-06,
-        "high": 1000.0
+        "high": 1000.0,
+        "type": "Uniform",
+        "_distribution_fun": "<numpyro.distributions.continuous.Uniform object at 0x36668f590 with batch shape () and event shape ()>",
+        "_print_str": "U(low=1e-06, high=1000.0)"
       }
     },
     {
@@ -31,9 +33,11 @@
       "value": 7.0,
       "constant": false,
       "prior": {
-        "type": "Uniform",
         "low": 1e-06,
-        "high": 200.0
+        "high": 200.0,
+        "type": "Uniform",
+        "_distribution_fun": "<numpyro.distributions.continuous.Uniform object at 0x3464cf610 with batch shape () and event shape ()>",
+        "_print_str": "U(low=1e-06, high=200.0)"
       }
     }
   ]

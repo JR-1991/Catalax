@@ -1,28 +1,37 @@
-from typing import Dict, Optional, Union
+from __future__ import annotations
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from dotted_dict import DottedDict
-from pydantic import BaseModel, Field, PrivateAttr, validator
-from sympy import Expr, Symbol, sympify
+from pydantic import Field, PrivateAttr
+from pydantic.config import ConfigDict
+from pydantic.functional_validators import field_validator
+from sympy import Expr, sympify
 
 from catalax.model.base import CatalaxBase
-
-from .species import Species
 from .parameter import Parameter
+from .species import Species
 from .utils import parameter_exists
+
+if TYPE_CHECKING:
+    from catalax.model import Model
 
 
 class ODE(CatalaxBase):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
-    species: Species
+    species: Species = Field(..., exclude=True)
     equation: Expr
     observable: bool = True
-    parameters: Dict[Union[str, Expr], Parameter] = Field(default_factory=DottedDict)
+    parameters: Dict[Union[str, Expr], Parameter] = Field(
+        default_factory=DottedDict,
+        exclude=True,
+    )
 
-    _model: Optional["Model"] = PrivateAttr(default=None)  # type: ignore
+    _model: Optional[Model] = PrivateAttr(default=None)  # type: ignore
 
-    @validator("equation", pre=True)
+    @field_validator("equation", mode="before")
     def converts_ode_to_sympy(cls, value):
         """Convertes a string"""
 
@@ -50,6 +59,12 @@ class ODE(CatalaxBase):
         for symbol in self.equation.free_symbols:
             if str(symbol) in self._model.species or str(symbol) == "t":
                 # Skip species and time symbol
+                continue
+            elif str(symbol) in self._model.constants:
+                # Skip constants
+                continue
+            elif str(symbol) in self._model.assignments:
+                # Skip assignments
                 continue
             elif parameter_exists(str(symbol), self._model.parameters):
                 # Assign parameter if it is already present in the model

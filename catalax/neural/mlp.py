@@ -1,4 +1,6 @@
+from typing import Callable, Optional
 import equinox as eqx
+import jax
 import jax.nn as jnn
 import jax.numpy as jnp
 import jax.random as jrandom
@@ -17,19 +19,22 @@ class MLP(eqx.Module):
         depth: int,
         use_final_bias: bool,
         activation=jnn.softplus,
+        final_activation: Optional[Callable] = None,
         max_time: float = 1.0,
+        out_size: Optional[int] = None,
         *,
         key,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.max_time = max_time
         self.mlp = eqx.nn.MLP(
             in_size=data_size + 1,
-            out_size=data_size,
+            out_size=out_size if out_size else data_size,
             width_size=width_size,
             depth=depth,
             activation=activation,
+            final_activation=final_activation if final_activation else lambda x: x,
             use_final_bias=use_final_bias,
             key=key,
         )  # type: ignore
@@ -37,7 +42,7 @@ class MLP(eqx.Module):
         if isinstance(activation, RBFLayer):
             self.mlp = self._mutate_to_rbf(key, activation)
 
-    def __call__(self, t, y, args):
+    def __call__(self, t, y, args) -> jax.Array:
         t = t / self.max_time
         y = jnp.concatenate((y, jnp.array([t])), axis=-1)
         return self.mlp(y)
