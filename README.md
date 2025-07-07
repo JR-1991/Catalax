@@ -446,5 +446,5 @@ Catalax builds on the excellent work of:
 ---
 
 <div align="center">
-<strong>Accelerate your biochemical modeling with Catalax! ��⚡</strong>
+<strong>Accelerate your biochemical modeling with Catalax! ⚡</strong>
 </div>
