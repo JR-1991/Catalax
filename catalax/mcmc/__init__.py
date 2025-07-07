@@ -4,6 +4,9 @@ from . import priors
 
 import arviz as az  # noqa: F401
 
+# Set plotting style
+az.style.use("arviz-doc")  # type: ignore
+
 __all__ = [
     "run_mcmc",
     "plot_corner",

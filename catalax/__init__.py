@@ -7,6 +7,11 @@ from .model import Model
 from .tools.optimization import optimize
 from .model import SimulationConfig
 
+import arviz as az  # noqa: F401
+
+# Set plotting style
+az.style.use("arviz-doc")  # type: ignore
+
 __all__ = [
     "SimulationConfig",
     "Dataset",
