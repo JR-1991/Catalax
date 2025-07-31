@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from jax import Array
 import jax.numpy as jnp
-import optax
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Any, Callable
 
