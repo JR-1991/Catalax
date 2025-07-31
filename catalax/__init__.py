@@ -24,7 +24,7 @@ __all__ = [
     "l1_loss",
 ]
 
-__version__ = "0.4.1"
+__version__ = "0.4.0"
 
 PARAMETERS = InAxes.PARAMETERS
 TIME = InAxes.TIME
