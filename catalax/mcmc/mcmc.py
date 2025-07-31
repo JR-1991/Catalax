@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -16,9 +17,9 @@ import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
+from numpyro.infer import MCMC, NUTS
 from jax import Array
 from jax.random import PRNGKey
-from numpyro.infer import MCMC, NUTS
 
 from catalax.dataset.dataset import Dataset
 from catalax.surrogate import Surrogate
@@ -278,7 +279,8 @@ class BayesianModel:
             likelihood: Likelihood distribution class
             sim_func: Function to simulate model with given parameters
         """
-        self.model = model
+        self.model = deepcopy(model)
+        self.model._setup_system()
         self.yerrs = yerrs
         self.likelihood = likelihood
         self.sim_func = sim_func
@@ -287,7 +289,7 @@ class BayesianModel:
         self.priors = [
             (
                 model.parameters[param].name,
-                model.parameters[param].prior._distribution_fun,
+                model.parameters[param].prior._distribution_fun(),
             )
             for param in model.get_parameter_order()
         ]
@@ -425,7 +427,10 @@ def _create_bayesian_model(
 
 
 def _prepare_mcmc_data(
-    dataset: Dataset, model: "Model", config: MCMCConfig, surrogate: Optional[Surrogate]
+    dataset: Dataset,
+    model: "Model",
+    config: MCMCConfig,
+    surrogate: Optional[Surrogate],
 ) -> DataPreparation:
     """Prepare all data components needed for MCMC simulation.
 
@@ -442,6 +447,8 @@ def _prepare_mcmc_data(
     data, times, y0s, constants = _extract_dataset_components(dataset, model)
 
     # Setup simulation function
+    model = deepcopy(model)
+    model._setup_system()
     sim_func, data, y0s, times = _configure_simulation_function(
         model=model,
         surrogate=surrogate,
@@ -508,7 +515,6 @@ def _run_mcmc_simulation(
     )
 
     if config.verbose:
-        print("\n\n🎉 Finished")
         mcmc.print_summary()
 
 
