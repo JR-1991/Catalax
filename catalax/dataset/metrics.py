@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from jax import Array
 import jax.numpy as jnp
+import optax
 from pydantic import BaseModel, ConfigDict, Field
+from typing import Any, Callable
 
 
 class FitMetrics(BaseModel):
@@ -12,8 +14,13 @@ class FitMetrics(BaseModel):
     following the lmfit convention. The metrics help assess both model fit quality and
     complexity, enabling model comparison and selection.
 
+    The class supports custom objective functions for computing chi-square, defaulting to
+    L2 loss but allowing any objective function that takes (y_true, y_pred) and returns
+    loss values. For normalized objectives (like mean loss), the metrics automatically
+    scale appropriately to maintain statistical interpretation.
+
     The class computes:
-    - Chi-square: Sum of squared residuals
+    - Chi-square: Objective function applied to residuals
     - Reduced chi-square: Chi-square normalized by degrees of freedom
     - AIC (Akaike Information Criterion): Balances model fit and complexity
     - BIC (Bayesian Information Criterion): Similar to AIC but with stronger penalty for complexity
@@ -26,45 +33,58 @@ class FitMetrics(BaseModel):
     """
 
     model_config: ConfigDict = ConfigDict(
-        populate_by_name=True,
         extra="forbid",
     )
 
     n_parameters: int = Field(
-        alias="Parameters",
         description="Number of parameters in the model",
     )
     n_points: int = Field(
-        alias="Data Points",
         description="Number of data points",
     )
     chisqr: float = Field(
-        alias="Chi-Square",
         description="Chi-square: χ² = Σᵢᴺ[Residᵢ]²",
     )
     redchi: float = Field(
-        alias="Reduced Chi-Square",
         description="Reduced chi-square: χᵥ² = χ²/max(1, N - Nᵥₐᵣᵧₛ)",
     )
+    weighted_mape: float = Field(
+        description="Weighted mean absolute percentage error (L1-based): |Σ abs(y_true - y_pred)| / Σ abs(y_true)",
+    )
     aic: float = Field(
-        alias="AIC",
         description="Akaike Information Criterion statistic: -2*loglikelihood + 2*Nᵥₐᵣᵧₛ",
     )
     bic: float = Field(
-        alias="BIC",
         description="Bayesian Information Criterion statistic: -2*loglikelihood + ln(N)*Nᵥₐᵣᵧₛ",
     )
 
     @staticmethod
-    def _chisqr(y_true: Array, y_pred: Array) -> float:
-        """Calculate chi-square statistic.
-
-        Chi-square is the sum of squared residuals between predicted and observed values.
-        It is calculated as: χ² = Σᵢᴺ[Residᵢ]²
+    def _weighted_mape(y_true: Array, y_pred: Array) -> Array:
+        """Calculate relative error with robust handling of small values.
 
         Args:
             y_true: True/observed values
             y_pred: Predicted values
+
+        Returns:
+            The calculated relative error value
+        """
+        residuals = jnp.abs(y_true - y_pred).sum()
+        weights = jnp.abs(y_true).sum()
+        return residuals / weights
+
+    @staticmethod
+    def _chisqr(residual: Array, n_points: int) -> Array:
+        """Calculate chi-square statistic using a specified objective function.
+
+        Chi-square is computed using the provided objective function. For normalized
+        objectives (like mean loss), the result is scaled by the number of data points
+        to maintain consistency with the traditional chi-square interpretation.
+
+        Args:
+            y_true: True/observed values
+            y_pred: Predicted values
+            objective_fn: Function that computes the objective/loss
 
         Returns:
             The calculated chi-square value
@@ -72,11 +92,11 @@ class FitMetrics(BaseModel):
         Note:
             Lower chi-square values indicate better model fit to the data.
         """
-        residuals = y_true - y_pred
-        chisqr = float(jnp.sum(residuals**2))
-        # Apply minimum threshold as in lmfit
-        ndata = y_true.size
-        return max(chisqr, 1.0e-250 * ndata)
+
+        if residual.size > 1:
+            return jnp.maximum(jnp.sum(jnp.pow(residual, 2)), 1.0e-250 * n_points)
+        else:
+            return jnp.maximum(residual, 1.0e-250 * n_points)
 
     @staticmethod
     def _redchi(chisqr: float, n_points: int, n_parameters: int) -> float:
@@ -101,7 +121,7 @@ class FitMetrics(BaseModel):
         return chisqr / max(1, nfree)
 
     @staticmethod
-    def _aic(chisqr: float, n_points: int, n_parameters: int) -> float:
+    def _aic(chisqr: Array, n_points: int, n_parameters: int) -> Array:
         """Calculate Akaike Information Criterion (AIC).
 
         AIC estimates the relative quality of statistical models by balancing
@@ -122,11 +142,11 @@ class FitMetrics(BaseModel):
             complex models compared to BIC.
         """
         # This is -2*loglikelihood following lmfit convention
-        neg2_log_likel = n_points * float(jnp.log(chisqr / n_points))
+        neg2_log_likel = n_points * jnp.log(chisqr / n_points)
         return neg2_log_likel + 2 * n_parameters
 
     @staticmethod
-    def _bic(chisqr: float, n_points: int, n_parameters: int) -> float:
+    def _bic(chisqr: Array, n_points: int, n_parameters: int) -> Array:
         """Calculate Bayesian Information Criterion (BIC).
 
         BIC is similar to AIC but includes a stronger penalty for model complexity
@@ -147,8 +167,8 @@ class FitMetrics(BaseModel):
             models compared to AIC, especially with larger datasets.
         """
         # This is -2*loglikelihood following lmfit convention
-        neg2_log_likel = n_points * float(jnp.log(chisqr / n_points))
-        return neg2_log_likel + float(jnp.log(n_points)) * n_parameters
+        neg2_log_likel = n_points * jnp.log(chisqr / n_points)
+        return neg2_log_likel + jnp.log(n_points) * n_parameters
 
     @classmethod
     def from_predictions(
@@ -156,6 +176,9 @@ class FitMetrics(BaseModel):
         y_true: Array,
         y_pred: Array,
         n_parameters: int,
+        objective_fun: Callable[[Array, Array], Any] = lambda y_true, y_pred: jnp.abs(
+            y_true - y_pred
+        ),  # type: ignore
     ) -> FitMetrics:
         """Create FitMetrics from predicted and observed values.
 
@@ -167,6 +190,9 @@ class FitMetrics(BaseModel):
             y_true: True/observed values as a JAX array
             y_pred: Predicted values as a JAX array, must have the same shape as y_true
             n_parameters: The number of variable parameters in the model being evaluated
+            objective_fun: Function to compute the objective/loss. Defaults to optax.l2_loss.
+                         For normalized objectives (like mean loss), the result will be
+                         scaled appropriately for chi-square calculation.
 
         Returns:
             A FitMetrics instance with computed chi-square, reduced chi-square, AIC, and BIC values
@@ -185,21 +211,39 @@ class FitMetrics(BaseModel):
             ...     n_parameters=3
             ... )
             >>> print(f"Model fit: χ² = {metrics.chisqr:.3f}, AIC = {metrics.aic:.2f}")
+            >>>
+            >>> # Using a custom objective function
+            >>> import optax
+            >>> metrics_custom = FitMetrics.from_predictions(
+            ...     y_true=y_observed,
+            ...     y_pred=y_predicted,
+            ...     n_parameters=3,
+            ...     objective_fn=optax.huber_loss
+            ... )
         """
         if y_true.shape != y_pred.shape:
             raise ValueError(
                 f"y_true and y_pred must have the same shape. Got {y_true.shape} and {y_pred.shape}"
             )
 
-        # Calculate chi-square from residuals
-        chisqr = cls._chisqr(y_true, y_pred)
-        n_points = y_true.size
+        # Calculate chi-square using the objective function
+        loss = objective_fun(y_true, y_pred)
+        n_points = loss.size
+        chisqr = cls._chisqr(loss, n_points)
+
+        if isinstance(loss, float):
+            loss = jnp.array(loss)
 
         return cls(
-            n_parameters=n_parameters,  # type: ignore
-            n_points=n_points,  # type: ignore
-            chisqr=chisqr,  # type: ignore
-            redchi=cls._redchi(chisqr, n_points, n_parameters),  # type: ignore
-            aic=cls._aic(chisqr, n_points, n_parameters),  # type: ignore
-            bic=cls._bic(chisqr, n_points, n_parameters),  # type: ignore
+            n_parameters=n_parameters,
+            n_points=n_points,
+            chisqr=float(chisqr),
+            redchi=cls._redchi(float(chisqr), n_points, n_parameters),
+            weighted_mape=float(cls._weighted_mape(y_true, y_pred)),
+            aic=float(cls._aic(chisqr, n_points, n_parameters)),
+            bic=float(cls._bic(chisqr, n_points, n_parameters)),
         )
+
+
+def l1_loss(y_true: Array, y_pred: Array) -> Array:
+    return jnp.abs(y_true - y_pred)

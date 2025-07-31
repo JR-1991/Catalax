@@ -18,13 +18,16 @@ from typing import (
     Tuple,
     Union,
     Self,
+    Callable,
 )
 
 import jax
 import jax.numpy as jnp
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import mlcroissant as mlc
 import numpy as np
+import optax
 import pandas as pd
 from jax import Array
 
@@ -639,6 +642,12 @@ class Dataset(BaseModel):
             f"First dimensions must be equal."
         )
 
+        assert y0s.shape[-1] == len(species_order), (
+            f"Incompatible shapes: y0s shape = {y0s.shape}, "
+            f"species_order length = {len(species_order)}. "
+            f"Last species dimensions must be equal to species_order length."
+        )
+
         # Create dataset
         dataset = cls(
             id=str(uuid.uuid4()),
@@ -649,8 +658,7 @@ class Dataset(BaseModel):
         # Add measurements
         for i in range(data.shape[0]):
             initial_conditions = {
-                species: float(y0s[i, j].squeeze())
-                for j, species in enumerate(species_order)
+                species: float(y0s[i, j]) for j, species in enumerate(species_order)
             }
 
             dataset.add_from_jax_array(
@@ -737,14 +745,14 @@ class Dataset(BaseModel):
     def plot(
         self,
         ncols: int = 2,
-        show: bool = True,
+        show: bool = False,
         path: Optional[str] = None,
         measurement_ids: List[str] = [],
         figsize: Tuple[int, int] = (5, 3),
         predictor: Optional[Predictor] = None,
         n_steps: int = 100,
         **kwargs,
-    ):
+    ) -> Optional[Figure]:
         """Plot all measurements in the dataset.
 
         Creates a multi-panel figure with one panel per measurement, with
@@ -793,7 +801,8 @@ class Dataset(BaseModel):
         # Save or show figure
         self._save_or_show_figure(fig, path, show)
 
-        return fig
+        if not show:
+            return fig
 
     def _get_measurement_ids(self, measurement_ids: List[str]) -> List[str]:
         """Get measurement IDs to plot, using all measurements with data if none provided."""
@@ -967,6 +976,7 @@ class Dataset(BaseModel):
     def metrics(
         self,
         predictor: Predictor,
+        objective_fun: Callable[[Array, Array], Array] = optax.l2_loss,  # type: ignore
     ) -> FitMetrics:
         """Calculate comprehensive fit metrics for evaluating predictor performance on this dataset.
 
@@ -982,6 +992,8 @@ class Dataset(BaseModel):
         Args:
             predictor (Predictor): The predictor model to evaluate. Must implement the predict()
                 method and provide parameter count information.
+            objective_fun: Objective function to use for calculating chi-square.
+                Defaults to L2 loss.
 
         Returns:
             FitMetrics: A metrics object containing:
@@ -1023,6 +1035,7 @@ class Dataset(BaseModel):
             y_true=y_true_flat,
             y_pred=y_pred_flat,
             n_parameters=n_parameters,
+            objective_fun=objective_fun,
         )
 
     @staticmethod
