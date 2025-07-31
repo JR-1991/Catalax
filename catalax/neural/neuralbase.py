@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Self
 
 import diffrax
 import equinox as eqx
@@ -261,7 +261,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         )
 
     @classmethod
-    def from_eqx(cls, path):
+    def from_eqx(cls, path) -> Self:
         """Loads a NeuralODE from an eqx file
 
         Args:
