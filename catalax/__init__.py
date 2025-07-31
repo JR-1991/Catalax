@@ -6,6 +6,7 @@ from .model import InAxes
 from .model import Model
 from .tools.optimization import optimize
 from .model import SimulationConfig
+from .objectives import mean_absolute_error, l1_loss
 
 import arviz as az  # noqa: F401
 
@@ -19,9 +20,11 @@ __all__ = [
     "InAxes",
     "Model",
     "optimize",
+    "mean_absolute_error",
+    "l1_loss",
 ]
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 PARAMETERS = InAxes.PARAMETERS
 TIME = InAxes.TIME
