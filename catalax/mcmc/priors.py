@@ -1,6 +1,6 @@
 from numpyro import distributions
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, PrivateAttr, computed_field
+from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 
 class Prior(BaseModel):
@@ -13,7 +13,6 @@ class Prior(BaseModel):
     _print_str: str = PrivateAttr(default="")
     _distribution_fun: Optional[distributions.Distribution] = PrivateAttr(default=None)
 
-    @computed_field(return_type=str)
     def type(self) -> str:
         """Return the name of the prior distribution class."""
         return self.__class__.__name__
@@ -34,12 +33,10 @@ class Normal(Prior):
     mu: float
     sigma: float
 
-    @computed_field(return_type=distributions.Distribution)
     def _distribution_fun(self) -> distributions.Distribution:
         """Create the NumPyro distribution object."""
         return distributions.Normal(self.mu, self.sigma)
 
-    @computed_field(return_type=str)
     def _print_str(self) -> str:
         """String representation of the distribution."""
         return f"N(μ={self.mu}, σ={self.sigma})"
@@ -64,29 +61,12 @@ class TruncatedNormal(Prior):
     low: float = 1e-6
     high: float = 1e6
 
-    # Use model validator!
-    def __init__(self, **kwargs) -> None:
-        """Initialize the truncated normal distribution with validation."""
-        super().__init__(**kwargs)
-
-        if self.low is None and self.high is None:
-            raise ValueError(
-                "Both low and high cannot be None. At least one of them must be specified."
-            )
-
-        if self.low is not None:
-            assert self.low > 0, (
-                "low must be greater than 0. Otherwise the integration will probably fail"
-            )
-
-    @computed_field(return_type=distributions.Distribution)
     def _distribution_fun(self) -> distributions.Distribution:
         """Create the NumPyro distribution object."""
         return distributions.TruncatedNormal(
             loc=self.mu, scale=self.sigma, low=self.low, high=self.high
         )
 
-    @computed_field(return_type=str)
     def _print_str(self) -> str:
         """String representation of the distribution."""
         return f"N(μ={self.mu}, σ={self.sigma}, low={self.low}, high={self.high})"
@@ -107,12 +87,10 @@ class Uniform(Prior):
     low: float
     high: float
 
-    @computed_field(return_type=distributions.Distribution)
     def _distribution_fun(self) -> distributions.Distribution:
         """Create the NumPyro distribution object."""
         return distributions.Uniform(self.low, self.high)
 
-    @computed_field(return_type=str)
     def _print_str(self) -> str:
         """String representation of the distribution."""
         return f"U(low={self.low}, high={self.high})"
@@ -133,12 +111,10 @@ class LogUniform(Prior):
     low: float
     high: float
 
-    @computed_field(return_type=distributions.Distribution)
     def _distribution_fun(self) -> distributions.Distribution:
         """Create the NumPyro distribution object."""
         return distributions.LogUniform(self.low, self.high)
 
-    @computed_field(return_type=str)
     def _print_str(self) -> str:
         """String representation of the distribution."""
         return f"LogU(low={self.low}, high={self.high})"
