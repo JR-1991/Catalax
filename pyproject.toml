@@ -26,7 +26,7 @@ pydantic = "^2.9.2"
 equinox = "^0.12.2"
 rich = "^13.8.1"
 mlcroissant = "^1.0.10"
-pyenzyme = { git = "https://github.com/EnzymeML/PyEnzyme.git", rev = "v2-migration" }
+pyenzyme = "^2.0.0"
 
 [tool.setuptools.packages.find]
 where = ["catalax"]
