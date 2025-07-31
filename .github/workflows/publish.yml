@@ -6,12 +6,11 @@ on:
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-        - uses: actions/checkout@v2
-        - name: "Build and publish to PyPi"
-          uses: JRubics/poetry-publish@v1.17
-          with:
-            pypi_token: ${{ secrets.PYPI_TOKEN }}
+      - uses: actions/checkout@v2
+      - name: 'Build and publish to PyPi'
+        uses: JRubics/poetry-publish@v1.17
+        with:
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
