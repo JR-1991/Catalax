@@ -21,6 +21,7 @@ def plot_learned_rates(
     model: Model,
     show: bool = True,
     save_path: str | None = None,
+    round_stoich: bool = True,
 ) -> Figure:
     """
     Plot learned stoichiometry matrix, rates, and dataset for a trained RateFlowODE.
@@ -46,7 +47,8 @@ def plot_learned_rates(
 
         # Stoichiometry Matrix (left panel)
         stoich_matrix = rateflow_ode.stoich_matrix.T
-        stoich_matrix = jnp.round(stoich_matrix)
+        if round_stoich:
+            stoich_matrix = jnp.round(stoich_matrix)
 
         sub_ax[0].set_title(
             f"Learned Stoichiometry Matrix {i + 1}", fontsize=12, pad=15
@@ -65,6 +67,7 @@ def plot_learned_rates(
         )
         sub_ax[0].set_xlabel("Species", fontsize=12, labelpad=10)
         sub_ax[0].set_ylabel("Reactions", fontsize=12, labelpad=10)
+        sub_ax[0].tick_params(axis="y", rotation=0)
 
         # Rates (middle panel)
         sub_ax[1].set_title(f"Learned Rates {i + 1}", fontsize=12, pad=15)

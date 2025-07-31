@@ -100,6 +100,23 @@ class RateFlowODE(NeuralBase):
         res: jax.Array = jax.vmap(self.stoich_func, in_axes=(0, 0, None))(t, y, None)
         return res
 
+    def reaction_rates(
+        self,
+        dataset: Dataset,
+    ) -> jax.Array:
+        """Get the reaction rates of the model for a given dataset.
+
+        Args:
+            dataset: Dataset containing measurements
+
+        Returns:
+            Reaction rates
+        """
+        data, t, _ = dataset.to_jax_arrays(self.species_order)
+        data = data.reshape(-1, data.shape[-1])
+        t = t.reshape(-1)
+        return jax.vmap(self.func, in_axes=(0, 0, None))(t, data, ())
+
     def get_weights_and_biases(self) -> List[jax.Array]:
         """Get all weights and biases from the model.
 
@@ -118,6 +135,7 @@ class RateFlowODE(NeuralBase):
         model: Model,
         show: bool = True,
         save_path: str | None = None,
+        round_stoich: bool = True,
     ) -> Figure:
         """
         Plot learned rates for a trained RateFlowODE.
@@ -128,6 +146,7 @@ class RateFlowODE(NeuralBase):
             model=model,
             show=show,
             save_path=save_path,
+            round_stoich=round_stoich,
         )
 
     def plot_rate_grid(
