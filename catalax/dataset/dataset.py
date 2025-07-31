@@ -17,7 +17,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    Self,
     Callable,
 )
 
@@ -620,7 +619,7 @@ class Dataset(BaseModel):
         data: Array,
         time: Array,
         y0s: Array,
-    ) -> Self:
+    ) -> "Dataset":
         """Create a dataset directly from JAX arrays.
 
         Args:
