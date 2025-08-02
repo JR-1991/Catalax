@@ -463,6 +463,7 @@ class Measurement(BaseModel):
         show: bool = True,
         ax=None,
         model_data: Optional[Measurement] = None,
+        xlim: Optional[Tuple[float, float | None]] = (0, None),
         **kwargs,
     ) -> None:
         """Plot the measurement data with optional model fit comparison.
@@ -471,6 +472,7 @@ class Measurement(BaseModel):
             show (bool): Whether to show the plot immediately.
             ax: Matplotlib axes to plot on. If None, creates a new figure.
             model_data (Optional[Measurement]): Model prediction data to overlay on the plot.
+            xlim: Optional[Tuple[float, float]]: Limits of the x-axis.
             **kwargs: Additional arguments to pass to plot functions.
         """
         is_subplot = ax is not None
@@ -520,6 +522,9 @@ class Measurement(BaseModel):
         ax.set_xlabel("Time", fontsize=12)
         ax.set_ylabel("Concentration", fontsize=12)
         ax.set_title(init_title, fontsize=title_fontsize)
+
+        if xlim:
+            ax.set_xlim(xlim[0], xlim[1])
 
         if self.data:
             ymax = max(max(series) for series in self.data.values() if len(series) > 0)

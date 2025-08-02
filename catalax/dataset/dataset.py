@@ -750,6 +750,7 @@ class Dataset(BaseModel):
         figsize: Tuple[int, int] = (5, 3),
         predictor: Optional[Predictor] = None,
         n_steps: int = 100,
+        xlim: Optional[Tuple[float, float | None]] = (0, None),
         **kwargs,
     ) -> Optional[Figure]:
         """Plot all measurements in the dataset.
@@ -792,6 +793,7 @@ class Dataset(BaseModel):
             measurement_ids=measurement_ids,
             model_data=model_data,
             kwargs=kwargs,
+            xlim=xlim,
         )
 
         # Format legends
@@ -857,6 +859,7 @@ class Dataset(BaseModel):
         measurement_ids: List[str],
         model_data: Optional[Dataset],
         kwargs: Dict[str, Any],
+        xlim: Optional[Tuple[float, float | None]] = (0, None),
     ):
         """Plot each measurement on its corresponding axis."""
         index = 0
@@ -870,6 +873,7 @@ class Dataset(BaseModel):
                 ax=axs[index],
                 model_data=sim_meas,
                 **kwargs,
+                xlim=xlim,
             )
 
             index += 1
