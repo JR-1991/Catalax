@@ -1,5 +1,8 @@
 from __future__ import annotations
 from copy import deepcopy
+import inspect
+import matplotlib.pyplot as plt
+
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -8,7 +11,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    Any,
     Dict,
 )
 from dataclasses import dataclass
@@ -20,9 +22,12 @@ import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
 from jax import Array
 from jax.random import PRNGKey
+import pandas as pd
+import xarray
 
 from catalax.dataset.dataset import Dataset
 from catalax.surrogate import Surrogate
+from catalax.mcmc.protocols import PreModel, PostModel
 
 if TYPE_CHECKING:
     from catalax.model.model import Model
@@ -59,6 +64,7 @@ class MCMCConfig:
     seed: int = 420
     verbose: int = 1
     max_steps: int = 64**4
+    solver: str = "scipy"
 
 
 class HMC:
@@ -121,27 +127,70 @@ class HMC:
         dataset: Dataset,
         yerrs: Union[float, Array],
         surrogate: Optional[Surrogate] = None,
-    ) -> "HMCResults":
-        """Run HMC sampling.
+        pre_model: Optional[PreModel] = None,
+        post_model: Optional[PostModel] = None,
+    ) -> HMCResults:
+        """Run MCMC simulation to infer posterior distribution of parameters.
+
+        Uses NumPyro to perform Markov Chain Monte Carlo simulation with the No-U-Turn
+        Sampler (NUTS) algorithm. Parameter priors are automatically extracted from the model.
+        The simulation compares model output against observed data to infer the posterior
+        distribution of parameters.
 
         Args:
             model: Model to fit
-            dataset: Dataset containing observations
+            dataset: Dataset containing observations to fit against
             yerrs: Standard deviation of observed data
             surrogate: Optional surrogate model for rate prediction
+            pre_model: Optional function to transform inputs and parameters before simulation
+            post_model: Optional function to transform outputs after simulation
 
         Returns:
-            HMCResults object containing samples and visualization methods
+            Tuple of (MCMC object with results, Bayesian model function)
+
+        Raises:
+            AssertionError: If any parameters lack prior distributions
+            TypeError: If pre_model or post_model functions are not callable
+            ValueError: If pre_model or post_model signatures don't match Protocol requirements
         """
-        mcmc, bayesian_model = run_mcmc(
+        # Validate inputs
+        _validate_parameter_priors(model)
+        _validate_model_functions(pre_model, post_model)
+
+        # Setup model and prepare data
+        data_prep = _prepare_mcmc_data(dataset, model, self.config, surrogate)
+
+        # Create Bayesian model
+        bayes_model = _create_bayesian_model(
             model=model,
-            dataset=dataset,
             yerrs=yerrs,
-            config=self.config,
-            surrogate=surrogate,
+            likelihood=self.config.likelihood,
+            sim_func=data_prep.sim_func,
+            pre_model=pre_model,
+            post_model=post_model,
         )
 
-        return HMCResults(mcmc, bayesian_model, model)
+        # Initialize and run MCMC
+        mcmc = _initialize_mcmc_sampler(bayes_model, self.config)
+        _run_mcmc_simulation(mcmc, data_prep, self.config)
+
+        return HMCResults(mcmc, bayes_model, model)
+
+    @classmethod
+    def from_config(cls, config: MCMCConfig) -> HMC:
+        """Create HMC instance from configuration.
+
+        Args:
+            config: MCMC configuration parameters
+        """
+        return cls(
+            num_warmup=config.num_warmup,
+            num_samples=config.num_samples,
+            likelihood=config.likelihood,
+            dense_mass=config.dense_mass,
+            thinning=config.thinning,
+            max_tree_depth=config.max_tree_depth,
+        )
 
 
 class HMCResults:
@@ -168,7 +217,12 @@ class HMCResults:
         self.mcmc.print_summary()
 
     # Visualization methods from plotting.py
-    def plot_corner(self, quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84)):
+    def plot_corner(
+        self,
+        quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
+        show: bool = False,
+        path: Optional[str] = None,
+    ):
         """Plot corner plot of parameter correlations.
 
         Args:
@@ -179,9 +233,16 @@ class HMCResults:
         """
         from catalax.mcmc.plotting import plot_corner
 
-        return plot_corner(self.mcmc, quantiles)
+        f = plot_corner(self.mcmc, quantiles)
+        if path is not None:
+            f.savefig(path)
+        if show:
+            plt.show()
+            return None
 
-    def plot_posterior(self, **kwargs):
+        return plt.gcf()
+
+    def plot_posterior(self, show: bool = False, path: Optional[str] = None, **kwargs):
         """Plot posterior distributions.
 
         Args:
@@ -192,13 +253,22 @@ class HMCResults:
         """
         from catalax.mcmc.plotting import plot_posterior
 
-        return plot_posterior(self.mcmc, self.model, **kwargs)
+        f = plot_posterior(self.mcmc, self.model, **kwargs)
+        if path is not None:
+            f.savefig(path)
+        if show:
+            plt.show()
+            return None
+
+        return plt.gcf()
 
     def plot_credibility_interval(
         self,
         initial_condition: Dict[str, float],
         time: Array,
         dt0: float = 0.1,
+        show: bool = False,
+        path: Optional[str] = None,
     ):
         """Plot credibility intervals for model simulations.
 
@@ -212,11 +282,17 @@ class HMCResults:
         """
         from catalax.mcmc.plotting import plot_credibility_interval
 
-        return plot_credibility_interval(
+        f = plot_credibility_interval(
             self.mcmc, self.model, initial_condition, time, dt0
         )
+        if path is not None:
+            f.savefig(path)
+        if show:
+            plt.show()
+            return None
+        return plt.gcf()
 
-    def plot_trace(self, **kwargs):
+    def plot_trace(self, show: bool = False, path: Optional[str] = None, **kwargs):
         """Plot MCMC trace.
 
         Args:
@@ -227,9 +303,13 @@ class HMCResults:
         """
         from catalax.mcmc.plotting import plot_trace
 
-        return plot_trace(self.mcmc, self.model, **kwargs)
+        f = plot_trace(self.mcmc, self.model, **kwargs)
+        if path is not None:
+            f.savefig(path)
+        if show:
+            plt.show()
 
-    def plot_forest(self, **kwargs):
+    def plot_forest(self, show: bool = False, path: Optional[str] = None, **kwargs):
         """Plot forest plot of parameter distributions.
 
         Args:
@@ -240,9 +320,17 @@ class HMCResults:
         """
         from catalax.mcmc.plotting import plot_forest
 
-        return plot_forest(self.mcmc, self.model, **kwargs)
+        f = plot_forest(self.mcmc, self.model, **kwargs)
+        if path is not None:
+            f.savefig(path)
 
-    def summary(self, hdi_prob: float = 0.95):
+        if show:
+            plt.show()
+            return None
+
+        return plt.gcf()
+
+    def summary(self, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]:
         """Generate summary statistics.
 
         Args:
@@ -270,6 +358,8 @@ class BayesianModel:
         yerrs: Union[float, Array],
         likelihood: Type[dist.Distribution],
         sim_func: Callable,
+        pre_model: Optional[PreModel] = None,
+        post_model: Optional[PostModel] = None,
     ):
         """Initialize the Bayesian model.
 
@@ -278,12 +368,16 @@ class BayesianModel:
             yerrs: Standard deviation of observed data
             likelihood: Likelihood distribution class
             sim_func: Function to simulate model with given parameters
+            pre_model: Optional function to transform inputs and parameters before simulation
+            post_model: Optional function to transform outputs after simulation
         """
         self.model = deepcopy(model)
         self.model._setup_system()
         self.yerrs = yerrs
         self.likelihood = likelihood
         self.sim_func = sim_func
+        self.pre_model = pre_model
+        self.post_model = post_model
 
         # Pre-compute priors and observables
         self.priors = [
@@ -323,13 +417,36 @@ class BayesianModel:
         Returns:
             Sampled posterior distribution
         """
+
         # Sample parameters from priors
         theta = jnp.array(
             [numpyro.sample(name, distribution) for name, distribution in self.priors]
         )
 
+        # Apply a pre-model which can be used to modify
+        # the initial conditions, constants, times, data, and parameters
+        if self.pre_model is not None:
+            y0s, constants, times, data, theta = self.pre_model(
+                model=self.model,
+                y0s=y0s,
+                constants=constants,
+                times=times,
+                data=data,
+                theta=theta,
+            )
+
         # Simulate model with sampled parameters
         states = self.sim_func(y0s, theta, constants, times)
+
+        # Apply a post-model which can be used to modify
+        # the states, data, and times
+        if self.post_model is not None:
+            states, data, times = self.post_model(
+                model=self.model,
+                states=states,
+                data=data,
+                times=times,
+            )
 
         # Sample noise parameter
         sigma = numpyro.sample("sigma", dist.Normal(0, self.yerrs))  # type: ignore
@@ -346,7 +463,9 @@ def run_mcmc(
     yerrs: Union[float, Array],
     config: MCMCConfig,
     surrogate: Optional[Surrogate] = None,
-) -> Tuple[MCMC, Any]:
+    pre_model: Optional[PreModel] = None,
+    post_model: Optional[PostModel] = None,
+) -> HMCResults:
     """Run MCMC simulation to infer posterior distribution of parameters.
 
     Uses NumPyro to perform Markov Chain Monte Carlo simulation with the No-U-Turn
@@ -360,32 +479,20 @@ def run_mcmc(
         yerrs: Standard deviation of observed data
         config: MCMC configuration parameters
         surrogate: Optional surrogate model for rate prediction
+        pre_model: Optional function to transform inputs and parameters before simulation
+        post_model: Optional function to transform outputs after simulation
 
     Returns:
         Tuple of (MCMC object with results, Bayesian model function)
 
     Raises:
         AssertionError: If any parameters lack prior distributions
+        TypeError: If pre_model or post_model functions are not callable
+        ValueError: If pre_model or post_model signatures don't match Protocol requirements
     """
     # Validate inputs
-    _validate_parameter_priors(model)
-
-    # Setup model and prepare data
-    data_prep = _prepare_mcmc_data(dataset, model, config, surrogate)
-
-    # Create Bayesian model
-    bayes_model = _create_bayesian_model(
-        model=model,
-        yerrs=yerrs,
-        likelihood=config.likelihood,
-        sim_func=data_prep.sim_func,
-    )
-
-    # Initialize and run MCMC
-    mcmc = _initialize_mcmc_sampler(bayes_model, config)
-    _run_mcmc_simulation(mcmc, data_prep, config)
-
-    return mcmc, bayes_model
+    hmc = HMC.from_config(config)
+    return hmc.run(model, dataset, yerrs, surrogate, pre_model, post_model)
 
 
 @dataclass
@@ -411,6 +518,8 @@ def _create_bayesian_model(
     yerrs: Union[float, Array],
     likelihood: Type[dist.Distribution],
     sim_func: Callable,
+    pre_model: Optional[PreModel] = None,
+    post_model: Optional[PostModel] = None,
 ) -> BayesianModel:
     """Create the Bayesian model for MCMC simulation.
 
@@ -419,11 +528,13 @@ def _create_bayesian_model(
         yerrs: Standard deviation of observed data
         likelihood: Likelihood distribution class
         sim_func: Function to simulate model with given parameters
+        pre_model: Optional function to transform inputs and parameters before simulation
+        post_model: Optional function to transform outputs after simulation
 
     Returns:
         BayesianModel instance for MCMC sampling
     """
-    return BayesianModel(model, yerrs, likelihood, sim_func)
+    return BayesianModel(model, yerrs, likelihood, sim_func, pre_model, post_model)
 
 
 def _prepare_mcmc_data(
@@ -533,6 +644,124 @@ def _validate_parameter_priors(model: "Model") -> None:
     assert not missing_priors, (
         f"Parameters {', '.join(missing_priors)} do not have priors. Please specify priors for all parameters."
     )
+
+
+def _validate_model_functions(
+    pre_model: Optional[PreModel], post_model: Optional[PostModel]
+) -> None:
+    """Validate that pre_model and post_model functions conform to expected signatures.
+
+    Args:
+        pre_model: Optional pre-model transformation function
+        post_model: Optional post-model transformation function
+
+    Raises:
+        TypeError: If functions don't conform to expected Protocol signatures
+        ValueError: If functions have incorrect parameter signatures
+    """
+    if pre_model is not None:
+        _validate_pre_model_signature(pre_model)
+
+    if post_model is not None:
+        _validate_post_model_signature(post_model)
+
+
+def _validate_pre_model_signature(pre_model: PreModel) -> None:
+    """Validate PreModel function signature.
+
+    Args:
+        pre_model: Pre-model function to validate
+
+    Raises:
+        TypeError: If function is not callable
+        ValueError: If function signature doesn't match Protocol
+    """
+    if not callable(pre_model):
+        raise TypeError("pre_model must be callable")
+
+    try:
+        sig = inspect.signature(pre_model)
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Could not inspect pre_model signature: {e}")
+
+    # Expected parameters for PreModel
+    expected_params = {"model", "y0s", "constants", "times", "data", "theta"}
+
+    # Check that function accepts keyword arguments
+    actual_params = set(sig.parameters.keys())
+
+    # Check for **kwargs (accepts any keyword args) or exact match
+    has_var_keyword = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+    )
+
+    if not has_var_keyword and not expected_params.issubset(actual_params):
+        missing_params = expected_params - actual_params
+        raise ValueError(
+            f"pre_model missing required parameters: {missing_params}. "
+            f"Expected signature: def pre_model(*, model, y0s, constants, times, data, theta)"
+        )
+
+    # Check that parameters are keyword-only (if not using **kwargs)
+    if not has_var_keyword:
+        for param_name, param in sig.parameters.items():
+            if param_name in expected_params and param.kind not in (
+                inspect.Parameter.KEYWORD_ONLY,
+                inspect.Parameter.VAR_KEYWORD,
+            ):
+                raise ValueError(
+                    f"pre_model parameter '{param_name}' must be keyword-only. "
+                    f"Use: def pre_model(*, {param_name}, ...)"
+                )
+
+
+def _validate_post_model_signature(post_model: PostModel) -> None:
+    """Validate PostModel function signature.
+
+    Args:
+        post_model: Post-model function to validate
+
+    Raises:
+        TypeError: If function is not callable
+        ValueError: If function signature doesn't match Protocol
+    """
+    if not callable(post_model):
+        raise TypeError("post_model must be callable")
+
+    try:
+        sig = inspect.signature(post_model)
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Could not inspect post_model signature: {e}")
+
+    # Expected parameters for PostModel
+    expected_params = {"model", "states", "data", "times"}
+
+    # Check that function accepts keyword arguments
+    actual_params = set(sig.parameters.keys())
+
+    # Check for **kwargs (accepts any keyword args) or exact match
+    has_var_keyword = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+    )
+
+    if not has_var_keyword and not expected_params.issubset(actual_params):
+        missing_params = expected_params - actual_params
+        raise ValueError(
+            f"post_model missing required parameters: {missing_params}. "
+            f"Expected signature: def post_model(*, model, states, data, times)"
+        )
+
+    # Check that parameters are keyword-only (if not using **kwargs)
+    if not has_var_keyword:
+        for param_name, param in sig.parameters.items():
+            if param_name in expected_params and param.kind not in (
+                inspect.Parameter.KEYWORD_ONLY,
+                inspect.Parameter.VAR_KEYWORD,
+            ):
+                raise ValueError(
+                    f"post_model parameter '{param_name}' must be keyword-only. "
+                    f"Use: def post_model(*, {param_name}, ...)"
+                )
 
 
 def _extract_dataset_components(
