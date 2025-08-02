@@ -53,8 +53,8 @@ def plot_posterior(mcmc: MCMC, model, **kwargs):
         matplotlib.figure.Figure: The posterior plot figure.
     """
     inf_data = az.from_numpyro(mcmc)
-    fig = az.plot_posterior(inf_data, var_names=model.get_parameter_order(), **kwargs)
-    return fig
+    az.plot_posterior(inf_data, **kwargs)
+    return plt.gcf()
 
 
 def plot_credibility_interval(
@@ -131,8 +131,8 @@ def plot_trace(mcmc: MCMC, model, **kwargs):
         matplotlib.figure.Figure: The trace plot figure.
     """
     inf_data = az.from_numpyro(mcmc)
-    fig = az.plot_trace(inf_data, var_names=model.get_parameter_order(), **kwargs)
-    return fig
+    az.plot_trace(inf_data, **kwargs)
+    return plt.gcf()
 
 
 def plot_forest(mcmc: MCMC, model, **kwargs):
@@ -147,8 +147,8 @@ def plot_forest(mcmc: MCMC, model, **kwargs):
         matplotlib.figure.Figure: The forest plot figure.
     """
     inf_data = az.from_numpyro(mcmc)
-    fig = az.plot_forest(inf_data, var_names=model.get_parameter_order(), **kwargs)
-    return fig
+    az.plot_forest(inf_data, var_names=model.get_parameter_order(), **kwargs)
+    return plt.gcf()
 
 
 def summary(mcmc: MCMC, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]:
