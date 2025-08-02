@@ -319,7 +319,7 @@ def _is_node(x):
 
 class SymbolicModule(eqx.Module):
     nodes: PyTree
-    has_extra_funcs: bool = eqx.static_field()
+    has_extra_funcs: bool = eqx.field(static=True)
 
     def __init__(
         self,
