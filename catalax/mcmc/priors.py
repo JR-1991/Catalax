@@ -1,6 +1,6 @@
 from numpyro import distributions
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, PrivateAttr
+from pydantic import BaseModel, ConfigDict, PrivateAttr, computed_field
 
 
 class Prior(BaseModel):
@@ -13,6 +13,7 @@ class Prior(BaseModel):
     _print_str: str = PrivateAttr(default="")
     _distribution_fun: Optional[distributions.Distribution] = PrivateAttr(default=None)
 
+    @computed_field()
     def type(self) -> str:
         """Return the name of the prior distribution class."""
         return self.__class__.__name__
