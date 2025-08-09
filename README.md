@@ -159,7 +159,7 @@ strategy.add_step(lr=1e-3, steps=1000, batch_size=32)
 strategy.add_step(lr=1e-4, steps=2000, batch_size=64)
 
 # Train the model
-trained_model = train_neural_ode(
+trained_model = neural_model.train(
     model=neural_model,
     dataset=experimental_data,
     strategy=strategy
@@ -280,7 +280,11 @@ strategy.add_step(
     train=ctx.neural.Modes.BOTH  # Train network + stoichiometry
 )
 
-trained_model = train_neural_ode(neural_model, training_dataset, strategy)
+trained_model = neural_model.train(
+    model=neural_model,
+    dataset=training_dataset,
+    strategy=strategy
+)
 ```
 
 </details>
