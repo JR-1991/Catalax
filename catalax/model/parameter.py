@@ -15,6 +15,8 @@ class Identifiability(CatalaxBase):
 class HDI(CatalaxBase):
     lower: float
     upper: float
+    lower_50: float
+    upper_50: float
     q: float
 
 
@@ -53,5 +55,6 @@ class Parameter(CatalaxBase):
             "lower_bound",
             "upper_bound",
             "constant",
+            "hdi",
         ]
     )
