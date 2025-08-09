@@ -215,6 +215,7 @@ def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
             y0i,
             penalties,
         )
+
         updates, opt_state = optimizer.update(grads, opt_state)
         model = eqx.apply_updates(model, updates)
 

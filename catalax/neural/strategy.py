@@ -12,6 +12,7 @@ from catalax.model.base import CatalaxBase
 from catalax.neural.neuralbase import NeuralBase
 from catalax.neural.rateflow import RateFlowODE
 from catalax.neural.penalties.penalties import Penalties
+from catalax.neural.universalode import UniversalODE
 
 
 class Modes(Enum):
@@ -64,6 +65,22 @@ class Step(CatalaxBase):
                 lambda tree: tree.stoich_matrix,
                 filter_spec,
                 replace=stoich_filter,
+            )
+
+        elif isinstance(model, UniversalODE):
+            learn_gate = train == Modes.BOTH.value or train == Modes.MLP.value
+            gate_filter = jtu.tree_map(
+                lambda _: (
+                    learn_gate and model.use_gate,
+                    learn_gate and model.use_gate,
+                ),
+                model.gate_matrix,
+            )
+
+            filter_spec = eqx.tree_at(
+                lambda tree: (tree.gate_matrix, tree.alpha_residual),
+                filter_spec,
+                replace=gate_filter,
             )
 
         if train == Modes.BOTH.value:
