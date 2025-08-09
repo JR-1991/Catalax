@@ -17,6 +17,7 @@ class NeuralODE(NeuralBase):
         solver=diffrax.Tsit5,
         activation=jax.nn.softplus,
         use_final_bias: bool = False,
+        final_activation=None,
         *,
         key,
         **kwargs,
@@ -31,6 +32,7 @@ class NeuralODE(NeuralBase):
             activation=activation,
             key=key,
             use_final_bias=use_final_bias,
+            final_activation=final_activation,
         )
 
     def __call__(self, ts, y0, key: jax.Array = jax.random.PRNGKey(0)):
