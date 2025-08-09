@@ -1,7 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
+from enum import Enum, auto
 import inspect
-import matplotlib.pyplot as plt
 
 from typing import (
     TYPE_CHECKING,
@@ -11,7 +11,7 @@ from typing import (
     Tuple,
     Type,
     Union,
-    Dict,
+    Literal,
 )
 from dataclasses import dataclass
 
@@ -22,12 +22,11 @@ import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
 from jax import Array
 from jax.random import PRNGKey
-import pandas as pd
-import xarray
 
 from catalax.dataset.dataset import Dataset
+from catalax.mcmc.results import HMCResults
 from catalax.surrogate import Surrogate
-from catalax.mcmc.protocols import PreModel, PostModel
+from catalax.mcmc.protocols import PreModel, PostModel, Shapes
 
 if TYPE_CHECKING:
     from catalax.model.model import Model
@@ -59,12 +58,38 @@ class MCMCConfig:
     thinning: int = 1
     max_tree_depth: int = 10
     dt0: float = 0.1
-    chain_method: str = "sequential"
+    chain_method: Literal["sequential", "parallel", "vectorized"] = "sequential"
     num_chains: int = 1
     seed: int = 420
     verbose: int = 1
     max_steps: int = 64**4
     solver: str = "scipy"
+
+
+class Modes(Enum):
+    """Modes of the model."""
+
+    SURROGATE = auto()
+    MECHANISTIC = auto()
+
+
+@dataclass
+class ModelSetup:
+    """Container for model setup results."""
+
+    priors: List[Tuple[str, dist.Distribution]]
+
+
+@dataclass
+class DataPreparation:
+    """Container for prepared MCMC data."""
+
+    data: Array
+    times: Array
+    y0s: Array
+    constants: Array
+    sim_func: Callable
+    shapes: Shapes
 
 
 class HMC:
@@ -83,7 +108,7 @@ class HMC:
         thinning: int = 1,
         max_tree_depth: int = 10,
         dt0: float = 0.1,
-        chain_method: str = "sequential",
+        chain_method: Literal["sequential", "parallel", "vectorized"] = "sequential",
         num_chains: int = 1,
         seed: int = 420,
         verbose: int = 1,
@@ -158,20 +183,42 @@ class HMC:
         _validate_model_functions(pre_model, post_model)
 
         # Setup model and prepare data
-        data_prep = _prepare_mcmc_data(dataset, model, self.config, surrogate)
+        data_prep = _prepare_mcmc_data(dataset, model, surrogate)
+
+        if surrogate is not None:
+            mode = Modes.SURROGATE
+        else:
+            mode = Modes.MECHANISTIC
 
         # Create Bayesian model
-        bayes_model = _create_bayesian_model(
+        bayes_model = BayesianModel(
             model=model,
             yerrs=yerrs,
             likelihood=self.config.likelihood,
             sim_func=data_prep.sim_func,
             pre_model=pre_model,
             post_model=post_model,
+            shapes=data_prep.shapes,
+            mode=mode,
         )
 
         # Initialize and run MCMC
-        mcmc = _initialize_mcmc_sampler(bayes_model, self.config)
+        nuts = NUTS(
+            bayes_model,
+            dense_mass=self.config.dense_mass,
+            max_tree_depth=self.config.max_tree_depth,
+        )
+        mcmc = MCMC(
+            nuts,
+            num_warmup=self.config.num_warmup,
+            num_samples=self.config.num_samples,
+            progress_bar=bool(self.config.verbose),
+            chain_method=self.config.chain_method,
+            num_chains=self.config.num_chains,
+            jit_model_args=True,
+            thinning=self.config.thinning,
+        )
+
         _run_mcmc_simulation(mcmc, data_prep, self.config)
 
         return HMCResults(mcmc, bayes_model, model)
@@ -190,158 +237,13 @@ class HMC:
             dense_mass=config.dense_mass,
             thinning=config.thinning,
             max_tree_depth=config.max_tree_depth,
+            chain_method=config.chain_method,
+            num_chains=config.num_chains,
+            seed=config.seed,
+            verbose=config.verbose,
+            max_steps=config.max_steps,
+            dt0=config.dt0,
         )
-
-
-class HMCResults:
-    """Results container for HMC sampling with integrated visualization methods."""
-
-    def __init__(self, mcmc: MCMC, bayesian_model: "BayesianModel", model: "Model"):
-        """Initialize HMC results.
-
-        Args:
-            mcmc: MCMC object containing samples
-            bayesian_model: Bayesian model used for sampling
-            model: Original model that was fit
-        """
-        self.mcmc = mcmc
-        self.bayesian_model = bayesian_model
-        self.model = model
-
-    def get_samples(self) -> Dict[str, Array]:
-        """Get posterior samples."""
-        return self.mcmc.get_samples()
-
-    def print_summary(self):
-        """Print MCMC summary."""
-        self.mcmc.print_summary()
-
-    # Visualization methods from plotting.py
-    def plot_corner(
-        self,
-        quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
-        show: bool = False,
-        path: Optional[str] = None,
-    ):
-        """Plot corner plot of parameter correlations.
-
-        Args:
-            quantiles: Quantiles to display in the corner plot
-
-        Returns:
-            matplotlib figure
-        """
-        from catalax.mcmc.plotting import plot_corner
-
-        f = plot_corner(self.mcmc, quantiles)
-        if path is not None:
-            f.savefig(path)
-        if show:
-            plt.show()
-            return None
-
-        return plt.gcf()
-
-    def plot_posterior(self, show: bool = False, path: Optional[str] = None, **kwargs):
-        """Plot posterior distributions.
-
-        Args:
-            **kwargs: Additional arguments passed to arviz.plot_posterior
-
-        Returns:
-            matplotlib figure
-        """
-        from catalax.mcmc.plotting import plot_posterior
-
-        f = plot_posterior(self.mcmc, self.model, **kwargs)
-        if path is not None:
-            f.savefig(path)
-        if show:
-            plt.show()
-            return None
-
-        return plt.gcf()
-
-    def plot_credibility_interval(
-        self,
-        initial_condition: Dict[str, float],
-        time: Array,
-        dt0: float = 0.1,
-        show: bool = False,
-        path: Optional[str] = None,
-    ):
-        """Plot credibility intervals for model simulations.
-
-        Args:
-            initial_condition: Initial conditions for simulation
-            time: Time points for simulation
-            dt0: Time step for simulation
-
-        Returns:
-            matplotlib figure
-        """
-        from catalax.mcmc.plotting import plot_credibility_interval
-
-        f = plot_credibility_interval(
-            self.mcmc, self.model, initial_condition, time, dt0
-        )
-        if path is not None:
-            f.savefig(path)
-        if show:
-            plt.show()
-            return None
-        return plt.gcf()
-
-    def plot_trace(self, show: bool = False, path: Optional[str] = None, **kwargs):
-        """Plot MCMC trace.
-
-        Args:
-            **kwargs: Additional arguments passed to arviz.plot_trace
-
-        Returns:
-            matplotlib figure
-        """
-        from catalax.mcmc.plotting import plot_trace
-
-        f = plot_trace(self.mcmc, self.model, **kwargs)
-        if path is not None:
-            f.savefig(path)
-        if show:
-            plt.show()
-
-    def plot_forest(self, show: bool = False, path: Optional[str] = None, **kwargs):
-        """Plot forest plot of parameter distributions.
-
-        Args:
-            **kwargs: Additional arguments passed to arviz.plot_forest
-
-        Returns:
-            matplotlib figure
-        """
-        from catalax.mcmc.plotting import plot_forest
-
-        f = plot_forest(self.mcmc, self.model, **kwargs)
-        if path is not None:
-            f.savefig(path)
-
-        if show:
-            plt.show()
-            return None
-
-        return plt.gcf()
-
-    def summary(self, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]:
-        """Generate summary statistics.
-
-        Args:
-            hdi_prob: Probability mass for highest density interval
-
-        Returns:
-            Summary statistics
-        """
-        from catalax.mcmc.plotting import summary
-
-        return summary(self.mcmc, hdi_prob)
 
 
 class BayesianModel:
@@ -358,6 +260,8 @@ class BayesianModel:
         yerrs: Union[float, Array],
         likelihood: Type[dist.Distribution],
         sim_func: Callable,
+        shapes: Shapes,
+        mode: Modes,
         pre_model: Optional[PreModel] = None,
         post_model: Optional[PostModel] = None,
     ):
@@ -368,6 +272,7 @@ class BayesianModel:
             yerrs: Standard deviation of observed data
             likelihood: Likelihood distribution class
             sim_func: Function to simulate model with given parameters
+            shapes: Shapes of the data, initial conditions, constants, and times
             pre_model: Optional function to transform inputs and parameters before simulation
             post_model: Optional function to transform outputs after simulation
         """
@@ -378,6 +283,8 @@ class BayesianModel:
         self.sim_func = sim_func
         self.pre_model = pre_model
         self.post_model = post_model
+        self.shapes = shapes
+        self.mode = mode
 
         # Pre-compute priors and observables
         self.priors = [
@@ -426,13 +333,15 @@ class BayesianModel:
         # Apply a pre-model which can be used to modify
         # the initial conditions, constants, times, data, and parameters
         if self.pre_model is not None:
-            y0s, constants, times, data, theta = self.pre_model(
+            y0s, constants, times, data, theta, pre_output = self.pre_model(
                 model=self.model,
                 y0s=y0s,
                 constants=constants,
                 times=times,
                 data=data,
                 theta=theta,
+                shapes=self.shapes,
+                mode=self.mode,
             )
 
         # Simulate model with sampled parameters
@@ -446,6 +355,7 @@ class BayesianModel:
                 states=states,
                 data=data,
                 times=times,
+                pre_output=pre_output,
             )
 
         # Sample noise parameter
@@ -495,52 +405,9 @@ def run_mcmc(
     return hmc.run(model, dataset, yerrs, surrogate, pre_model, post_model)
 
 
-@dataclass
-class ModelSetup:
-    """Container for model setup results."""
-
-    priors: List[Tuple[str, dist.Distribution]]
-
-
-@dataclass
-class DataPreparation:
-    """Container for prepared MCMC data."""
-
-    data: Array
-    times: Array
-    y0s: Array
-    constants: Array
-    sim_func: Callable
-
-
-def _create_bayesian_model(
-    model: "Model",
-    yerrs: Union[float, Array],
-    likelihood: Type[dist.Distribution],
-    sim_func: Callable,
-    pre_model: Optional[PreModel] = None,
-    post_model: Optional[PostModel] = None,
-) -> BayesianModel:
-    """Create the Bayesian model for MCMC simulation.
-
-    Args:
-        model: Model being fit
-        yerrs: Standard deviation of observed data
-        likelihood: Likelihood distribution class
-        sim_func: Function to simulate model with given parameters
-        pre_model: Optional function to transform inputs and parameters before simulation
-        post_model: Optional function to transform outputs after simulation
-
-    Returns:
-        BayesianModel instance for MCMC sampling
-    """
-    return BayesianModel(model, yerrs, likelihood, sim_func, pre_model, post_model)
-
-
 def _prepare_mcmc_data(
     dataset: Dataset,
     model: "Model",
-    config: MCMCConfig,
     surrogate: Optional[Surrogate],
 ) -> DataPreparation:
     """Prepare all data components needed for MCMC simulation.
@@ -556,17 +423,24 @@ def _prepare_mcmc_data(
     """
     # Extract basic dataset components
     data, times, y0s, constants = _extract_dataset_components(dataset, model)
+    shapes = Shapes(
+        y0s=y0s.shape,
+        constants=constants.shape,
+        times=times.shape,
+        data=data.shape,
+    )
 
     # Setup simulation function
     model = deepcopy(model)
     model._setup_system()
-    sim_func, data, y0s, times = _configure_simulation_function(
+    sim_func, data, y0s, times, constants = _configure_simulation_function(
         model=model,
         surrogate=surrogate,
         dataset=dataset,
         data=data,
         y0s=y0s,
         times=times,
+        constants=constants,
     )
 
     return DataPreparation(
@@ -575,32 +449,7 @@ def _prepare_mcmc_data(
         y0s=y0s,
         constants=constants,
         sim_func=sim_func,
-    )
-
-
-def _initialize_mcmc_sampler(bayes_model: Callable, config: MCMCConfig) -> MCMC:
-    """Initialize the MCMC sampler with configuration.
-
-    Args:
-        bayes_model: Bayesian model function
-        config: MCMC configuration parameters
-
-    Returns:
-        Initialized MCMC sampler
-    """
-    return MCMC(
-        NUTS(
-            bayes_model,
-            dense_mass=config.dense_mass,
-            max_tree_depth=config.max_tree_depth,
-        ),
-        num_warmup=config.num_warmup,
-        num_samples=config.num_samples,
-        progress_bar=bool(config.verbose),
-        chain_method=config.chain_method,
-        num_chains=config.num_chains,
-        jit_model_args=True,
-        thinning=config.thinning,
+        shapes=shapes,
     )
 
 
@@ -614,7 +463,7 @@ def _run_mcmc_simulation(
         data_prep: Prepared data for simulation
         config: MCMC configuration
     """
-    if config.verbose:
+    if config.verbose > 0:
         print("\n🚀 Running MCMC\n")
 
     mcmc.run(
@@ -625,7 +474,7 @@ def _run_mcmc_simulation(
         constants=data_prep.constants,
     )
 
-    if config.verbose:
+    if config.verbose > 1:
         mcmc.print_summary()
 
 
@@ -805,7 +654,8 @@ def _configure_simulation_function(
     data: Array,
     y0s: Array,
     times: Array,
-) -> Tuple[Callable, Array, Array, Array]:
+    constants: Array,
+) -> Tuple[Callable, Array, Array, Array, Array]:
     """Configure the appropriate simulation function based on model type.
 
     Args:
@@ -819,17 +669,22 @@ def _configure_simulation_function(
     Returns:
         Tuple of (simulation function, modified data, modified y0s, modified times)
     """
+
+    model = model._replace_assignments()
+
     if surrogate is not None:
         # Use surrogate model for rate prediction
         data, times, _ = dataset.to_jax_arrays(model.get_species_order())
+        constants = dataset.to_y0_matrix(species_order=model.get_constants_order())
         rate_fun = model._setup_rate_function(in_axes=None)
         y0s = data.reshape(-1, data.shape[-1])
 
         def sim_func(y0s, theta, constants, times):
             return rate_fun(times, y0s, (theta, constants))
 
-        sim_func = jax.jit(jax.vmap(sim_func, in_axes=(0, None, None, 0)))
+        sim_func = jax.jit(jax.vmap(sim_func, in_axes=(0, None, 0, 0)))
         times = times.ravel()
+        constants = jnp.repeat(constants, data.shape[1], axis=0)
         data = surrogate.predict_rates(dataset=dataset)
     else:
         # Create a new simulation function with correct axes for MCMC
@@ -852,4 +707,4 @@ def _configure_simulation_function(
         # Set up simulation with correct in_axes for MCMC
         sim_func, _ = simulation_setup._prepare_func(in_axes=(0, None, 0, 0))
 
-    return sim_func, data, y0s, times  # type: ignore
+    return sim_func, data, y0s, times, constants  # type: ignore
