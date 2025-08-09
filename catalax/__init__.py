@@ -1,5 +1,3 @@
-import os
-
 from .dataset import Dataset
 from .dataset import Measurement
 from .model import InAxes
@@ -39,8 +37,6 @@ def set_host_count(n: int = 1):
         n (int): The number of hosts to use. Defaults to 1.
     """
     import numpyro
-
-    os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={n}"
 
     numpyro.set_host_device_count(n)
 
