@@ -1,0 +1,175 @@
+{
+    "name": "model_sr",
+    "species": [
+      {
+        "name": "s0",
+        "symbol": "s0"
+      },
+      {
+        "name": "s1",
+        "symbol": "s1"
+      },
+      {
+        "name": "s2",
+        "symbol": "s2"
+      },
+      {
+        "name": "s3",
+        "symbol": "s3"
+      }
+    ],
+    "constants": [
+      {
+        "name": "p0",
+        "symbol": "p0"
+      }
+    ],
+    "odes": [
+      {
+        "equation": "-dCEX - dPG",
+        "observable": true,
+        "species": "s0"
+      },
+      {
+        "equation": "-dCEX + vcex",
+        "observable": true,
+        "species": "s1"
+      },
+      {
+        "equation": "dCEX - vcex",
+        "observable": true,
+        "species": "s2"
+      },
+      {
+        "equation": "dPG + vcex",
+        "observable": true,
+        "species": "s3"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "k_4b",
+        "symbol": "k_4b",
+        "value": 9126.0,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 3000.0,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "K_s",
+        "symbol": "K_s",
+        "value": 14.0,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 100.0,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "k2",
+        "symbol": "k2",
+        "value": 432.0,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 10000.0,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "K_p",
+        "symbol": "K_p",
+        "value": 39.0,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 50.0,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "k3",
+        "symbol": "k3",
+        "value": 417.0,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 1700.0,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "k6",
+        "symbol": "k6",
+        "value": 1660.0,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 1700.0,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "kd",
+        "symbol": "kd",
+        "value": 0.000643,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 0.02,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "k4_app",
+        "symbol": "k4_app",
+        "value": 73600.0,
+        "constant": false,
+        "prior": {
+          "low": 1e-06,
+          "high": 1700.0,
+          "type": "Uniform"
+        }
+      },
+      {
+        "name": "a3",
+        "symbol": "a3",
+        "value": 0.0001,
+        "constant": false,
+        "prior": { "type": "Uniform", "low": 1e-6, "high": 200.0 }
+      },
+      {
+        "name": "K_pg",
+        "symbol": "K_pg",
+        "value": 0.0001,
+        "constant": false,
+        "prior": { "type": "Uniform", "low": 1e-06, "high": 2.0 }
+      }
+    ],
+    "assignments": [
+      {
+        "equation": "enz*(k3 + k6*s0/K_s)*(k2*s0/K_s + k_4b*s2/K_p)/(k3 + k6*s0/K_s + k4_app*s1)",
+        "symbol": "dPG"
+      },
+      {
+        "equation": "-enz*k3*(k2*s0/K_s + k_4b*s2/K_p)/(k3 + k6*s0/K_s + k4_app*s1) + enz*k2*s0/K_s",
+        "symbol": "dCEX"
+      },
+      {
+        "equation": "0.0002 * exp(-kd*t)/enz_denom",
+        "symbol": "enz"
+      },
+      {
+        "equation": "1 + k2*s0*(1 + s0/K_s)/(K_s*(k3 + k6*s0/K_s + k4_app*s1)) + s0**2/(K_s*K_s) + s3/K_s + s2/K_p",
+        "symbol": "enz_denom"
+      },
+      {
+        "equation": "a3 * s2 / (K_pg + s2)",
+        "symbol": "vcex"
+      }
+    ]
+  }
