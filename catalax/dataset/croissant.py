@@ -176,7 +176,7 @@ def _create_file_object(measurement: Measurement) -> Tuple[mlc.FileObject, Strin
         id=f"{measurement.id}_data",
         name=measurement.name,
         description=measurement.description,
-        encoding_format="application/jsonlines",
+        encoding_formats=["application/jsonlines"],
         content_url=fname,
         md5=hash,
     )
