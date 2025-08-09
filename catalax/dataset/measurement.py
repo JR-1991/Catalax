@@ -10,6 +10,7 @@ import jax
 import jax.numpy as jnp
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 import pyenzyme as pe
@@ -22,6 +23,10 @@ from pydantic import (
 )
 from pydantic.config import ConfigDict
 from pydantic.fields import computed_field
+
+# HDI visualization constants
+HDI_95_ALPHA = 0.1
+HDI_50_ALPHA = 0.35
 
 
 class Measurement(BaseModel):
@@ -203,6 +208,15 @@ class Measurement(BaseModel):
             )
 
         self.data[species] = data
+        self.initial_conditions[species] = initial_concentration
+
+    def add_initial(self, species: str, initial_concentration: float) -> None:
+        """Add or update an initial condition for a species in the measurement.
+
+        Args:
+            species (str): The species name to add or update.
+            initial_concentration (float): The initial concentration of the species.
+        """
         self.initial_conditions[species] = initial_concentration
 
     def has_data(self) -> bool:
@@ -464,6 +478,10 @@ class Measurement(BaseModel):
         ax=None,
         model_data: Optional[Measurement] = None,
         xlim: Optional[Tuple[float, float | None]] = (0, None),
+        _lower_95: Optional[Measurement] = None,
+        _upper_95: Optional[Measurement] = None,
+        _lower_50: Optional[Measurement] = None,
+        _upper_50: Optional[Measurement] = None,
         **kwargs,
     ) -> None:
         """Plot the measurement data with optional model fit comparison.
@@ -473,6 +491,10 @@ class Measurement(BaseModel):
             ax: Matplotlib axes to plot on. If None, creates a new figure.
             model_data (Optional[Measurement]): Model prediction data to overlay on the plot.
             xlim: Optional[Tuple[float, float]]: Limits of the x-axis.
+            _lower_95: Optional[Measurement]: Lower 95% HDI data. Internally used for MCMC.
+            _upper_95: Optional[Measurement]: Upper 95% HDI data. Internally used for MCMC.
+            _lower_50: Optional[Measurement]: Lower 50% HDI data. Internally used for MCMC.
+            _upper_50: Optional[Measurement]: Upper 50% HDI data. Internally used for MCMC.
             **kwargs: Additional arguments to pass to plot functions.
         """
         is_subplot = ax is not None
@@ -488,6 +510,19 @@ class Measurement(BaseModel):
 
         if model_data:
             sim_meas = model_data.to_dict()
+
+        has_95_hdi = _lower_95 and _upper_95
+        has_50_hdi = _lower_50 and _upper_50
+
+        if has_95_hdi:
+            assert _lower_95 and _upper_95, "Lower and upper 95% HDI must be provided"
+            lower_95_meas = _lower_95.to_dict()
+            upper_95_meas = _upper_95.to_dict()
+
+        if has_50_hdi:
+            assert _lower_50 and _upper_50, "Lower and upper 50% HDI must be provided"
+            lower_50_meas = _lower_50.to_dict()
+            upper_50_meas = _upper_50.to_dict()
 
         for species in self.initial_conditions.keys():
             if self.data.get(species) is None or len(self.data[species]) == 0:
@@ -518,7 +553,30 @@ class Measurement(BaseModel):
                     **kwargs,
                 )
 
-        ax.grid(alpha=0.3, linestyle="--")
+            if has_95_hdi:
+                ax.fill_between(
+                    lower_95_meas["time"],
+                    lower_95_meas[species],
+                    upper_95_meas[species],
+                    color=color,
+                    alpha=HDI_95_ALPHA,
+                    edgecolor="none",
+                )
+
+            if has_50_hdi:
+                ax.fill_between(
+                    lower_50_meas["time"],
+                    lower_50_meas[species],
+                    upper_50_meas[species],
+                    color=color,
+                    alpha=HDI_50_ALPHA,
+                    edgecolor="none",
+                )
+
+        ax.grid(True, which="both", linestyle="--")
+        ax.grid(True, which="minor", alpha=0.3)
+        ax.minorticks_on()
+
         ax.set_xlabel("Time", fontsize=12)
         ax.set_ylabel("Concentration", fontsize=12)
         ax.set_title(init_title, fontsize=title_fontsize)
@@ -530,7 +588,18 @@ class Measurement(BaseModel):
             ymax = max(max(series) for series in self.data.values() if len(series) > 0)
             ax.set_ylim(0, ymax * 1.1)
 
-        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        # Create custom legend with HDI handles
+        handles, labels = ax.get_legend_handles_labels()
+
+        # Add HDI patches to legend if they exist
+        if has_95_hdi:
+            handles.append(Patch(facecolor="gray", alpha=HDI_95_ALPHA))
+            labels.append("95% HDI")
+        if has_50_hdi:
+            handles.append(Patch(facecolor="gray", alpha=HDI_50_ALPHA))
+            labels.append("50% HDI")
+
+        ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5))
 
         if show and not is_subplot:
             plt.show()

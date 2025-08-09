@@ -26,19 +26,19 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import mlcroissant as mlc
 import numpy as np
-import optax
 import pandas as pd
 from jax import Array
 
 import pyenzyme as pe
 from pydantic import BaseModel, Field
 
+from catalax.objectives import l1_loss
 from catalax.dataset.metrics import FitMetrics
 from catalax.predictor import Predictor
 
 if TYPE_CHECKING:
     from catalax.model.simconfig import SimulationConfig
-    from catalax.model.model import Model
+    from catalax.model.model import Model, HDIOptions
 
 from .croissant import extract_record_set, json_lines_to_dict
 from .measurement import Measurement
@@ -771,6 +771,8 @@ class Dataset(BaseModel):
         Returns:
             The matplotlib figure object
         """
+        from catalax.model import Model
+
         # Get measurement IDs if not provided
         measurement_ids = self._get_measurement_ids(measurement_ids)
 
@@ -787,6 +789,18 @@ class Dataset(BaseModel):
             else None
         )
 
+        if predictor and isinstance(predictor, Model) and predictor.has_hdi():
+            print("has hdi")
+            lower_95 = self._simulate_model_data(predictor, n_steps, "lower")
+            upper_95 = self._simulate_model_data(predictor, n_steps, "upper")
+            lower_50 = self._simulate_model_data(predictor, n_steps, "lower_50")
+            upper_50 = self._simulate_model_data(predictor, n_steps, "upper_50")
+        else:
+            lower_95 = None
+            upper_95 = None
+            lower_50 = None
+            upper_50 = None
+
         # Plot measurements
         self._plot_measurements(
             axs=axs,
@@ -794,6 +808,10 @@ class Dataset(BaseModel):
             model_data=model_data,
             kwargs=kwargs,
             xlim=xlim,
+            lower_95=lower_95,
+            upper_95=upper_95,
+            lower_50=lower_50,
+            upper_50=upper_50,
         )
 
         # Format legends
@@ -831,7 +849,13 @@ class Dataset(BaseModel):
 
         return fig, axs
 
-    def _simulate_model_data(self, model, n_steps):
+    def _simulate_model_data(
+        self,
+        model: Model,
+        n_steps: int,
+        use_hdi: Optional[HDIOptions] = None,
+        hdi_prob: float = 0.95,
+    ) -> Dataset:
         """Simulate model data for plotting."""
         # Import SimulationConfig here to avoid circular imports
         from catalax.model.simconfig import SimulationConfig
@@ -846,6 +870,8 @@ class Dataset(BaseModel):
 
         return model.simulate(
             dataset=self,
+            use_hdi=use_hdi,
+            hdi_prob=hdi_prob,
             config=SimulationConfig(
                 t0=t0,
                 t1=t1,
@@ -860,6 +886,10 @@ class Dataset(BaseModel):
         model_data: Optional[Dataset],
         kwargs: Dict[str, Any],
         xlim: Optional[Tuple[float, float | None]] = (0, None),
+        lower_95: Optional[Dataset] = None,
+        upper_95: Optional[Dataset] = None,
+        lower_50: Optional[Dataset] = None,
+        upper_50: Optional[Dataset] = None,
     ):
         """Plot each measurement on its corresponding axis."""
         index = 0
@@ -868,10 +898,18 @@ class Dataset(BaseModel):
                 continue
 
             sim_meas = model_data.measurements[i] if model_data else None
+            lower_95_meas = lower_95.measurements[i] if lower_95 else None
+            upper_95_meas = upper_95.measurements[i] if upper_95 else None
+            lower_50_meas = lower_50.measurements[i] if lower_50 else None
+            upper_50_meas = upper_50.measurements[i] if upper_50 else None
 
             meas.plot(
                 ax=axs[index],
                 model_data=sim_meas,
+                _lower_95=lower_95_meas,
+                _upper_95=upper_95_meas,
+                _lower_50=lower_50_meas,
+                _upper_50=upper_50_meas,
                 **kwargs,
                 xlim=xlim,
             )
@@ -979,7 +1017,7 @@ class Dataset(BaseModel):
     def metrics(
         self,
         predictor: Predictor,
-        objective_fun: Callable[[Array, Array], Array] = optax.l2_loss,  # type: ignore
+        objective_fun: Callable[[Array, Array], Array] = l1_loss,  # type: ignore
     ) -> FitMetrics:
         """Calculate comprehensive fit metrics for evaluating predictor performance on this dataset.
 
