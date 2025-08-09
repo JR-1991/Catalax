@@ -4,6 +4,12 @@ import json
 import os
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
+
+try:
+    from typing import Self  # Python 3.11+
+except ImportError:
+    from typing_extensions import Self
+
 import diffrax
 import equinox as eqx
 import equinox.internal as eqxi
@@ -20,10 +26,11 @@ from catalax.dataset import Dataset
 from catalax.predictor import Predictor
 from catalax.surrogate import Surrogate
 from catalax.tools.simulation import Stack
-from .mlp import MLP
+from catalax.neural.mlp import MLP
 
 if TYPE_CHECKING:
     from catalax.dataset import Dataset
+    from catalax.neural.strategy import Strategy
 
 
 class NeuralBase(eqx.Module, Predictor, Surrogate):
@@ -79,6 +86,68 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             key=key,
             use_final_bias=use_final_bias,
             out_size=out_size,
+        )
+
+    def train(
+        self,
+        dataset: Dataset,
+        strategy: Strategy,
+        optimizer=optax.adabelief,
+        print_every: int = 10,
+        weight_scale: float = 1e-8,
+        save_milestones: bool = False,
+        milestone_dir: str = "./milestones",
+        log: Optional[str] = None,
+        seed: int = 420,
+    ) -> Self:
+        """Train the model on the given dataset.
+
+        This method trains the neural ODE model using the specified training strategy and
+        hyperparameters. The training process involves optimizing the neural network parameters
+        to minimize the loss function defined in the strategy over multiple epochs and batches.
+
+        The method will:
+        - Extract training data from the provided dataset
+        - Initialize the optimizer with the specified learning rate schedule
+        - Scale model weights according to the weight_scale parameter
+        - Execute the training loop following the provided strategy
+        - Optionally save model checkpoints at specified milestones
+        - Log training progress if a log file is specified
+
+        The training uses JAX for automatic differentiation and JIT compilation to ensure
+        efficient computation. The model parameters are updated using the specified optimizer
+        (default: AdaBelief) to minimize prediction errors on the training data.
+
+        Returns the trained model with optimized parameters that can be used for making
+        predictions on new data or for further analysis.
+
+        Args:
+            dataset: Dataset containing initial conditions for training
+            strategy: Training strategy to use
+            print_every: Print progress every n steps
+            weight_scale: Weight scale for the optimizer
+            save_milestones: Save model checkpoints
+            log: Log file to save progress
+
+        Returns:
+            NeuralODE: The trained neural ODE model with updated parameters.
+                The model will have learned to approximate the dynamics from the provided
+                dataset using the specified training strategy and hyperparameters.
+        """
+
+        from catalax.neural.trainer import train_neural_ode
+
+        return train_neural_ode(
+            model=self,
+            dataset=dataset,
+            strategy=strategy,
+            optimizer=optimizer,
+            print_every=print_every,
+            weight_scale=weight_scale,
+            save_milestones=save_milestones,
+            milestone_dir=milestone_dir,
+            log=log,
+            seed=seed,
         )
 
     def predict(
@@ -187,7 +256,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         width_size: int,
         depth: int,
         seed: int = 0,
-        use_final_bias: bool = True,
+        use_final_bias: bool = False,
         final_activation: Optional[Callable] = None,
         solver=diffrax.Tsit5,
         activation=jax.nn.softplus,
@@ -261,7 +330,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         )
 
     @classmethod
-    def from_eqx(cls, path) -> "NeuralBase":
+    def from_eqx(cls, path) -> Self:
         """Loads a NeuralODE from an eqx file
 
         Args:
@@ -294,6 +363,9 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             path (str): Path to the directory to save the eqx file
             name (str): Name of the eqx file
         """
+
+        if name.endswith(".eqx"):
+            name = name.rstrip(".eqx")
 
         filename = os.path.join(path, name + ".eqx")
         with open(filename, "wb") as f:
