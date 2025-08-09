@@ -9,6 +9,12 @@ import jax
 import jax.numpy as jnp
 
 from catalax.neural.neuralbase import NeuralBase
+from catalax.neural.penalties.uode import (
+    l1_reg_alpha,
+    l1_reg_gate,
+    l2_reg_alpha,
+    l2_reg_gate,
+)
 from catalax.neural.penalties.weight import l1_regularisation, l2_regularisation
 
 from .stoich_mat import (
@@ -132,6 +138,62 @@ class Penalties:
                 fun=l1_regularisation,
                 alpha=l1_alpha,
             )
+        return penalties
+
+    @classmethod
+    def for_universal_ode(
+        cls,
+        l2_gate_alpha: Optional[float] = 1e-3,
+        l1_gate_alpha: Optional[float] = None,
+        l2_residual_alpha: Optional[float] = 1e-3,
+        l1_residual_alpha: Optional[float] = None,
+        l2_mlp_alpha: Optional[float] = 1e-3,
+        l1_mlp_alpha: Optional[float] = None,
+    ) -> Penalties:
+        """Create a collection of penalties specifically designed for UniversalODE models."""
+        penalties = cls()
+        if l2_gate_alpha is not None:
+            penalties.add_penalty(
+                name="l2_gate",
+                fun=l2_reg_gate,
+                alpha=l2_gate_alpha,
+            )
+
+        if l1_gate_alpha is not None:
+            penalties.add_penalty(
+                name="l1_gate",
+                fun=l1_reg_gate,
+                alpha=l1_gate_alpha,
+            )
+
+        if l2_residual_alpha is not None:
+            penalties.add_penalty(
+                name="l2_residual",
+                fun=l2_reg_alpha,
+                alpha=l2_residual_alpha,
+            )
+
+        if l1_residual_alpha is not None:
+            penalties.add_penalty(
+                name="l1_residual",
+                fun=l1_reg_alpha,
+                alpha=l1_residual_alpha,
+            )
+
+        if l2_mlp_alpha is not None:
+            penalties.add_penalty(
+                name="l2_mlp",
+                fun=l2_regularisation,
+                alpha=l2_mlp_alpha,
+            )
+
+        if l1_mlp_alpha is not None:
+            penalties.add_penalty(
+                name="l1_mlp",
+                fun=l1_regularisation,
+                alpha=l1_mlp_alpha,
+            )
+
         return penalties
 
     @classmethod
