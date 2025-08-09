@@ -3,11 +3,12 @@ from __future__ import annotations
 import copy
 import json
 import os
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
 
+import rich
 import arviz as az
 import pyenzyme as pe
 from dotted_dict import DottedDict
@@ -18,7 +19,7 @@ from sympy import Expr, Matrix, Symbol, symbols, sympify
 
 from catalax.dataset.dataset import Dataset
 from catalax.mcmc import priors
-from catalax.model.assignment import Assignment
+from catalax.model.assignment import Assignment, analyze_and_resolve_dependencies
 from catalax.model.base import CatalaxBase
 from catalax.model.enzymeml import from_enzymeml
 from catalax.model.simconfig import SimulationConfig
@@ -37,6 +38,8 @@ Y0_INDEX = 0
 PARAMETERS_INDEX = 1
 CONSTANTS_INDEX = 2
 TIME_INDEX = 3
+
+HDIOptions = Literal["lower", "upper", "lower_50", "upper_50"]
 
 
 class Model(CatalaxBase, Predictor, Surrogate):
@@ -90,7 +93,6 @@ class Model(CatalaxBase, Predictor, Surrogate):
         species: str,
         equation: str,  # type: ignore
         observable: bool = True,
-        species_map: Optional[Dict[str, str]] = None,
     ):
         """Adds an ODE to the model and converts the equation to a SymPy expression.
 
@@ -131,7 +133,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
             self.add_species(species)
 
         self.odes[species] = ODE(
-            equation=equation,
+            equation=equation,  # type: ignore
             species=self.species[species],
             observable=observable,
         )
@@ -292,7 +294,9 @@ class Model(CatalaxBase, Predictor, Surrogate):
 
         for symbol, name in constants_map.items():
             if not isinstance(name, str):
-                raise TypeError("Constants names must be of type str")
+                raise TypeError(
+                    f"Constants names must be of type str. Got {type(name)}"
+                )
 
             # Make sure the symbol is valid
             check_symbol(symbol)
@@ -308,6 +312,8 @@ class Model(CatalaxBase, Predictor, Surrogate):
         parameters: Optional[jax.Array] = None,
         in_axes: InAxes = InAxes.Y0,
         return_array: bool = False,
+        use_hdi: Optional[Literal["lower", "upper", "lower_50", "upper_50"]] = None,
+        hdi_prob: float = 0.95,
     ) -> Dataset:
         """
         Simulate the model with given dataset and parameters.
@@ -319,6 +325,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
             parameters: Optional array of model parameters
             in_axes: Axes specification for vectorized operations
             return_array: Whether to return raw arrays instead of Dataset
+            use_hdi: Whether to return the lower or upper bound of the HDI. Internally used for MCMC.
 
         Returns:
             Either a tuple of (time points, results) arrays or a Dataset object
@@ -328,9 +335,13 @@ class Model(CatalaxBase, Predictor, Surrogate):
             raise ValueError("Cannot specify both nsteps and saveat")
 
         # Initialize simulation data from dataset
-        y0, constants = self._initialize_simulation_data(dataset)
-        parameters = self._get_parameters(parameters)
-        saveat = self._setup_saveat(config, saveat)
+        y0, constants = self._initialize_simulation_data(dataset=dataset)
+        saveat = self._setup_saveat(config=config, saveat=saveat)
+        parameters = self._get_parameters(
+            parameters=parameters,
+            use_hdi=use_hdi,
+            hdi_prob=hdi_prob,
+        )
 
         if saveat.ndim != 1:
             inaxes: Tuple = in_axes + InAxes.TIME  # type: ignore
@@ -553,7 +564,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
 
         return stoich_mat.at[diag_indices].set(1)
 
-    def _setup_system(self, in_axes: Tuple = (0, None, None), **kwargs):
+    def _setup_system(self, in_axes: Tuple = InAxes.Y0.value, **kwargs):
         """Converts given SymPy equations into Equinox modules, used for simulation.
 
         This method will prepare the simulation function, jit it and vmap it across
@@ -563,42 +574,54 @@ class Model(CatalaxBase, Predictor, Surrogate):
             in_axes: Specifies the axes to map the simulation function across.
                      Defaults to (0, None, None).
         """
-        self._replace_assignments()
+        model = self._replace_assignments()
 
         # Retrieve ODEs based on species order
-        odes = [self.odes[species] for species in self.get_species_order()]
+        odes = [model.odes[species] for species in model.get_species_order()]
         simulation_setup = Simulation(
             odes=odes,
-            parameters=self.get_parameter_order(),
-            stoich_mat=self._get_stoich_mat(),
-            constants=self.get_constants_order(),
+            parameters=model.get_parameter_order(),
+            stoich_mat=model._get_stoich_mat(),
+            constants=model.get_constants_order(),
             **kwargs,
         )
 
         self._sim_func, self._stack = simulation_setup._prepare_func(in_axes=in_axes)
 
-    def _replace_assignments(self):
+    def _replace_assignments(self) -> "Model":
         """Replaces assignment symbols with their values"""
+        model = copy.deepcopy(self)
 
         # First replace assignements in assignments
-        for symbol, assignment in self.assignments.items():
-            for other_assignment in self.assignments.values():
-                if (
-                    str(symbol) in str(other_assignment.equation)
-                    and symbol != other_assignment.symbol
-                ):
-                    other_assignment.equation = other_assignment.equation.subs(
-                        symbol,
+        resolved_assignments = analyze_and_resolve_dependencies(self)
+
+        for symbol, equation in resolved_assignments.items():
+            model.assignments[symbol].equation = equation
+
+        # Then replace assignements in odes
+        for ode in model.odes.values():
+            for assignment in model.assignments.values():
+                # Check if the assignment is used in the ode
+                if assignment.symbol in [
+                    str(symbol) for symbol in ode.equation.free_symbols
+                ]:
+                    ode.equation = ode.equation.subs(  # type: ignore
+                        assignment.symbol,
                         assignment.equation,  # type: ignore
                     )
 
-        # Then replace assignements in odes
-        for symbol, assignment in self.assignments.items():
-            for ode in self.odes.values():
-                ode.equation = ode.equation.subs(symbol, assignment.equation)  # type: ignore
+        return model
 
-    def _get_parameters(self, parameters: Optional[jax.Array] = None) -> jax.Array:
+    def _get_parameters(
+        self,
+        parameters: Optional[jax.Array] = None,
+        use_hdi: Optional[HDIOptions] = None,
+        hdi_prob: float = 0.95,
+    ) -> jax.Array:
         """Gets all the parameters for the model"""
+
+        if parameters is not None:
+            return parameters
 
         missing_parameters = [
             param for param in self.parameters.values() if param.value is None
@@ -609,8 +632,41 @@ class Model(CatalaxBase, Predictor, Surrogate):
                 f"Missing values for parameters: {', '.join([param.name for param in missing_parameters])}"
             )
 
-        if parameters is not None:
-            return parameters
+        # Check if we should use HDI bounds instead of parameter values
+        if use_hdi in ["lower", "upper"]:
+            # Ensure all parameters have HDI information available
+            assert all(
+                param.hdi is not None
+                and param.hdi.lower is not None
+                and param.hdi.upper is not None
+                for param in self.parameters.values()
+            ), "Lower bound of HDI requested, but no HDI found for parameters"
+
+            # Return either lower or upper HDI bounds for all parameters
+            return jnp.array(
+                [
+                    self.parameters[param].hdi.lower  # type: ignore
+                    if use_hdi == "lower"
+                    else self.parameters[param].hdi.upper  # type: ignore
+                    for param in self.get_parameter_order()
+                ]
+            )
+        elif use_hdi in ["lower_50", "upper_50"]:
+            # Return either lower or upper HDI bounds for all parameters
+            return jnp.array(
+                [
+                    self.parameters[param].hdi.lower_50  # type: ignore
+                    if use_hdi == "lower_50"
+                    else self.parameters[param].hdi.upper_50  # type: ignore
+                    for param in self.get_parameter_order()
+                ]
+            )
+
+        elif use_hdi is not None:
+            # Invalid HDI option provided
+            raise ValueError(
+                "Invalid use_hdi value. Either 'lower' or 'upper' expected."
+            )
 
         return jnp.array(
             [self.parameters[param].value for param in self.get_parameter_order()]
@@ -689,7 +745,9 @@ class Model(CatalaxBase, Predictor, Surrogate):
             "Got invalid dimension for 'in_axes' - Needs to have four ints/Nones"
         )
 
-        odes = [self.odes[species] for species in self.get_species_order()]
+        model = self._replace_assignments()
+
+        odes = [model.odes[species] for species in model.get_species_order()]
         fun = Stack(
             odes=odes,
             parameters=self.get_parameter_order(),
@@ -699,7 +757,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         if in_axes is None:
             return fun
 
-        return jax.jit(jax.vmap(fun, in_axes=in_axes))
+        return jax.jit(fun)
 
     def reset(self):
         """Resets the model"""
@@ -708,12 +766,98 @@ class Model(CatalaxBase, Predictor, Surrogate):
         self._in_axes = None
 
     # ! Helper methods
+    def reparametrize(
+        self,
+        **replacements: Dict[str, Expr | str | float | int | None],
+    ) -> "Model":
+        """Reparametrizes the model by substituting symbols in all equations with new expressions or values.
+
+        This method performs symbolic substitution across all ODEs and assignments in the model.
+        It takes keyword arguments where keys are symbol names and values are the replacement
+        expressions, numbers, or None. All substitutions are applied using SymPy's substitution
+        mechanism, allowing for both numerical values and symbolic expressions.
+
+        The method handles None values by converting them to 0.0, which is useful for
+        eliminating terms from equations. This creates a new model instance with the
+        substitutions applied, leaving the original model unchanged.
+
+        Args:
+            **replacements: Keyword arguments where keys are symbol names (strings) and
+                          values are the replacement expressions, numbers, or None.
+                          None values are automatically converted to 0.0.
+
+        Returns:
+            Model: A new model instance with the substitutions applied.
+
+        Example:
+            >>> model = Model(name="example")
+            >>> model.add_species("A, B")
+            >>> model.add_ode("A", "k1 * A - k2 * A * B")
+            >>> model.add_ode("B", "k2 * A * B - k3 * B")
+            >>>
+            >>> # Fix parameter k3 to a specific value
+            >>> new_model = model.reparametrize(k3=0.5)
+            >>>
+            >>> # Replace k1 with a more complex expression
+            >>> new_model = model.reparametrize(k1="k1_max * A / (K_m + A)")
+            >>>
+            >>> # Eliminate the k2 term by setting it to zero
+            >>> new_model = model.reparametrize(k2=None)
+        """
+
+        new_model = copy.deepcopy(self)
+        replacements_ = dict()
+
+        for k, v in replacements.items():
+            if v is not None:
+                replacements_[k] = v
+            else:
+                replacements_[k] = 0.0
+
+        for equation in list(new_model.odes.values()) + list(
+            new_model.assignments.values()
+        ):
+            equation.reparametrize(**replacements_)  # type: ignore
+
+        # We need to remove parameters that are not used in the model
+        # and thus not included in the fit
+        new_model._cleanup_unused_parameters()
+
+        return new_model
+
+    def _cleanup_unused_parameters(self):
+        """Removes parameters that are not used in the model"""
+
+        all_free_symbols = set()
+        for equation in self.odes.values():
+            all_free_symbols.update(equation.equation.free_symbols)
+        for equation in self.assignments.values():
+            all_free_symbols.update(equation.equation.free_symbols)
+
+        all_free_symbols = [str(symbol) for symbol in all_free_symbols]
+
+        unused_params = [
+            name
+            for name, parameter in self.parameters.items()
+            if str(parameter.symbol) not in all_free_symbols
+        ]
+
+        for name in unused_params:
+            self.parameters.pop(name)
+
     def has_hdi(self):
         """Checks whether the model has HDI values for any of the parameters"""
 
-        return any(parameter.hdi is not None for parameter in self.parameters.values())
+        return all(
+            parameter.hdi is not None
+            and parameter.hdi.lower is not None
+            and parameter.hdi.upper is not None
+            and parameter.hdi.lower_50 is not None
+            and parameter.hdi.upper_50 is not None
+            for parameter in self.parameters.values()
+        )
 
-    def __repr__(self):
+    def __str__(self):
         """Prints a summary of the model"""
 
         print("Model summary")
@@ -841,6 +985,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         self,
         samples: Dict[str, Array],
         hdi_prob: float = 0.95,
+        set_bounds: bool = False,
     ) -> "Model":
         """Create a new model from samples drawn from the posterior distribution.
 
@@ -849,12 +994,44 @@ class Model(CatalaxBase, Predictor, Surrogate):
         """
 
         new_model = copy.deepcopy(self)
-        hdi = az.hdi(samples, hdi_prob=hdi_prob)
+        hdi = az.hdi(samples, hdi_prob=hdi_prob, skipna=True)
+        hdi_50 = az.hdi(samples, hdi_prob=0.5, skipna=True)
 
         for name, parameter in new_model.parameters.items():
-            parameter.value = samples[name].mean()  # type: ignore
-            parameter.initial_value = samples[name].mean()  # type: ignore
-            parameter.hdi = HDI(lower=hdi[name][0], upper=hdi[name][1], q=hdi_prob)
+            parameter.value = float(jnp.median(samples[name]))
+            parameter.initial_value = float(jnp.median(samples[name]))
+            parameter.hdi = HDI(
+                lower=hdi[name][0],
+                upper=hdi[name][1],
+                lower_50=hdi_50[name][0],
+                upper_50=hdi_50[name][1],
+                q=hdi_prob,
+            )
+
+            # If any of the HDI boundaries are nan, use the median value and
+            # add the opposite bound to the parameter value
+            lower_nan = jnp.isnan(parameter.hdi.lower)
+            upper_nan = jnp.isnan(parameter.hdi.upper)
+            has_nan_hdi = lower_nan and upper_nan
+
+            if has_nan_hdi:
+                rich.print(
+                    f"[bold yellow]Warning:[/bold yellow] Parameter {name} has nan HDI bounds. Using median value."
+                )
+            elif lower_nan:
+                rich.print(
+                    f"[bold yellow]Warning:[/bold yellow] Parameter {name} has nan lower bound. Mirroring from upper bound."
+                )
+                parameter.hdi.lower = parameter.value - parameter.hdi.upper
+            elif upper_nan:
+                rich.print(
+                    f"[bold yellow]Warning:[/bold yellow] Parameter {name} has nan upper bound. Mirroring from lower bound."
+                )
+                parameter.hdi.upper = parameter.value + parameter.hdi.lower
+
+            if set_bounds and not has_nan_hdi:
+                parameter.upper_bound = parameter.hdi.upper
+                parameter.lower_bound = parameter.hdi.lower
 
         return new_model
 
@@ -888,10 +1065,12 @@ class Model(CatalaxBase, Predictor, Surrogate):
         model = cls(name=model_dict.name)
 
         # Add Species
-        model.add_species(**{sp.symbol: sp.name for sp in model_dict.species})
+        model.add_species(**{str(sp.symbol): sp.name for sp in model_dict.species})
 
         if "constants" in model_dict and model_dict.constants:
-            model.add_constant(**{sp.symbol: sp.name for sp in model_dict.constants})
+            model.add_constant(
+                **{str(sp.symbol): sp.name for sp in model_dict.constants}
+            )
 
         if "assignments" in model_dict and model_dict.assignments:
             for assignment in model_dict.assignments:
@@ -903,7 +1082,8 @@ class Model(CatalaxBase, Predictor, Surrogate):
 
         # Update given parameters
         for parameter in model_dict.parameters:
-            if parameter.symbol not in model.parameters:
+            param_name = str(parameter.symbol)
+            if param_name not in model.parameters:
                 raise ValueError(
                     f"Parameter [symbol: {parameter.symbol}, name: {parameter.name}] not found in the model and thus inconsistent with the given model. Please check the JSON file you are trying to load."
                 )
@@ -911,9 +1091,9 @@ class Model(CatalaxBase, Predictor, Surrogate):
             if "prior" in parameter:
                 prior = parameter.pop("prior")
                 prior_cls = priors.__dict__[prior.pop("type")]
-                model.parameters[parameter.symbol].prior = prior_cls(**prior)
+                model.parameters[param_name].prior = prior_cls(**prior)
 
-            model.parameters[parameter.symbol].__dict__.update(parameter)
+            model.parameters[param_name].__dict__.update(parameter)
 
         return model
 
