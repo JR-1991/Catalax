@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from enum import Enum
 import os
 import random
 import tempfile
@@ -9,36 +8,36 @@ import warnings
 import zipfile
 from copy import deepcopy
 from datetime import datetime
+from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Optional,
     Tuple,
     Union,
-    Callable,
 )
 
 import jax
 import jax.numpy as jnp
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import mlcroissant as mlc
 import numpy as np
 import pandas as pd
-from jax import Array
-
 import pyenzyme as pe
+from jax import Array
+from matplotlib.figure import Figure
 from pydantic import BaseModel, Field
 
-from catalax.objectives import l1_loss
 from catalax.dataset.metrics import FitMetrics
+from catalax.objectives import l1_loss
 from catalax.predictor import Predictor
 
 if TYPE_CHECKING:
+    from catalax.model.model import HDIOptions, Model
     from catalax.model.simconfig import SimulationConfig
-    from catalax.model.model import Model, HDIOptions
 
 from .croissant import extract_record_set, json_lines_to_dict
 from .measurement import Measurement
@@ -256,6 +255,76 @@ class Dataset(BaseModel):
 
         self.add_measurement(measurement)
 
+    def pad(self) -> "Dataset":
+        """Return a copy of the dataset with uniform array lengths, padded with NaN.
+
+        This method deep-copies the dataset and ensures that each `Measurement`
+        has:
+        * A `data` entry for every species in `self.species`.
+        * All per-species arrays right-padded to the maximum length with NaN.
+        * A `time` array right-padded to the same maximum length with NaN
+            (if present). If `time` is `None`, it is left unchanged.
+
+        The maximum length is determined from the longest `time` array among
+        all measurements. Measurements with `time=None` are ignored when
+        computing this length.
+
+        Returns:
+            Dataset: A new dataset instance where all measurements have
+            homogeneously shaped 1-D lists for all species and padded `time`
+            arrays.
+
+        Raises:
+            ValueError: If any measurement's `initial_conditions` do not cover
+            all species in `self.species`.
+        """
+        ds = deepcopy(self)
+        required = set(self.species)
+
+        # Get max length from data arrays and time arrays
+        max_len = 0
+        for meas in ds.measurements:
+            # Check time length if time exists
+            if meas.time is not None:
+                max_len = max(max_len, len(meas.time))
+
+        # Validate that measurements have required initial conditions
+        for meas in ds.measurements:
+            keys = set(meas.initial_conditions.keys())
+            missing = required - keys
+            if missing:
+                raise ValueError(
+                    f"Measurement {meas.id} missing definition of initial condition for species: {sorted(missing)}"
+                )
+
+        # Pad missing measurement data with NaNs
+        for meas in ds.measurements:
+            # Pad time if needed
+            if meas.time is not None:
+                time_arr = jnp.asarray(meas.time, dtype=float)
+                if len(time_arr) < max_len:
+                    pad_len = max_len - len(time_arr)
+                    time_arr = jnp.concatenate((time_arr, jnp.full(pad_len, jnp.nan)))
+                meas.time = time_arr.tolist()
+
+            # Pad data for each species
+            for sid in self.species:
+                try:
+                    arr = jnp.asarray(meas.data[sid], dtype=float)
+                except KeyError:
+                    # Species data missing - create full NaN array
+                    arr = jnp.full(max_len, jnp.nan)
+                    meas.data[sid] = arr.tolist()
+                    continue
+
+                if arr.size < max_len:
+                    pad_len = max_len - arr.size
+                    arr = jnp.concatenate((arr, jnp.full(pad_len, jnp.nan)))
+
+                meas.data[sid] = arr.tolist()
+
+        return ds
+
     # =====================
     # Data Export Methods
     # =====================
@@ -400,8 +469,7 @@ class Dataset(BaseModel):
     def from_enzymeml(
         cls,
         enzmldoc: pe.EnzymeMLDocument,
-        from_reactions: bool = False,
-    ) -> Tuple[Dataset, Model]:
+    ) -> Dataset:
         """Create a dataset from an EnzymeML document.
 
         Args:
@@ -410,7 +478,6 @@ class Dataset(BaseModel):
         Returns:
             A new Dataset object with measurements extracted from the EnzymeML document
         """
-        from catalax.model import Model
 
         measurements = [
             Measurement.from_enzymeml(meas)
@@ -418,17 +485,18 @@ class Dataset(BaseModel):
             if any(sp.data is not None and len(sp.data) > 0 for sp in meas.species_data)
         ]
 
-        model = Model.from_enzymeml(enzmldoc, from_reactions=from_reactions)
+        small_molecules = [sp.id for sp in enzmldoc.small_molecules]
+        proteins = [sp.id for sp in enzmldoc.proteins]
+        all_species = small_molecules + proteins
 
-        all_species = model.get_species_order()
         dataset = cls(
             id=enzmldoc.name,
             name=enzmldoc.name,
-            species=list(all_species),
+            species=all_species,
             measurements=measurements,
         )
 
-        return dataset, model
+        return dataset
 
     @classmethod
     def from_dataframe(
@@ -570,7 +638,7 @@ class Dataset(BaseModel):
                 croissant_ds, lambda meas_id: "/inits" not in meas_id
             )
 
-            species = set()
+            species: set[str] = set()
             measurements = []
 
             # Process each measurement
@@ -822,6 +890,7 @@ class Dataset(BaseModel):
 
         if not show:
             return fig
+        return None
 
     def _get_measurement_ids(self, measurement_ids: List[str]) -> List[str]:
         """Get measurement IDs to plot, using all measurements with data if none provided."""
