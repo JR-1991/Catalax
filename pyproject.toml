@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "catalax"
-version = "0.4.0"
+version = "0.5.0"
 description = "A JAX-based framework for (neural) ODE modelling in biocatalysis."
 authors = ["Jan Range <jan.range@simtech.uni-stuttgart.de>"]
 license = "MIT License"
