@@ -5,7 +5,7 @@ import pytest
 
 import catalax as ctx
 
-ENZYMEML_DOC_PATH = "tests/enzymeml_docs/enzymeml_complete.json"
+ENZYMEML_DOC_PATH = "examples/datasets/enzymeml_inactivation.json"
 
 
 class TestDatasetFromEnzymeML:

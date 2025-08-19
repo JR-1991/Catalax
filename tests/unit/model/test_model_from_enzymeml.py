@@ -5,7 +5,7 @@ import catalax as ctx
 
 
 def test_model_from_enzymeml_complete_enzymeml():
-    doc = pe.read_enzymeml("tests/enzymeml_docs/enzymeml_complete.json")
+    doc = pe.read_enzymeml("examples/datasets/enzymeml_inactivation.json")
     dataset, model = ctx.from_enzymeml(doc, from_reactions=False)
 
     assert dataset is not None
