@@ -310,7 +310,7 @@ class Dataset(BaseModel):
                     if time_arr.size > 0:
                         start_val = time_arr[-1] + 1.0
                     else:
-                        start_val = 0.0  # type: ignore
+                        start_val = 0.0
                     pad_vals = jnp.arange(start_val, start_val + pad_len, 1.0)
                     time_arr = jnp.concatenate((time_arr, pad_vals))
                 meas.time = time_arr
