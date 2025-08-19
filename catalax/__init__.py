@@ -1,12 +1,10 @@
-from .dataset import Dataset
-from .dataset import Measurement
-from .model import InAxes
-from .model import Model
-from .tools.optimization import optimize
-from .model import SimulationConfig
-from .objectives import mean_absolute_error, l1_loss
-
 import arviz as az  # noqa: F401
+
+from .dataset import Dataset, Measurement
+from .model import InAxes, Model, SimulationConfig
+from .objectives import l1_loss, mean_absolute_error
+from .tools.enzymeml import dataset_and_model_from_enzymeml as from_enzymeml
+from .tools.optimization import optimize
 
 # Set plotting style
 az.style.use("arviz-doc")  # type: ignore
@@ -20,9 +18,10 @@ __all__ = [
     "optimize",
     "mean_absolute_error",
     "l1_loss",
+    "from_enzymeml",
 ]
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 PARAMETERS = InAxes.PARAMETERS
 TIME = InAxes.TIME
