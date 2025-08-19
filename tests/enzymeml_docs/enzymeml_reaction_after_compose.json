@@ -1,0 +1,402 @@
+{
+  "@context": {
+    "enzml": "http://www.enzymeml.org/v2/",
+    "schema": "https://schema.org/",
+    "OBO": "http://purl.obolibrary.org/obo/",
+    "name": "schema:title",
+    "created": "schema:dateCreated",
+    "modified": "schema:dateModified",
+    "creators": "schema:creator",
+    "references": {
+      "@id": "schema:citation",
+      "@type": "@id"
+    }
+  },
+  "@id": "enzml:EnzymeMLDocument/61db6379-943a-4ed0-a24a-57b000aea161",
+  "@type": [
+    "enzml:EnzymeMLDocument"
+  ],
+  "name": "Lactate dehydrogenase",
+  "version": "2",
+  "creators": [],
+  "vessels": [
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "name": "schema:name",
+        "volume": "OBO:OBI_0002139"
+      },
+      "@id": "enzml:Vessel/332e0dab-5760-4b63-b467-8ccc4a1e205b",
+      "@type": [
+        "enzml:Vessel",
+        "OBO:OBI_0400081"
+      ],
+      "id": "vessel",
+      "name": "vessel",
+      "volume": 1.0,
+      "unit": {
+        "id": "ml",
+        "name": "ml",
+        "base_units": [
+          {
+            "kind": "litre",
+            "exponent": 1,
+            "multiplier": 1.0,
+            "scale": -3.0
+          }
+        ]
+      },
+      "constant": true
+    }
+  ],
+  "proteins": [
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "name": "schema:name",
+        "sequence": "OBO:GSSO_007262",
+        "vessel_id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "organism": "OBO:OBI_0100026",
+        "organism_tax_id": {
+          "@type": "@id"
+        },
+        "references": {
+          "@id": "schema:citation",
+          "@type": "@id"
+        },
+        "uniprot": "https://www.uniprot.org/uniprotkb/"
+      },
+      "@id": "uniprot:P00175",
+      "@type": [
+        "enzml:Protein",
+        "OBO:PR_000000001",
+        "uniprot:P00175"
+      ],
+      "id": "l_lactate_dehydrogenase_cytochrome",
+      "name": "L-lactate dehydrogenase (cytochrome)",
+      "constant": true,
+      "sequence": "MLKYKPLLKISKNCEAAILRASKTRLNTIRAYGSTVPKSKSFEQDSRKRTQSWTALRVGAILAATSSVAYLNWHNGQIDNEPKLDMNKQKISPAEVAKHNKPDDCWVVINGYVYDLTRFLPNHPGGQDVIKFNAGKDVTAIFEPLHAPNVIDKYIAPEKKLGPLQGSMPPELVCPPYAPGETKEDIARKEQLKSLLPPLDNIINLYDFEYLASQTLTKQAWAYYSSGANDEVTHRENHNAYHRIFFKPKILVDVRKVDISTDMLGSHVDVPFYVSATALCKLGNPLEGEKDVARGCGQGVTKVPQMISTLASCSPEEIIEAAPSDKQIQWYQLYVNSDRKITDDLVKNVEKLGVKALFVTVDAPSLGQREKDMKLKFSNTKAGPKAMKKTNVEESQGASRALSKFIDPSLTWKDIEELKKKTKLPIVIKGVQRTEDVIKAAEIGVSGVVLSNHGGRQLDFSRAPIEVLAETMPILEQRNLKDKLEVFVDGGVRRGTDVLKALCLGAKGVGLGRPFLYANSCYGRNGVEKAIEILRDEIEMSMRLLGVTSIAELKPDLLDLSTLKARTVGVPNDVLYNEVYEGPTLTEFEDA",
+      "vessel_id": "vessel",
+      "ecnumber": "1.1.2.3",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "organism_tax_id": "559292",
+      "references": [
+        "https://www.uniprot.org/uniprotkb/P00175"
+      ]
+    }
+  ],
+  "complexes": [],
+  "small_molecules": [
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "name": "schema:name",
+        "vessel_id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "references": {
+          "@id": "schema:citation",
+          "@type": "@id"
+        }
+      },
+      "@id": "OBO:CHEBI_15378",
+      "@type": [
+        "enzml:SmallMolecule",
+        "OBO:CHEBI_15378"
+      ],
+      "id": "hydron",
+      "name": "hydron",
+      "constant": false,
+      "vessel_id": "vessel",
+      "canonical_smiles": "[H+]",
+      "inchi": "InChI=1S/p+1",
+      "inchikey": "GPRLSGONYQIRFK-UHFFFAOYSA-N",
+      "synonymous_names": [],
+      "references": [
+        "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15378"
+      ]
+    },
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "name": "schema:name",
+        "vessel_id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "references": {
+          "@id": "schema:citation",
+          "@type": "@id"
+        }
+      },
+      "@id": "OBO:CHEBI_29033",
+      "@type": [
+        "enzml:SmallMolecule",
+        "OBO:CHEBI_29033"
+      ],
+      "id": "iron_2",
+      "name": "iron(2+)",
+      "constant": false,
+      "vessel_id": "vessel",
+      "canonical_smiles": "[Fe++]",
+      "inchi": "InChI=1S/Fe/q+2",
+      "inchikey": "CWYNVVGOOAEACU-UHFFFAOYSA-N",
+      "synonymous_names": [],
+      "references": [
+        "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:29033"
+      ]
+    },
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "name": "schema:name",
+        "vessel_id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "references": {
+          "@id": "schema:citation",
+          "@type": "@id"
+        }
+      },
+      "@id": "OBO:CHEBI_29034",
+      "@type": [
+        "enzml:SmallMolecule",
+        "OBO:CHEBI_29034"
+      ],
+      "id": "iron_3",
+      "name": "iron(3+)",
+      "constant": false,
+      "vessel_id": "vessel",
+      "canonical_smiles": "[Fe+3]",
+      "inchi": "InChI=1S/Fe/q+3",
+      "inchikey": "VTLYFUHAOXGGBS-UHFFFAOYSA-N",
+      "synonymous_names": [],
+      "references": [
+        "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:29034"
+      ]
+    },
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "name": "schema:name",
+        "vessel_id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "references": {
+          "@id": "schema:citation",
+          "@type": "@id"
+        }
+      },
+      "@id": "OBO:CHEBI_15361",
+      "@type": [
+        "enzml:SmallMolecule",
+        "OBO:CHEBI_15361"
+      ],
+      "id": "pyruvate",
+      "name": "pyruvate",
+      "constant": false,
+      "vessel_id": "vessel",
+      "canonical_smiles": "CC(=O)C([O-])=O",
+      "inchi": "InChI=1S/C3H4O3/c1-2(4)3(5)6/h1H3,(H,5,6)/p-1",
+      "inchikey": "LCTONWCANYUPML-UHFFFAOYSA-M",
+      "synonymous_names": [],
+      "references": [
+        "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:15361"
+      ]
+    },
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "name": "schema:name",
+        "vessel_id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "references": {
+          "@id": "schema:citation",
+          "@type": "@id"
+        }
+      },
+      "@id": "OBO:CHEBI_16651",
+      "@type": [
+        "enzml:SmallMolecule",
+        "OBO:CHEBI_16651"
+      ],
+      "id": "s_lactate",
+      "name": "(S)-lactate",
+      "constant": false,
+      "vessel_id": "vessel",
+      "canonical_smiles": "C[C@H](O)C([O-])=O",
+      "inchi": "InChI=1S/C3H6O3/c1-2(4)3(5)6/h2,4H,1H3,(H,5,6)/p-1/t2-/m0/s1",
+      "inchikey": "JVTAAEKCZFNVCJ-REOHCLBHSA-M",
+      "synonymous_names": [],
+      "references": [
+        "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:16651"
+      ]
+    }
+  ],
+  "reactions": [
+    {
+      "@context": {
+        "enzml": "http://www.enzymeml.org/v2/",
+        "schema": "https://schema.org/",
+        "OBO": "http://purl.obolibrary.org/obo/",
+        "id": {
+          "@id": "schema:identifier",
+          "@type": "@id"
+        },
+        "rhea": "http://www.rhea-db.org/rhea/"
+      },
+      "@id": "rhea:19909",
+      "@type": [
+        "enzml:Reaction",
+        "rhea:19909"
+      ],
+      "id": "RHEA:19909",
+      "name": "RHEA:19909",
+      "reversible": true,
+      "reactants": [
+        {
+          "@context": {
+            "enzml": "http://www.enzymeml.org/v2/",
+            "schema": "https://schema.org/",
+            "OBO": "http://purl.obolibrary.org/obo/",
+            "species_id": {
+              "@id": "schema:identifier",
+              "@type": "@id"
+            }
+          },
+          "@id": "enzml:ReactionElement/8796564b-6e09-4a11-965f-e6d50a1a3c74",
+          "@type": [
+            "enzml:ReactionElement"
+          ],
+          "species_id": "s_lactate",
+          "stoichiometry": 1.0
+        },
+        {
+          "@context": {
+            "enzml": "http://www.enzymeml.org/v2/",
+            "schema": "https://schema.org/",
+            "OBO": "http://purl.obolibrary.org/obo/",
+            "species_id": {
+              "@id": "schema:identifier",
+              "@type": "@id"
+            }
+          },
+          "@id": "enzml:ReactionElement/df43af7b-7534-46e0-bfce-36ceb4d4c438",
+          "@type": [
+            "enzml:ReactionElement"
+          ],
+          "species_id": "iron_3",
+          "stoichiometry": 1.0
+        }
+      ],
+      "products": [
+        {
+          "@context": {
+            "enzml": "http://www.enzymeml.org/v2/",
+            "schema": "https://schema.org/",
+            "OBO": "http://purl.obolibrary.org/obo/",
+            "species_id": {
+              "@id": "schema:identifier",
+              "@type": "@id"
+            }
+          },
+          "@id": "enzml:ReactionElement/b1c14783-915b-4193-bb7c-b0f589a4cf05",
+          "@type": [
+            "enzml:ReactionElement"
+          ],
+          "species_id": "iron_2",
+          "stoichiometry": 1.0
+        },
+        {
+          "@context": {
+            "enzml": "http://www.enzymeml.org/v2/",
+            "schema": "https://schema.org/",
+            "OBO": "http://purl.obolibrary.org/obo/",
+            "species_id": {
+              "@id": "schema:identifier",
+              "@type": "@id"
+            }
+          },
+          "@id": "enzml:ReactionElement/327653fa-bc9c-4a73-afc1-d2adecd7d239",
+          "@type": [
+            "enzml:ReactionElement"
+          ],
+          "species_id": "pyruvate",
+          "stoichiometry": 1.0
+        },
+        {
+          "@context": {
+            "enzml": "http://www.enzymeml.org/v2/",
+            "schema": "https://schema.org/",
+            "OBO": "http://purl.obolibrary.org/obo/",
+            "species_id": {
+              "@id": "schema:identifier",
+              "@type": "@id"
+            }
+          },
+          "@id": "enzml:ReactionElement/feacbcfe-1b0f-416b-a637-02b8ab3e3028",
+          "@type": [
+            "enzml:ReactionElement"
+          ],
+          "species_id": "hydron",
+          "stoichiometry": 1.0
+        }
+      ],
+      "modifiers": []
+    }
+  ],
+  "measurements": [],
+  "equations": [],
+  "parameters": [],
+  "references": []
+}
