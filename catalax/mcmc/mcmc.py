@@ -435,6 +435,8 @@ def _prepare_mcmc_data(
 
     # mask for data that is not nan or inf
     mask = jnp.isfinite(data)
+    if surrogate:
+        mask = mask.reshape(-1, data.shape[-1])
 
     # Setup simulation function
     model = deepcopy(model)
