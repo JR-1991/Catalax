@@ -6,8 +6,7 @@ import os
 import zipfile
 from datetime import datetime
 from io import StringIO
-from typing import Dict, List, Optional, Tuple
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import mlcroissant as mlc
 import pandas as pd
