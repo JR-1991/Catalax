@@ -1,32 +1,32 @@
 from __future__ import annotations
-from copy import deepcopy
-from enum import Enum, auto
-import inspect
 
+import inspect
+from copy import deepcopy
+from dataclasses import dataclass
+from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
     Callable,
     List,
+    Literal,
     Optional,
     Tuple,
     Type,
     Union,
-    Literal,
 )
-from dataclasses import dataclass
 
 import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-from numpyro.infer import MCMC, NUTS
 from jax import Array
 from jax.random import PRNGKey
+from numpyro.infer import MCMC, NUTS
 
 from catalax.dataset.dataset import Dataset
+from catalax.mcmc.protocols import PostModel, PreModel, Shapes
 from catalax.mcmc.results import HMCResults
 from catalax.surrogate import Surrogate
-from catalax.mcmc.protocols import PreModel, PostModel, Shapes
 
 if TYPE_CHECKING:
     from catalax.model.model import Model
@@ -90,6 +90,7 @@ class DataPreparation:
     constants: Array
     sim_func: Callable
     shapes: Shapes
+    mask: Array
 
 
 class HMC:
@@ -308,6 +309,7 @@ class BayesianModel:
         y0s: Array,
         constants: Array,
         times: Array,
+        mask: Array,
         data: Optional[Array] = None,
     ):
         """Bayesian model for parameter posterior sampling.
@@ -362,9 +364,10 @@ class BayesianModel:
         sigma = numpyro.sample("sigma", dist.Normal(0, self.yerrs))  # type: ignore
 
         # Compare simulation to observed data
-        numpyro.sample(
-            "y", self.likelihood(states[..., self.observables], sigma), obs=data
-        )
+        with numpyro.handlers.mask(mask=mask):
+            numpyro.sample(
+                "y", self.likelihood(states[..., self.observables], sigma), obs=data
+            )
 
 
 def run_mcmc(
@@ -430,6 +433,9 @@ def _prepare_mcmc_data(
         data=data.shape,
     )
 
+    # mask for data that is not nan or inf
+    mask = jnp.isfinite(data)
+
     # Setup simulation function
     model = deepcopy(model)
     model._setup_system()
@@ -450,6 +456,7 @@ def _prepare_mcmc_data(
         constants=constants,
         sim_func=sim_func,
         shapes=shapes,
+        mask=mask,
     )
 
 
@@ -472,6 +479,7 @@ def _run_mcmc_simulation(
         y0s=data_prep.y0s,
         times=data_prep.times,
         constants=data_prep.constants,
+        mask=data_prep.mask,
     )
 
     if config.verbose > 1:
