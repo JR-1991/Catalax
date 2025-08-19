@@ -20,7 +20,7 @@ class TestDatasetFromEnzymeML:
         protein_ids = [p.id for p in doc.proteins]
         small_molecules = [s.id for s in doc.small_molecules]
 
-        all_species = protein_ids.extend(small_molecules)
+        all_species = protein_ids + small_molecules
 
         assert doc.name == ds.name
         assert set(all_species) == set(ds.species)
