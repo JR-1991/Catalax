@@ -15,9 +15,11 @@ from typing import (
     Callable,
     Dict,
     List,
+    Literal,
     Optional,
     Tuple,
     Union,
+    overload,
 )
 
 import jax
@@ -304,8 +306,14 @@ class Dataset(BaseModel):
                 time_arr = jnp.asarray(meas.time, dtype=float)
                 if len(time_arr) < max_len:
                     pad_len = max_len - len(time_arr)
-                    time_arr = jnp.concatenate((time_arr, jnp.full(pad_len, jnp.nan)))
-                meas.time = time_arr.tolist()
+                    # Continue monotonically with +1.0
+                    if time_arr.size > 0:
+                        start_val = time_arr[-1] + 1.0
+                    else:
+                        start_val = 0.0  # type: ignore
+                    pad_vals = jnp.arange(start_val, start_val + pad_len, 1.0)
+                    time_arr = jnp.concatenate((time_arr, pad_vals))
+                meas.time = time_arr
 
             # Pad data for each species
             for sid in self.species:
@@ -314,14 +322,14 @@ class Dataset(BaseModel):
                 except KeyError:
                     # Species data missing - create full NaN array
                     arr = jnp.full(max_len, jnp.nan)
-                    meas.data[sid] = arr.tolist()
+                    meas.data[sid] = arr
                     continue
 
                 if arr.size < max_len:
                     pad_len = max_len - arr.size
                     arr = jnp.concatenate((arr, jnp.full(pad_len, jnp.nan)))
 
-                meas.data[sid] = arr.tolist()
+                meas.data[sid] = arr
 
         return ds
 
@@ -382,7 +390,7 @@ class Dataset(BaseModel):
             return (
                 jnp.stack(data, axis=0),
                 jnp.stack(time, axis=0),
-                jnp.stack(initial_conditions, axis=0),
+                jnp.stack(initial_conditions, axis=0),  # type: ignore
             )
         else:
             return (
@@ -809,6 +817,34 @@ class Dataset(BaseModel):
     # Plotting Methods
     # =====================
 
+    @overload
+    def plot(
+        self,
+        ncols: int = 2,
+        show: Literal[True] = True,
+        path: Optional[str] = None,
+        measurement_ids: List[str] = [],
+        figsize: Tuple[int, int] = (5, 3),
+        predictor: Optional[Predictor] = None,
+        n_steps: int = 100,
+        xlim: Optional[Tuple[float, float | None]] = (0, None),
+        **kwargs,
+    ) -> None: ...
+
+    @overload
+    def plot(
+        self,
+        ncols: int = 2,
+        show: Literal[False] = False,
+        path: Optional[str] = None,
+        measurement_ids: List[str] = [],
+        figsize: Tuple[int, int] = (5, 3),
+        predictor: Optional[Predictor] = None,
+        n_steps: int = 100,
+        xlim: Optional[Tuple[float, float | None]] = (0, None),
+        **kwargs,
+    ) -> Figure: ...
+
     def plot(
         self,
         ncols: int = 2,
@@ -858,7 +894,6 @@ class Dataset(BaseModel):
         )
 
         if predictor and isinstance(predictor, Model) and predictor.has_hdi():
-            print("has hdi")
             lower_95 = self._simulate_model_data(predictor, n_steps, "lower")
             upper_95 = self._simulate_model_data(predictor, n_steps, "upper")
             lower_50 = self._simulate_model_data(predictor, n_steps, "lower_50")
@@ -930,7 +965,9 @@ class Dataset(BaseModel):
         from catalax.model.simconfig import SimulationConfig
 
         _, saveat, _ = self.to_jax_arrays(
-            species_order=self.species,
+            species_order=[
+                spec for spec in self.species if spec not in model.constants
+            ],
             inits_to_array=True,
         )
 
