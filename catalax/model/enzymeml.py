@@ -52,7 +52,6 @@ def from_enzymeml(
     all_species = {sp.id for sp in enzmldoc.small_molecules} | {
         sp.id for sp in enzmldoc.proteins
     }
-    print(all_species, "all species")
 
     # Identify observable and non-observable species
     observables, non_observables = _extract_species_observability(enzmldoc, all_species)
@@ -68,7 +67,7 @@ def from_enzymeml(
         _convert_from_odes(model, enzmldoc, observables, non_observables)
 
     _transfer_parameters(model, enzmldoc)
-    _cleanup_unused_species(model)
+    # _cleanup_unused_species(model)
 
     return model
 
@@ -272,7 +271,6 @@ def _convert_from_reactions(
             is_observable = species_id in observables
             model.add_ode(species_id, ode_equation, observable=is_observable)
 
-    # print aggregated species in equations
     missing_odes = species_in_equations - set(model.odes.keys())
     for species in missing_odes:
         model.add_constant(species)
