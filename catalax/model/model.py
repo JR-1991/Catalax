@@ -5,12 +5,11 @@ import json
 import os
 from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
 
+import arviz as az
 import jax
 import jax.numpy as jnp
-
-import rich
-import arviz as az
 import pyenzyme as pe
+import rich
 from dotted_dict import DottedDict
 from jax import Array
 from pydantic import ConfigDict, Field, PrivateAttr, field_validator
@@ -26,13 +25,14 @@ from catalax.model.simconfig import SimulationConfig
 from catalax.surrogate import Surrogate
 from catalax.tools import Stack
 from catalax.tools.simulation import Simulation
+
+from ..predictor import Predictor
 from .constant import Constant
 from .inaxes import InAxes
 from .ode import ODE
 from .parameter import HDI, Parameter
 from .species import Species
 from .utils import PrettyDict, check_symbol, eqprint, odeprint
-from ..predictor import Predictor
 
 Y0_INDEX = 0
 PARAMETERS_INDEX = 1

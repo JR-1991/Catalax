@@ -1,14 +1,16 @@
 import random
-from catalax.dataset.dataset import Dataset
+
+import jax.numpy as jnp
+import optax
+
+import catalax.mcmc as cmc
 import catalax.mcmc as cmm
+import catalax.neural as ctn
+from catalax.dataset.dataset import Dataset
+from catalax.mcmc.models import estimate_initials
 from catalax.mcmc.priors import Uniform
 from catalax.model.model import Model
 from catalax.model.simconfig import SimulationConfig
-import catalax.neural as ctn
-import optax
-import jax.numpy as jnp
-from catalax.mcmc.models import estimate_initials
-import catalax.mcmc as cmc
 
 
 class TestMCMC:

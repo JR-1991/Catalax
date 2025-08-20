@@ -2,8 +2,8 @@ import re
 from typing import Dict
 
 import pandas as pd
-from sympy import Derivative, Eq
 from dotted_dict import DottedDict
+from sympy import Derivative, Eq
 
 from catalax.model.base import CatalaxBase
 from catalax.model.parameter import Parameter

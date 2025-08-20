@@ -23,7 +23,7 @@ def from_enzymeml(
     all species, parameters, and equations from the original document.
 
     Args:
-        cls: The Model class to instantiate (typically catalax.model.Model)
+        cls: The Model class to instantiate (catalax.model.Model)
         enzmldoc: The EnzymeML document to convert
         name: Optional name for the model. If None, uses the document's name
         from_reactions: If True, converts from reaction networks to ODEs.
@@ -46,56 +46,82 @@ def from_enzymeml(
     """
     # Use document name if no name provided
     model_name = name if name is not None else enzmldoc.name
-    model = cls(name=model_name)  # type: ignore
+    model = cls(name=model_name)
 
-    # Identify observable and non-observable species from measurement data
-    observables, non_observables = _extract_species_observability(enzmldoc)
-    all_species = observables | non_observables
+    # get all species from document
+    all_species = {sp.id for sp in enzmldoc.small_molecules} | {
+        sp.id for sp in enzmldoc.proteins
+    }
 
-    # Add all species to the model
-    for species_id in all_species:
-        model.add_species(species_id)
+    # Identify observable and non-observable species
+    observables, non_observables = _extract_species_observability(enzmldoc, all_species)
+
+    assert all_species == observables | non_observables, (
+        "all species should be either observable or non-observable"
+    )
 
     # Convert equations based on the specified mode
     if from_reactions:
         _convert_from_reactions(model, enzmldoc, observables, non_observables)
     else:
-        _convert_from_odes(model, enzmldoc, observables)
+        _convert_from_odes(model, enzmldoc, observables, non_observables)
 
     _transfer_parameters(model, enzmldoc)
-    _cleanup_unused_species(model)
+    # _cleanup_unused_species(model)
 
     return model
 
 
 def _extract_species_observability(
     enzmldoc: pe.EnzymeMLDocument,
+    all_species: set[str],
 ) -> tuple[set[str], set[str]]:
     """
-    Extract observable and non-observable species from measurement data.
+    Determine which species in the EnzymeML document are observable based on measurement data.
 
-    Analyzes the measurement data in the EnzymeML document to determine which
-    species have observational data (observables) and which do not (non-observables).
+    This function analyzes the measurement data in the EnzymeML document to classify species
+    into observable and non-observable categories. A species is considered observable if it
+    has associated measurement data. If a species is only observable in some measurements,
+    it is marked as non-observable. If no measurement data is available, all species are
+    marked as non-observable by default.
 
     Args:
-        enzmldoc: The EnzymeML document to analyze
+        enzmldoc: The EnzymeML document to analyze.
+        all_species: A set of all species IDs present in the document.
 
     Returns:
         A tuple containing:
-        - Set of observable species IDs (have measurement data)
-        - Set of non-observable species IDs (no measurement data)
+        - Set of observable species IDs (species with measurement data)
+        - Set of non-observable species IDs (species without measurement data or all species if no measurements)
     """
     observables = set()
     non_observables = set()
 
-    for measurement in enzmldoc.measurements:
-        for species_data in measurement.species_data:
-            if species_data.data:
-                observables.add(species_data.species_id)
-            elif species_data.initial is not None:
-                non_observables.add(species_data.species_id)
-            else:
-                continue
+    # If no measurements exist, all species are non-observable by default
+    if not enzmldoc.measurements:
+        return set(), all_species
+
+    # Check each species against measurement data
+    for species_id in all_species:
+        species_has_data = False
+        species_has_no_data = False
+
+        for measurement in enzmldoc.measurements:
+            for species_data in measurement.species_data:
+                if species_data.species_id != species_id:
+                    continue
+                if species_data.data:
+                    species_has_data = True
+                else:
+                    species_has_no_data = True
+
+        # Classify based on measurement data
+        if species_has_data and not species_has_no_data:
+            # Species has data in all measurements where it appears
+            observables.add(species_id)
+        else:
+            # Species has no data or mixed data (some with data, some without)
+            non_observables.add(species_id)
 
     return observables, non_observables
 
@@ -104,6 +130,7 @@ def _convert_from_odes(
     model: Model,
     enzmldoc: pe.EnzymeMLDocument,
     observables: set[str],
+    non_observables: set[str],
 ) -> None:
     """
     Convert equations directly from ODE specifications in the EnzymeML document.
@@ -115,16 +142,41 @@ def _convert_from_odes(
         model: The Catalax model to populate
         enzmldoc: The EnzymeML document containing the equations
         observables: Set of species IDs that should be marked as observable
-    """
-    # First pass: Add any species referenced in ODEs that aren't already in the model
-    for equation in enzmldoc.equations:
-        if (
-            equation.equation_type == pe.EquationType.ODE
-            and equation.species_id not in model.species
-        ):
-            model.add_species(equation.species_id)
+        non_observables: Set of species IDs that should not be marked as observable
 
-    # Second pass: Add the actual equations
+    Raises:
+        AssertionError: If a species mentioned in any right hand side of an ODE equation
+        does not have a corresponding ODE equation.
+        ValueError: If an equation has an invalid equation type
+    """
+
+    all_species = observables | non_observables
+    rhs_species = set()
+    lhs_species = set()
+
+    # Identify species mentioned in ODEs
+    for equation in enzmldoc.equations:
+        if not equation.equation_type == pe.EquationType.ODE:
+            continue
+
+        # add LHS species as `species` to model
+        lhs_species.add(equation.species_id)
+
+        # bookkeep species are part of RHS of ODE
+        for species in all_species:
+            if species in equation.equation:
+                rhs_species.add(species)
+
+    # add LHS species as `species` to model
+    for species in lhs_species:
+        model.add_species(species)
+
+    # add RHS species without ODE as constants to model
+    for species in rhs_species:
+        if species not in lhs_species:
+            model.add_constant(species)
+
+    # Populate model with ODEs and assignments
     for equation in enzmldoc.equations:
         if equation.equation_type == pe.EquationType.ASSIGNMENT:
             model.add_assignment(equation.species_id, equation.equation)
@@ -132,6 +184,11 @@ def _convert_from_odes(
             is_observable = equation.species_id in observables
             model.add_ode(
                 equation.species_id, equation.equation, observable=is_observable
+            )
+        else:
+            raise ValueError(
+                f"Equation {equation.id} has an invalid equation type: {equation.equation_type}"
+                f"Only ODE and ASSIGNMENT equations are supported."
             )
 
 
@@ -161,12 +218,23 @@ def _convert_from_reactions(
     # Validate that all reactions have kinetic laws
     missing_kinetic_laws = []
     kinetic_laws = {}
-    species_ode_terms = {species: [] for species in observables | non_observables}
+    species_in_equations = set()
+    species_ode_terms: dict[str, list[str]] = {
+        species: [] for species in observables | non_observables
+    }
 
     for reaction_index, reaction in enumerate(enzmldoc.reactions):
         if reaction.kinetic_law is None:
             missing_kinetic_laws.append(reaction.id)
             continue
+
+        # aggregate all species mentioned in kinetic law
+        for species in observables | non_observables:
+            if (
+                species == reaction.kinetic_law.species_id
+                or species in reaction.kinetic_law.equation
+            ):
+                species_in_equations.add(species)
 
         # Create a unique identifier for this reaction rate
         rate_id = f"r{reaction_index}"
@@ -202,6 +270,10 @@ def _convert_from_reactions(
             ode_equation = " + ".join(ode_terms)
             is_observable = species_id in observables
             model.add_ode(species_id, ode_equation, observable=is_observable)
+
+    missing_odes = species_in_equations - set(model.odes.keys())
+    for species in missing_odes:
+        model.add_constant(species)
 
 
 def _transfer_parameters(model: Model, enzmldoc: pe.EnzymeMLDocument) -> None:

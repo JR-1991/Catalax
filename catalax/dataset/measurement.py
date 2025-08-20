@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from types import NoneType
 import warnings
+from types import NoneType
 from typing import Dict, List, Optional, Tuple, Union
 from uuid import uuid4
 
@@ -10,10 +10,10 @@ import jax
 import jax.numpy as jnp
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 import pyenzyme as pe
+from matplotlib.patches import Patch
 from pydantic import (
     BaseModel,
     Field,
@@ -585,7 +585,11 @@ class Measurement(BaseModel):
             ax.set_xlim(xlim[0], xlim[1])
 
         if self.data:
-            ymax = max(max(series) for series in self.data.values() if len(series) > 0)
+            ymax = max(
+                np.nanmax(series)
+                for series in self.data.values()
+                if len(series) > 0 and not np.all(np.isnan(series))
+            )
             ax.set_ylim(0, ymax * 1.1)
 
         # Create custom legend with HDI handles
