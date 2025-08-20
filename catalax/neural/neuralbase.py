@@ -456,7 +456,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         if solver is None:
             return diffrax.PIDController(1e-3, 1e-6)
 
-        if solver is not None and solver in NON_ADAPTIVE_SOLVERS:
+        if solver in NON_ADAPTIVE_SOLVERS:
             return diffrax.ConstantStepSize()
         else:
             return diffrax.PIDController(
