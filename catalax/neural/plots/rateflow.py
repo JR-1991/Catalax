@@ -79,17 +79,19 @@ def plot_learned_rates(
                 label=f"Reaction {reaction + 1}",
             )
 
+        sub_ax[1].grid(True, which="both", linestyle="--")
+        sub_ax[1].grid(True, which="minor", alpha=0.3)
+        sub_ax[1].minorticks_on()
+
         sub_ax[1].legend(fontsize="small", frameon=True, fancybox=True, shadow=True)
-        sub_ax[1].grid(alpha=0.3, linestyle="--", linewidth=0.8)
         sub_ax[1].set_xlabel("Time", fontsize=12, labelpad=10)
         sub_ax[1].set_ylabel("Rate Magnitude", fontsize=12, labelpad=10)
         sub_ax[1].spines["top"].set_visible(False)
         sub_ax[1].spines["right"].set_visible(False)
 
         # Model fit (right panel)
-        dataset.measurements[i].plot(
-            ax=sub_ax[2], linestyle="--", linewidth=2, alpha=0.7
-        )
+        dataset.measurements[i].plot(ax=sub_ax[2], model_data=pred.measurements[i])
+
         sub_ax[2].set_title(f"Dataset {i + 1}", fontsize=12, pad=15)
         sub_ax[2].legend(fontsize="small", frameon=True, fancybox=True, shadow=True)
         sub_ax[2].grid(alpha=0.2, linestyle="--", linewidth=0.8)

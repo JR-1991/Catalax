@@ -24,6 +24,7 @@ from .stoich_mat import (
     penalize_duplicate_reactions,
     penalize_non_conservative,
     penalize_non_integer,
+    penalize_null_space,
 )
 
 
@@ -207,6 +208,7 @@ class Penalties:
         integer_alpha: Optional[float] = None,
         sparsity_alpha: Optional[float] = None,
         l2_alpha: Optional[float] = None,
+        null_space_alpha: Optional[float] = None,
     ) -> Penalties:
         """Create a collection of penalties specifically designed for NeuralRDE models.
 
@@ -275,6 +277,12 @@ class Penalties:
             alpha=l2_alpha or alpha,
         )
 
+        if null_space_alpha is not None:
+            penalties.add_penalty(
+                name="null_space",
+                fun=penalize_null_space,
+                alpha=null_space_alpha,
+            )
         return penalties
 
 

@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import List, Optional, Type
 
 import jax
 import diffrax
@@ -97,14 +97,26 @@ class UniversalODE(NeuralBase):
 
         return mech_rates + self._corrective_term(t, y, args)
 
-    def __call__(self, ts, y0):
+    def __call__(
+        self,
+        ts,
+        y0,
+        solver: Optional[Type[diffrax.AbstractSolver]] = None,
+        rtol: Optional[float] = None,
+        atol: Optional[float] = None,
+        dt0: Optional[float] = None,
+    ):
+        stepsize_controller = self._create_controller(solver, rtol, atol)
+        solver_instance = self._instantiate_solver(solver)
+
         solution = diffrax.diffeqsolve(
             diffrax.ODETerm(self._combined_term),  # type: ignore
-            self.solver(),  # type: ignore
+            solver_instance,  # type: ignore
             t0=0.0,  # type: ignore
             t1=ts[-1],
-            dt0=ts[1] - ts[0],
+            dt0=dt0 or ts[1] - ts[0],
             y0=y0,
+            stepsize_controller=stepsize_controller,
             saveat=diffrax.SaveAt(ts=ts),  # type: ignore
             max_steps=64**4,
         )

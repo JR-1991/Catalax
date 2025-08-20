@@ -4,6 +4,28 @@ import jax.numpy as jnp
 from catalax.neural.rateflow import RateFlowODE
 
 
+def penalize_null_space(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array:
+    """Penalize the null space of the stoichiometric matrix.
+
+    This penalty function encourages the stoichiometric matrix to have a null space of zero.
+    """
+    assert isinstance(model, RateFlowODE), "Model must be a RateFlowODE"
+
+    stoich_matrix = _normalize_matrix(model.stoich_matrix)
+    if model.mass_constraint is not None:
+        # Check shape compatibility for matrix multiplication
+        if model.mass_constraint.shape[1] != stoich_matrix.shape[0]:
+            raise ValueError(
+                f"Incompatible shapes for matrix multiplication: "
+                f"mass_constraint.shape={model.mass_constraint.shape}, "
+                f"stoich_matrix.shape={stoich_matrix.shape}. "
+                "Expected mass_constraint.shape[1] == stoich_matrix.shape[0]."
+            )
+        return alpha * jnp.mean(model.mass_constraint @ stoich_matrix)
+    else:
+        return jnp.array(0.0)
+
+
 def penalize_density(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array:
     """Penalize dense stoichiometric matrices by encouraging sparsity.
 

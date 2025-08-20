@@ -1,10 +1,11 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Type
 
 import diffrax
 import jax
 import jax.tree_util as jtn
 import jax.random as jrandom
 from matplotlib.figure import Figure
+import equinox as eqx
 
 from catalax.dataset.dataset import Dataset
 from catalax.model.model import Model
@@ -15,9 +16,15 @@ from .plots.rateflow import plot_learned_rates
 
 
 class RateFlowODE(NeuralBase):
-    reaction_size: int
     stoich_matrix: jax.Array
-    learn_stoich: bool
+    reaction_size: int = eqx.field()
+    learn_stoich: bool = eqx.field(
+        default=True,
+        static=True,
+    )
+    mass_constraint: Optional[jax.Array] = eqx.field(
+        default=None,
+    )
 
     def __init__(
         self,
@@ -32,6 +39,7 @@ class RateFlowODE(NeuralBase):
         use_final_bias: bool = False,
         learn_stoich: bool = True,
         stoich_matrix: jax.Array | None = None,
+        mass_constraint: jax.Array | None = None,
         *,
         key,
         **kwargs,
@@ -52,6 +60,22 @@ class RateFlowODE(NeuralBase):
             learn_stoich=learn_stoich,
         )
 
+        if mass_constraint is not None:
+            assert mass_constraint.ndim == 2, (
+                "Mass constraint must be a matrix of shape (n_constraints, n_species). Given shape: "
+                f"{mass_constraint.shape}"
+            )
+
+            _, n_species = mass_constraint.shape
+            assert n_species == len(species_order), (
+                "Mass constraint must be a matrix of shape (n_constraints, n_species). Given shape: "
+                f"{mass_constraint.shape}"
+            )
+
+            self.mass_constraint = mass_constraint
+        else:
+            self.mass_constraint = None
+
         self.reaction_size = reaction_size
         self.learn_stoich = learn_stoich
 
@@ -62,17 +86,27 @@ class RateFlowODE(NeuralBase):
             self.stoich_matrix = stoich_matrix
 
     def stoich_func(self, t, y, args):
-        return self.stoich_matrix @ self.func(t, y, args)
+        return self.stoich_matrix @ jax.nn.relu(self.func(t, y, args))
 
-    def __call__(self, ts, y0):
+    def __call__(
+        self,
+        ts,
+        y0,
+        solver: Optional[Type[diffrax.AbstractSolver]] = None,
+        rtol: float = 1e-3,
+        atol: float = 1e-6,
+        dt0: Optional[float] = None,
+    ):
+        stepsize_controller = self._create_controller(solver, rtol, atol)
+        solver_instance = self._instantiate_solver(solver)
         solution = diffrax.diffeqsolve(
             diffrax.ODETerm(self.stoich_func),  # type: ignore
-            self.solver(),  # type: ignore
+            solver_instance,  # type: ignore
             t0=ts[0],  # type: ignore
             t1=ts[-1],
-            dt0=ts[1] - ts[0],
+            dt0=dt0 or ts[1] - ts[0],
             y0=y0,
-            stepsize_controller=diffrax.PIDController(rtol=1e-3, atol=1e-6),  # type: ignore
+            stepsize_controller=stepsize_controller,
             saveat=diffrax.SaveAt(ts=ts),  # type: ignore
         )
         return solution.ys
