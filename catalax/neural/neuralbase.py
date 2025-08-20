@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 import json
 import os
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type
 
 
 try:
@@ -18,6 +19,7 @@ import jax.numpy as jnp
 import jax.random as jrandom
 import jax.tree_util as jtn
 import optax
+import diffrax as dfx
 
 from catalax import Model
 from catalax.model.model import SimulationConfig
@@ -32,12 +34,17 @@ if TYPE_CHECKING:
     from catalax.dataset import Dataset
     from catalax.neural.strategy import Strategy
 
+NON_ADAPTIVE_SOLVERS = [
+    dfx.Euler,
+    dfx.Heun,
+]
+
 
 class NeuralBase(eqx.Module, Predictor, Surrogate):
     func: MLP
     observable_indices: List[int]
     hyperparams: Dict
-    solver: diffrax.AbstractSolver
+    solver: Type[diffrax.AbstractSolver]
     vector_field: Optional[Stack]
     species_order: List[str]
 
@@ -58,7 +65,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         **kwargs,
     ):
         # Save solver and observable indices
-        self.solver = solver  # type: ignore
+        self.solver = solver
         self.observable_indices = observable_indices
         self.vector_field = None
         self.species_order = species_order
@@ -87,6 +94,18 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             use_final_bias=use_final_bias,
             out_size=out_size,
         )
+
+    @abstractmethod
+    def __call__(
+        self,
+        ts,
+        y0,
+        solver: Optional[Type[diffrax.AbstractSolver]] = None,
+        rtol: Optional[float] = None,
+        atol: Optional[float] = None,
+        dt0: Optional[float] = None,
+    ) -> jax.Array:
+        raise NotImplementedError("This method is not implemented")
 
     def train(
         self,
@@ -156,6 +175,10 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         config: Optional[SimulationConfig] = None,
         n_steps: int = 100,
         use_times: bool = False,
+        solver: Optional[Type[diffrax.AbstractSolver]] = None,
+        rtol: Optional[float] = None,
+        atol: Optional[float] = None,
+        dt0: Optional[float] = None,
     ):
         """Predict model behavior using the given dataset.
 
@@ -195,7 +218,10 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         if config:
             times = jnp.linspace(config.t0, config.t1, config.nsteps).T  # type: ignore
 
-        predictions = jax.vmap(self, in_axes=(0, 0))(times, y0s)  # type: ignore
+        predictions = jax.vmap(
+            lambda ts, y0: self(ts, y0, solver=solver, rtol=rtol, atol=atol, dt0=dt0),
+            in_axes=(0, 0),
+        )(times, y0s)
 
         return Dataset.from_jax_arrays(
             species_order=self.species_order,
@@ -419,3 +445,30 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         for layer in layers:
             n_parameters += layer.size
         return n_parameters
+
+    def _create_controller(
+        self,
+        solver: Optional[Type[diffrax.AbstractSolver]] = None,
+        rtol: Optional[float] = None,
+        atol: Optional[float] = None,
+    ):
+        """Create the appropriate stepsize controller"""
+        if solver is None:
+            return diffrax.PIDController(1e-3, 1e-6)
+
+        if solver is not None and solver in NON_ADAPTIVE_SOLVERS:
+            return diffrax.ConstantStepSize()
+        else:
+            return diffrax.PIDController(
+                rtol=rtol if rtol is not None else 1e-3,
+                atol=atol if atol is not None else 1e-6,
+            )
+
+    def _instantiate_solver(
+        self,
+        solver: Optional[Type[diffrax.AbstractSolver]],
+    ) -> diffrax.AbstractSolver:
+        if solver is None:
+            return self.solver()
+        else:
+            return solver()

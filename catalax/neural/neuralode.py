@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Type
 
 import jax
 import diffrax
@@ -35,15 +35,25 @@ class NeuralODE(NeuralBase):
             final_activation=final_activation,
         )
 
-    def __call__(self, ts, y0, key: jax.Array = jax.random.PRNGKey(0)):
+    def __call__(
+        self,
+        ts,
+        y0,
+        solver: Optional[Type[diffrax.AbstractSolver]] = None,
+        rtol: Optional[float] = None,
+        atol: Optional[float] = None,
+        dt0: Optional[float] = None,
+    ):
+        stepsize_controller = self._create_controller(solver, rtol, atol)
+        solver_instance = self._instantiate_solver(solver)
         solution = diffrax.diffeqsolve(
             diffrax.ODETerm(self.func),  # type: ignore
-            self.solver(),  # type: ignore
+            solver_instance,  # type: ignore
             t0=ts[0],  # type: ignore
             t1=ts[-1],
-            dt0=ts[1] - ts[0],
+            dt0=dt0 or ts[1] - ts[0],
             y0=y0,
-            stepsize_controller=diffrax.PIDController(rtol=1e-3, atol=1e-6),  # type: ignore
+            stepsize_controller=stepsize_controller,
             saveat=diffrax.SaveAt(ts=ts),  # type: ignore
         )
         return solution.ys
