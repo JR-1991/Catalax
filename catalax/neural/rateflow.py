@@ -17,8 +17,6 @@ from .plots.rateflow import plot_learned_rates
 
 class RateFlowODE(NeuralBase):
     stoich_matrix: jax.Array
-    reaction_size: int = eqx.field(
-        default=None,
     reaction_size: int = eqx.field()
     learn_stoich: bool = eqx.field(
         default=True,
