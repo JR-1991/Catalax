@@ -56,6 +56,9 @@ class FitMetrics(BaseModel):
     bic: float = Field(
         description="Bayesian Information Criterion statistic: -2*loglikelihood + ln(N)*Nᵥₐᵣᵧₛ",
     )
+    r2: float = Field(
+        description="R² statistic: 1 - (Σ(y_true - y_pred)² / Σ(y_true - y_true.mean())²)",
+    )
 
     @staticmethod
     def _weighted_mape(y_true: Array, y_pred: Array) -> Array:
@@ -169,6 +172,17 @@ class FitMetrics(BaseModel):
         neg2_log_likel = n_points * jnp.log(chisqr / n_points)
         return neg2_log_likel + jnp.log(n_points) * n_parameters
 
+    @staticmethod
+    def _r2(y_true: Array, y_pred: Array) -> Array:
+        """Calculate R² statistic.
+
+        R² is the coefficient of determination, which measures the proportion of variance in the dependent variable that is explained by the independent variable.
+        """
+        return 1 - (
+            jnp.sum(jnp.pow(y_true - y_pred, 2))
+            / jnp.sum(jnp.pow(y_true - y_true.mean(), 2))
+        )
+
     @classmethod
     def from_predictions(
         cls,
@@ -241,6 +255,7 @@ class FitMetrics(BaseModel):
             weighted_mape=float(cls._weighted_mape(y_true, y_pred)),
             aic=float(cls._aic(chisqr, n_points, n_parameters)),
             bic=float(cls._bic(chisqr, n_points, n_parameters)),
+            r2=float(cls._r2(y_true, y_pred)),
         )
 
 
