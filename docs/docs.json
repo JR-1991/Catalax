@@ -1,0 +1,74 @@
+{
+  "appearance": {
+    "default": "system",
+    "strict": false
+  },
+  "background": {
+    "color": {
+      "dark": "#222831",
+      "light": "#F8FAFB"
+    }
+  },
+  "colors": {
+    "dark": "#f72585",
+    "light": "#4cc9f0",
+    "primary": "#016e88"
+  },
+  "logo": {
+    "light": "assets/logo-light.png",
+    "dark": "assets/logo-dark.png"
+  },
+  "description": "Biochemical modelling with JAX",
+  "name": "Catalax",
+  "navbar": {
+    "primary": {
+      "href": "https://github.com/JR-1991/Catalax",
+      "type": "github"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "icon": "book-open",
+        "pages": [
+          "welcome",
+          {
+            "group": "Basics",
+            "icon": "flask",
+            "pages": [
+              "basic/model-class",
+              "basic/simulation",
+              "basic/data-management",
+              "basic/parameter-opt"
+            ],
+            "tab": "Basics"
+          },
+          {
+            "group": "Bayesian Inference",
+            "icon": "chart-line",
+            "pages": [
+              "hmc/mcmc-basic",
+              "hmc/pre-post-models",
+              "hmc/surrogate-hmc"
+            ]
+          },
+          {
+            "group": "Neural ODEs",
+            "icon": "brain",
+            "pages": [
+              "neural/neural-ode",
+              "neural/universal-ode",
+              "neural/rateflow-ode",
+              "neural/neural-regularization"
+            ]
+          }
+        ],
+        "tab": "Documentation"
+      }
+    ]
+  },
+  "search": {
+    "prompt": "Search the docs..."
+  },
+  "theme": "mint"
+}

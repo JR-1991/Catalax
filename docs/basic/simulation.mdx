@@ -1,0 +1,277 @@
+---
+title: "Simulation"
+---
+
+Model simulation in Catalax is centered around generating synthetic datasets from biochemical models. This guide covers the essential workflow: creating models, running simulations, and analyzing results through the Dataset interface.
+
+## Core Workflow
+
+The simulation process follows a straightforward pattern:
+
+1. **Define a Model**: Create species and differential equations
+2. **Create a Dataset**: Set up initial conditions  
+3. **Configure Simulation**: Define time parameters
+4. **Run Simulation**: Generate time-series data
+5. **Analyze Results**: Plot and evaluate the data
+
+### Step 1: Creating a Biochemical Model
+
+Start by defining your biochemical system:
+
+```python
+import catalax as ctx
+
+# Create a model
+model = ctx.Model(name="Enzyme Kinetics")
+
+# Add species
+model.add_species("S")  # Substrate
+
+# Define the differential equation
+model.add_ode("S", "-v_max * S / (K_m + S)")
+
+# Set parameter values
+model.parameters["v_max"].value = 7.0
+model.parameters["K_m"].value = 100.0
+```
+
+The model automatically infers parameters (`v_max`, `K_m`) from the equation and creates `Parameter` objects that you can configure.
+
+### Step 2: Setting Up Initial Conditions
+
+Create a Dataset linked to your model and add initial conditions:
+
+```python
+# Create an empty dataset from the model
+dataset = ctx.Dataset.from_model(model)
+
+# Add single initial condition
+dataset.add_initial(S=300.0)
+
+# Add multiple initial conditions for comparison
+for concentration in [50.0, 100.0, 200.0, 400.0]:
+    dataset.add_initial(S=concentration)
+
+print(f"Dataset has {len(dataset.measurements)} initial conditions")
+```
+
+Each call to `add_initial()` creates a new `Measurement` in the dataset with the specified initial conditions.
+
+### Step 3: Configuring the Simulation
+
+Define simulation parameters using `SimulationConfig`:
+
+```python
+# Basic simulation configuration
+config = ctx.SimulationConfig(
+    t0=0,        # Start time
+    t1=100,      # End time  
+    nsteps=50    # Number of time points
+)
+```
+
+**Key parameters:**
+- `t0`, `t1`: Start and end times for simulation
+- `nsteps`: Number of time points in the output
+- `dt0`: Initial step size (default: 0.1)
+- `rtol`, `atol`: Numerical tolerances (defaults: 1e-5)
+
+### Step 4: Running the Simulation
+
+Once you have defined your model, set up initial conditions, and configured the simulation parameters, you can execute the simulation to generate time-series data. The simulation process integrates the differential equations forward in time, starting from each set of initial conditions:
+
+```python
+# Run simulation
+simulated_dataset = model.simulate(dataset, config)
+
+# The result is a new Dataset with time-series data
+print(f"Generated {len(simulated_dataset.measurements)} trajectories")
+
+# Each measurement now contains time-series data
+measurement = simulated_dataset.measurements[0]
+print(f"Time points: {len(measurement.time)}")
+print(f"Species data: {list(measurement.data.keys())}")
+```
+
+The `simulate()` method is the core function that transforms your initial conditions into complete time-series trajectories. It returns a new `Dataset` object where each `Measurement` has been populated with simulation results. Each measurement now contains three key components:
+
+- **`time`**: An array of time points from t0 to t1 with the specified number of steps
+- **`data`**: A dictionary mapping each species name to its concentration time-series
+- **`initial_conditions`**: The original initial values that were used to start this trajectory
+
+This structure means that your simulation results are immediately ready for analysis, plotting, and integration with other Catalax workflows.
+
+### Step 5: Visualization and Analysis
+
+## Basic Plotting
+
+Catalax datasets come with built-in plotting capabilities that make it easy to visualize your simulation results. The plotting system automatically handles multiple trajectories and provides clean, publication-ready figures:
+
+```python
+# Plot all trajectories
+simulated_dataset.plot(show=True)
+
+# Plot specific measurements
+simulated_dataset.plot(
+    measurement_ids=[simulated_dataset.measurements[0].id, 
+                     simulated_dataset.measurements[1].id],
+    show=True
+)
+```
+
+The `plot()` method creates a multi-panel figure where each panel shows one simulation trajectory. When you plot all trajectories at once, you can easily compare how different initial conditions lead to different system behaviors, which is particularly useful for understanding concentration-dependent effects in biochemical systems.
+
+## Model Evaluation
+
+One of the most powerful features of the Catalax plotting system is the ability to compare model predictions with experimental data by passing a `predictor` to the plot function. This enables direct visual assessment of how well your model captures the observed behavior:
+
+```python
+# Create some "experimental" data (or load real data)
+experimental_data = model.simulate(dataset, config)
+
+# Evaluate how well a fitted model predicts the data
+experimental_data.plot(predictor=model, show=True)
+```
+
+When you pass a `predictor` to the plot function, Catalax automatically generates model predictions at the same time points as your experimental data and overlays them on the same plot. This creates a comprehensive visualization that shows both the experimental observations and the model's predictions, making it immediately clear how well the model captures the system behavior. The plot displays experimental data as points or lines while model predictions appear as smooth overlaid curves, providing an intuitive visual comparison to assess model fit quality.
+
+## Quantitative Evaluation
+
+Beyond visual assessment, Catalax provides quantitative metrics to evaluate model performance numerically. The `metrics()` method calculates comprehensive fit statistics that help you assess model quality objectively:
+
+```python
+# Get comprehensive fit statistics
+metrics = experimental_data.metrics(model)
+print(f"RMSE: {metrics.rmse:.3f}")
+print(f"R²: {metrics.r2:.3f}")
+print(f"AIC: {metrics.aic:.1f}")
+```
+
+These metrics provide different perspectives on model performance: RMSE (Root Mean Square Error) quantifies the average prediction error, R² indicates the proportion of variance explained by the model, and AIC (Akaike Information Criterion) balances model fit against complexity. Together, these statistics give you a comprehensive understanding of how well your model captures the experimental data.
+
+## Practical Examples
+
+### Example 1: Parameter Study
+
+Understanding how parameter changes affect system behavior is a fundamental aspect of biochemical modeling. This example demonstrates how to systematically compare different parameter values to understand their impact on system dynamics:
+
+```python
+# Create base model
+model = ctx.Model(name="Parameter Study")
+model.add_species("S")
+model.add_ode("S", "-v_max * S / (K_m + S)")
+
+# Test different v_max values
+v_max_values = [5.0, 7.0, 10.0]
+results = []
+
+for v_max in v_max_values:
+    model.parameters["v_max"].value = v_max
+    model.parameters["K_m"].value = 100.0
+    
+    # Same initial conditions
+    dataset = ctx.Dataset.from_model(model)
+    dataset.add_initial(S=200.0)
+    
+    # Simulate
+    result = model.simulate(dataset, config)
+    results.append(result)
+
+# Plot comparison
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots()
+for i, result in enumerate(results):
+    meas = result.measurements[0]
+    ax.plot(meas.time, meas.data["S"], label=f"v_max = {v_max_values[i]}")
+ax.legend()
+ax.set_xlabel("Time")
+ax.set_ylabel("Substrate Concentration")
+plt.show()
+```
+
+### Example 2: Generating Synthetic Data
+
+Synthetic data generation is essential for developing and testing new analysis methods, validating computational approaches, and training machine learning models. This example shows how to create realistic synthetic datasets that mimic experimental conditions and include appropriate variability:
+
+```python
+import numpy as np
+
+# Set up model with realistic parameters
+model = ctx.Model(name="Synthetic Data Generator")
+model.add_species("S")
+model.add_ode("S", "-v_max * S / (K_m + S)")
+model.parameters["v_max"].value = 7.0
+model.parameters["K_m"].value = 100.0
+
+# Create dataset with varied initial conditions
+dataset = ctx.Dataset.from_model(model)
+
+# Add systematic variation in initial conditions
+for base_conc in [50.0, 100.0, 200.0, 300.0]:
+    for replicate in range(5):
+        # Add small random variation
+        noisy_conc = np.random.normal(base_conc, base_conc * 0.02)
+        dataset.add_initial(S=noisy_conc)
+
+# Simulate synthetic data
+synthetic_data = model.simulate(dataset, config)
+
+# Export for sharing
+synthetic_data.to_croissant("./data", name="enzyme_kinetics_synthetic")
+```
+
+### Example 3: Model Validation
+
+Model validation is crucial for ensuring that your computational model accurately represents the biological system you're studying. This example demonstrates how to test model accuracy by comparing predictions against known data, which is essential for building confidence in your modeling results:
+
+```python
+# Generate "true" data with known parameters
+true_model = ctx.Model(name="True System")
+true_model.add_species("S")
+true_model.add_ode("S", "-v_max * S / (K_m + S)")
+true_model.parameters["v_max"].value = 7.0
+true_model.parameters["K_m"].value = 100.0
+
+# Create test dataset
+test_dataset = ctx.Dataset.from_model(true_model)
+test_dataset.add_initial(S=200.0)
+
+# Generate "experimental" data
+experimental_data = true_model.simulate(test_dataset, config)
+
+# Create model with different parameters (to test fitting)
+fitted_model = true_model.model_copy()
+fitted_model.parameters["v_max"].value = 6.5  # Slightly wrong
+fitted_model.parameters["K_m"].value = 110.0  # Slightly wrong
+
+# Compare models visually
+experimental_data.plot(predictor=fitted_model, show=True)
+
+# Get quantitative comparison
+metrics = experimental_data.metrics(fitted_model)
+print(f"Model fit quality: RMSE = {metrics.rmse:.3f}")
+```
+
+## Working with Real Data
+
+For comprehensive information about importing data from various formats, managing datasets, and data augmentation techniques, see the [Data Management](./data-management.mdx) guide. This covers importing from EnzymeML documents, pandas DataFrames, Croissant archives, and various data processing workflows.
+
+## Model as Predictor
+
+An important feature of the Catalax design is that any `Model` can serve as a `Predictor`, which creates a unified interface for model evaluation and comparison. This means that whether you're working with mechanistic models, neural ODEs, or hybrid approaches, they all implement the same prediction interface. This allows models to be used seamlessly for plotting model curves over experimental data, calculating fit metrics for model validation, and serving as components in parameter estimation workflows.
+
+## Best Practices
+
+Following these best practices will help you develop robust and reliable simulation workflows:
+
+1. **Start simple**: Begin with single species and basic kinetics before adding complexity. This approach helps you understand the fundamental behavior of your system and makes it easier to diagnose issues when they arise.
+
+2. **Check parameters**: Always verify that parameter values are reasonable for your biological system. Parameters should fall within ranges that make sense given the physical and chemical constraints of your system.
+
+3. **Use multiple initial conditions**: Test model behavior across the full range of relevant concentration conditions. This helps you understand how your system responds under different scenarios and can reveal important features like saturation effects or threshold behaviors.
+
+4. **Visualize results**: Always plot your simulations to check for reasonable behavior. Visual inspection can quickly reveal issues like unphysical oscillations, incorrect steady states, or parameter values that lead to unrealistic dynamics.
+
+5. **Save your work**: Export datasets in Croissant format for sharing and reproducibility. This standardized format ensures that your data can be easily shared with collaborators and used in different analysis pipelines.
+
+This simulation framework provides the foundation for all advanced Catalax workflows, including parameter optimization, Bayesian inference, and neural network training. By mastering these basic simulation concepts, you'll be well-prepared to tackle more sophisticated modeling challenges.

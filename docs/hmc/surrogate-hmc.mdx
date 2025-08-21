@@ -1,0 +1,302 @@
+---
+title: "Surrogate-Accelerated HMC"
+---
+
+Surrogate-accelerated Hamiltonian Monte Carlo represents a breakthrough in computational efficiency for Bayesian parameter estimation in biochemical systems. By leveraging trained Neural ODEs to predict instantaneous reaction rates, this approach eliminates the need for costly numerical integration at each MCMC step, delivering dramatic speedups while maintaining full probabilistic rigor. This technique is particularly powerful for complex models where traditional MCMC becomes computationally prohibitive.
+
+## Understanding the Surrogate Acceleration Mechanism
+
+### Traditional MCMC Computational Bottleneck
+
+Standard MCMC for biochemical models faces a fundamental computational challenge: at each sampling step, the algorithm must numerically integrate the complete ODE system to generate model predictions for likelihood evaluation. This process involves:
+
+1. **Parameter sampling**: [NumPyro](https://numpyro.readthedocs.io/) samples new parameter values from priors
+2. **Full numerical integration**: Solve the complete ODE system from initial conditions to final time
+3. **Likelihood evaluation**: Compare integrated trajectories with experimental observations
+4. **Accept/reject decision**: Determine whether to accept the proposed parameter values
+
+For complex biochemical systems, the numerical integration step can consume 90% or more of the computational time, making large-scale inference studies impractical.
+
+### Surrogate-Based Rate Prediction
+
+The surrogate approach fundamentally changes this computational paradigm by replacing numerical integration with direct rate evaluation:
+
+**Traditional approach:**
+
+To predict species concentrations at any given time, the system must solve the differential equation by integrating the rate function from the initial time to the desired time point. This integration process is computationally expensive and must be repeated for every parameter combination tested during MCMC sampling.
+
+**Surrogate approach:**
+
+Instead of integrating to find concentrations, the surrogate method directly compares the instantaneous rates of change. The trained Neural ODE predicts what the rate should be at experimental measurement points, while the mechanistic model calculates what rate it would produce with proposed parameters. These rates are compared directly without any integration step.
+
+Instead of integrating ODEs, the surrogate method:
+
+1. **Uses pre-trained Neural ODE**: Converts experimental concentration measurements to instantaneous rate predictions
+2. **Evaluates model rates directly**: Computes the right-hand side of the mechanistic model at experimental data points
+3. **Compares rates directly**: Matches Neural ODE rate predictions with mechanistic model rates
+
+This eliminates numerical integration entirely while preserving the full mathematical structure of the inference problem.
+
+### Why neural ODEs?
+
+While alternative methods like splines and polynomial chaos expansions can also predict rates of change, Neural ODEs offer superior performance for surrogate HMC due to the [Universal Approximation Theorem](https://en.wikipedia.org/wiki/Universal_approximation_theorem) and their inherent smoothness. Neural networks can approximate any continuous function to arbitrary precision while providing continuously differentiable predictions that integrate seamlessly with gradient-based MCMC samplers, avoiding the discontinuities that can degrade performance in other approximation methods.
+
+### Mathematical Foundation
+
+The surrogate approach leverages the mathematical equivalence between trajectory fitting and rate matching. For a biochemical system:
+
+$$
+\frac{dy}{dt} = f(y, \theta, t)
+$$
+
+Traditional MCMC compares integrated solutions:
+
+$$
+\mathcal{L}(\theta) \propto \prod_{i,j} p\left(y_{obs,i,j} \mid y^{(i)}(t_j; \theta)\right)
+$$
+
+where $y^{(i)}(t_j; \theta)$ is the solution to $\frac{dy}{dt} = f(y, \theta, t)$ with initial condition $y^{(i)}_0$ evaluated at time $t_j$.
+
+Surrogate MCMC compares instantaneous rates:
+
+$$
+\mathcal{L}(\theta) \propto \prod_{i,j} p\left(\hat{f}(y_{obs,i,j}, t_j) \mid f(y_{obs,i,j}, \theta, t_j)\right)
+$$
+
+where $\hat{f}$ represents the Neural ODE rate predictions and $f$ represents the mechanistic model rates. This mathematical transformation preserves the statistical validity of the inference while dramatically reducing computational cost.
+
+## Workflow Overview
+
+### Prerequisites: Neural ODE Training
+
+Before applying surrogate HMC, you need a trained Neural ODE that can predict reaction rates from experimental measurements. This training process is covered in detail in the [Neural ODE documentation](neural-ode.mdx), but briefly involves:
+
+```python
+import catalax as ctx
+import catalax.neural as ctn
+
+# Create and train Neural ODE (see neural-ode.mdx for details)
+neural_ode = ctn.NeuralODE.from_model(model, width_size=16, depth=3)
+strategy = ctn.Strategy()
+strategy.add_step(lr=1e-3, length=1.0, steps=1000, batch_size=32)
+trained_neural_ode = neural_ode.train(dataset=training_data, strategy=strategy)
+
+# Save for later use in surrogate HMC
+trained_neural_ode.save_to_eqx("./trained/", "neural_ode_model")
+```
+
+The trained Neural ODE learns to predict $\frac{dy}{dt}$ directly from concentration measurements $(y, t)$, capturing the system's kinetic behavior without requiring knowledge of the underlying parameters.
+
+### Complete Surrogate HMC Workflow
+
+```python
+import catalax as ctx
+import catalax.mcmc as cmc
+import catalax.neural as ctn
+
+# Step 1: Load your mechanistic model with priors
+model = ctx.Model.load("./models/enzyme_model_with_priors.json")
+
+# Step 2: Load experimental dataset
+dataset = ctx.Dataset.from_croissant("./data/experimental_measurements.zip")
+
+# Step 3: Load pre-trained Neural ODE
+surrogate_model = ctn.NeuralODE.from_eqx("./trained/neural_ode_model.eqx")
+
+# Step 4: Run surrogate-accelerated MCMC
+hmc = cmc.HMC(num_warmup=1000, num_samples=2000, num_chains=4)
+results = hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1,
+    surrogate=surrogate_model  # Enable surrogate acceleration
+)
+
+# Step 5: Analyze results (identical to standard MCMC)
+fitted_model = results.get_fitted_model()
+results.plot_corner(show=True)
+dataset.plot(predictor=fitted_model, show=True)
+```
+
+## Performance Comparison and Benefits
+
+### Computational Speedup
+
+The performance gains from surrogate acceleration can be dramatic:
+
+```python
+import time
+
+# Traditional MCMC timing
+start_time = time.time()
+traditional_results = hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1
+    # No surrogate - uses numerical integration
+)
+traditional_time = time.time() - start_time
+
+# Surrogate MCMC timing  
+start_time = time.time()
+surrogate_results = hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1,
+    surrogate=trained_neural_ode  # Enable surrogate acceleration
+)
+surrogate_time = time.time() - start_time
+
+print(f"Traditional MCMC: {traditional_time:.1f} seconds")
+print(f"Surrogate MCMC: {surrogate_time:.1f} seconds") 
+print(f"Speedup: {traditional_time/surrogate_time:.1f}x faster")
+
+# Typical results:
+# Traditional MCMC: 140.2 seconds
+# Surrogate MCMC: 0.7 seconds
+# Speedup: 200.1x faster
+```
+
+### Enhanced Exploration Capabilities
+
+Beyond speed improvements, surrogate MCMC offers enhanced sampling capabilities:
+
+**Elimination of integration instabilities**: Numerical ODE solvers can fail or become unstable for certain parameter combinations, leading to sampling difficulties. Surrogate methods bypass integration entirely, eliminating these failure modes.
+
+**Improved parameter space exploration**: Without integration bottlenecks, the sampler can explore more parameter combinations per unit time, potentially discovering parameter regions that traditional methods might miss due to computational constraints.
+
+**Scalability to complex models**: Systems with many species, reactions, or stiff dynamics become tractable for large-scale inference studies.
+
+## Large-Scale Inference Studies
+
+### Million-Sample Studies
+
+Surrogate acceleration enables previously impractical inference studies:
+
+```python
+# Large-scale parameter study with surrogate acceleration
+large_scale_hmc = cmc.HMC(
+    num_warmup=10_000,
+    num_samples=1_000_000,  # One million samples
+    num_chains=10,          # Parallel chains
+    chain_method="parallel"
+)
+
+# This completes in minutes rather than weeks
+large_scale_results = large_scale_hmc.run(
+    model=complex_model,
+    dataset=comprehensive_dataset,
+    yerrs=measurement_errors,
+    surrogate=trained_neural_ode
+)
+
+# Analyze with unprecedented statistical power
+print(f"Total samples: {large_scale_results.get_samples()['k_cat'].size:,}")
+print(f"Effective sample size: {large_scale_results.ess():.0f}")
+```
+
+## Integration with Standard MCMC Features
+
+### Compatibility with PreModel and PostModel
+
+Surrogate HMC maintains full compatibility with advanced MCMC features:
+
+```python
+from catalax.mcmc.protocols import pre_model, post_model
+
+@pre_model
+def handle_uncertain_conditions(ctx):
+    """Estimate uncertain experimental conditions."""
+    uncertainty = numpyro.sample("condition_uncertainty", dist.HalfNormal(0.05))
+    true_conditions = numpyro.sample("true_conditions", dist.Normal(ctx.y0s, uncertainty))
+    ctx.y0s = jnp.maximum(true_conditions, 1e-6)
+
+@post_model  
+def observable_transformation(ctx):
+    """Transform rates to match experimental observables."""
+    total_flux = numpyro.deterministic("total_flux", jnp.sum(ctx.states, axis=1))
+    ctx.states = total_flux[:, None]
+
+# Use with surrogate acceleration
+results = hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1,
+    surrogate=trained_neural_ode,
+    pre_model=handle_uncertain_conditions,
+    post_model=observable_transformation
+)
+```
+
+### Multi-Chain Parallel Sampling
+
+Surrogate methods particularly benefit from parallel chain execution:
+
+```python
+# Parallel chain execution with surrogate acceleration
+parallel_hmc = cmc.HMC(
+    num_warmup=5000,
+    num_samples=100_000,
+    num_chains=8,               # Multiple parallel chains
+    chain_method="parallel"     # Enable parallel execution
+)
+
+# Each chain runs independently with shared surrogate model
+parallel_results = parallel_hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1,
+    surrogate=trained_neural_ode
+)
+
+# Convergence diagnostics across all chains
+print(f"R-hat values: {parallel_results.rhat()}")
+print(f"ESS across chains: {parallel_results.ess()}")
+```
+
+## Best Practices and Considerations
+
+### Neural ODE Quality Requirements
+
+The accuracy of surrogate HMC depends critically on Neural ODE training quality:
+
+```python
+# Assess Neural ODE quality before surrogate MCMC
+validation_metrics = neural_ode_dataset.metrics(trained_neural_ode)
+print(f"Neural ODE R²: {validation_metrics.r2:.4f}")
+print(f"Neural ODE Chisqr: {validation_metrics.chisqr:.6f}")
+
+# Ensure high-quality rate predictions
+if validation_metrics.r2 < 0.95:
+    print("Warning: Neural ODE quality may be insufficient for accurate surrogate MCMC")
+    print("Consider additional training or architecture modifications")
+```
+
+## Limitations and Trade-offs
+
+### Approximation Accuracy
+
+Surrogate methods introduce approximation that must be carefully managed:
+
+- **Neural ODE fidelity**: The surrogate can only be as accurate as the underlying Neural ODE training
+- **Parameter space coverage**: Inference quality depends on Neural ODE training covering the relevant parameter space
+- **Model complexity**: Very simple models may not benefit significantly from surrogate acceleration
+
+### Training Overhead
+
+The surrogate approach requires upfront Neural ODE training:
+
+- **Training time investment**: Initial Neural ODE training requires computational time and data
+- **Model-specific training**: Each biochemical system requires its own trained Neural ODE
+- **Retraining requirements**: Significant model changes may necessitate Neural ODE retraining
+
+### Applicability Assessment
+
+Consider surrogate methods when:
+
+1. **Model integration is expensive**: Complex biochemical systems with many species or reactions
+2. **Large inference studies planned**: Parameter studies requiring many MCMC samples
+3. **Multiple experimental conditions**: Datasets spanning diverse experimental conditions
+4. **Parameter space exploration critical**: Applications where thorough parameter space coverage is essential
+
+This surrogate-accelerated MCMC framework transforms computationally intensive Bayesian inference into a practical tool for large-scale biochemical modeling studies. By leveraging the power of Neural ODEs to eliminate integration bottlenecks, researchers can conduct previously impossible inference studies while maintaining full statistical rigor and uncertainty quantification.

@@ -1,0 +1,239 @@
+---
+title: "Regularization"
+---
+
+The penalty system in Catalax provides sophisticated regularization mechanisms for enforcing biological constraints and improving neural ODE training. Rather than relying solely on data fitting, penalties enable the incorporation of biochemical knowledge, conservation laws, and structural principles into the learning process. This approach ensures that discovered models remain biologically plausible while achieving excellent predictive performance.
+
+## Understanding the Penalty Framework
+
+### The Role of Penalties in Biochemical Modeling
+
+Neural networks excel at pattern recognition but can learn solutions that violate fundamental biochemical principles. The penalty framework addresses this challenge by adding constraint terms to the training objective:
+
+$$
+\mathcal{L}_{total} = \mathcal{L}_{data} + \sum_{i} \alpha_i \cdot P_i(\text{model})
+$$
+
+where:
+- $\mathcal{L}_{data}$ is the standard data fitting loss
+- $P_i$ are individual penalty functions
+- $\alpha_i$ are penalty strength coefficients
+
+This mathematical structure enables the integration of domain knowledge with data-driven learning.
+
+### Penalty Architecture and Design
+
+The penalty system is designed around two core components:
+
+**Individual Penalty Functions**: Each penalty targets a specific biological or mathematical constraint (mass conservation, sparsity, smoothness)
+
+**Penalty Collections**: The `Penalties` class manages multiple penalty functions, enabling complex constraint combinations and adaptive penalty scheduling
+
+```python
+from catalax.neural.penalties import Penalties, Penalty
+
+# Create individual penalty
+mass_penalty = Penalty(
+    name="mass_conservation",
+    fun=penalize_non_conservative,
+    alpha=0.1
+)
+
+# Create penalty collection
+penalties = Penalties([mass_penalty])
+
+# Apply to model during training
+penalty_value = penalties(neural_model)
+```
+
+## Neural ODE Penalties
+
+### Standard Regularization
+
+Basic L1 and L2 regularization for neural network weights:
+
+```python
+# L2 regularization for smooth weight distributions
+penalties = Penalties.for_neural_ode(
+    l2_alpha=1e-3,    # Standard L2 regularization strength
+    l1_alpha=1e-4     # Optional L1 sparsity regularization
+)
+
+# Apply during Neural ODE training
+strategy = ctn.Strategy()
+strategy.add_step(
+    lr=1e-3,
+    steps=1000,
+    penalties=penalties
+)
+
+trained_neural_ode = neural_ode.train(dataset=data, strategy=strategy)
+```
+
+**Mathematical formulation**:
+- L2 penalty: $P_{L2} = \alpha \sum_{w} w^2$
+- L1 penalty: $P_{L1} = \alpha \sum_{w} |w|$
+
+These penalties prevent overfitting and encourage smooth, generalizable solutions.
+
+## RateFlowODE Biological Constraints
+
+### Stoichiometric Matrix Penalties
+
+RateFlowODE training benefits from specialized penalties that enforce biochemical realism in learned stoichiometric matrices:
+
+```python
+# Comprehensive RateFlowODE penalty system
+penalties = Penalties.for_rateflow(
+    alpha=0.1,                     # Base penalty strength
+    density_alpha=0.05,            # Encourage sparse reactions
+    bipolar_alpha=0.1,             # Enforce mass balance principles
+    integer_alpha=0.02,            # Encourage integer stoichiometry
+    conservation_alpha=0.2,        # Strong conservation enforcement
+    duplicate_reactions_alpha=0.1, # Prevent redundant reactions
+    sparsity_alpha=0.05,          # L1 sparsity on stoichiometry
+    l2_alpha=0.01                 # Neural network regularization
+)
+```
+
+## UniversalODE Penalties
+
+### Component-Specific Regularization
+
+UniversalODE models require penalties for multiple components: the neural correction term, the gating mechanism, and the base neural network:
+
+```python
+# UniversalODE penalty configuration
+penalties = Penalties.for_universal_ode(
+    l2_gate_alpha=1e-3,        # Gate function regularization
+    l1_gate_alpha=1e-4,        # Gate sparsity
+    l2_residual_alpha=1e-3,    # Residual term smoothness
+    l1_residual_alpha=None,    # Optional residual sparsity
+    l2_mlp_alpha=1e-3,         # Base MLP regularization
+    l1_mlp_alpha=1e-4          # MLP sparsity
+)
+```
+
+## Advanced Penalty Strategies
+
+### Adaptive Penalty Scheduling
+
+Dynamically adjust penalty strengths during training for optimal convergence:
+
+```python
+# Multi-phase training with penalty progression
+strategy = ctn.Strategy()
+
+# Phase 1: Weak constraints, focus on data fitting
+strategy.add_step(
+    lr=1e-3,
+    steps=500,
+    penalties=penalties.update_alpha(0.01)  # Weak penalties
+)
+
+# Phase 2: Moderate constraints, balance fitting and structure
+strategy.add_step(
+    lr=5e-4,
+    steps=1000,
+    penalties=penalties.update_alpha(0.1)   # Standard penalties
+)
+
+# Phase 3: Strong constraints, enforce biochemical realism
+strategy.add_step(
+    lr=1e-4,
+    steps=500,
+    penalties=penalties.update_alpha(0.5)   # Strong penalties
+)
+```
+
+### Selective Penalty Updates
+
+Fine-tune individual penalty components during training:
+
+```python
+# Update specific penalties while maintaining others
+updated_penalties = penalties.update_alpha(
+    alpha=None,  # Don't change default penalties
+    integer_alpha=0.2,      # Strengthen integer constraint
+    conservation_alpha=0.1, # Moderate conservation
+    l2_alpha=0.005         # Reduce network regularization
+)
+```
+
+### Custom Penalty Functions
+
+Create specialized penalties for specific biochemical constraints:
+
+```python
+def penalize_catalytic_cycles(model, alpha=0.1):
+    """Custom penalty to prevent futile cycles in reaction networks."""
+    stoich = model.stoich_matrix
+    
+    # Detect potential cycles (simplified example)
+    # A proper implementation would use graph theory
+    cycle_penalty = jnp.sum(jnp.abs(jnp.diag(stoich @ stoich.T)))
+    
+    return alpha * cycle_penalty
+
+# Add custom penalty to collection
+penalties.add_penalty(
+    name="catalytic_cycles",
+    fun=penalize_catalytic_cycles,
+    alpha=0.15
+)
+```
+
+## Practical Implementation Guidelines
+
+### Penalty Strength Selection
+
+Choose appropriate penalty strengths for different training phases:
+
+```python
+# Guidelines for penalty strength selection
+def select_penalty_strengths(data_size, model_complexity):
+    """Select appropriate penalty strengths based on problem characteristics."""
+    
+    base_alpha = 0.1 / jnp.log(data_size)  # Scale with data size
+    
+    penalties_config = {
+        "l2_alpha": base_alpha * 0.1,           # Light regularization
+        "density_alpha": base_alpha,            # Moderate sparsity
+        "bipolar_alpha": base_alpha * 2,        # Strong mass balance
+        "integer_alpha": base_alpha * 0.5,      # Moderate integer constraint
+        "conservation_alpha": base_alpha * 5    # Very strong conservation
+    }
+    
+    return penalties_config
+
+# Apply adaptive strength selection
+config = select_penalty_strengths(data_size=1000, model_complexity="medium")
+adaptive_penalties = Penalties.for_rateflow(**config)
+```
+
+### Monitoring Penalty Contributions
+
+Track individual penalty contributions during training:
+
+```python
+def monitor_penalties(model, penalties):
+    """Monitor individual penalty contributions for training diagnostics."""
+    
+    penalty_values = {}
+    total_penalty = 0
+    
+    for penalty in penalties.penalties:
+        value = penalty(model)
+        penalty_values[penalty.name] = float(value)
+        total_penalty += value
+    
+    penalty_values["total"] = float(total_penalty)
+    return penalty_values
+
+# Use during training monitoring
+if step % 100 == 0:  # Every 100 steps
+    penalty_breakdown = monitor_penalties(current_model, penalties)
+    print("Penalty contributions:")
+    for name, value in penalty_breakdown.items():
+        print(f"  {name}: {value:.6f}")
+```

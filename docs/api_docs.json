@@ -1,0 +1,99 @@
+{
+    "icon": "square-terminal",
+    "pages": [
+      "api/catalax-objectives",
+      "api/catalax-predictor",
+      "api/catalax-surrogate",
+      "api/catalax-widget",
+      {
+        "group": "catalax.dataset",
+        "pages": [
+          "api/catalax-dataset-__init__",
+          "api/catalax-dataset-croissant",
+          "api/catalax-dataset-dataset",
+          "api/catalax-dataset-measurement",
+          "api/catalax-dataset-metrics"
+        ]
+      },
+      {
+        "group": "catalax.mcmc",
+        "pages": [
+          "api/catalax-mcmc-__init__",
+          "api/catalax-mcmc-mcmc",
+          {
+            "group": "models",
+            "pages": [
+              "api/catalax-mcmc-models-__init__",
+              "api/catalax-mcmc-models-init_estimator"
+            ]
+          },
+          "api/catalax-mcmc-plotting",
+          "api/catalax-mcmc-priors",
+          "api/catalax-mcmc-protocols",
+          "api/catalax-mcmc-results"
+        ]
+      },
+      {
+        "group": "catalax.model",
+        "pages": [
+          "api/catalax-model-__init__",
+          "api/catalax-model-assignment",
+          "api/catalax-model-base",
+          "api/catalax-model-constant",
+          "api/catalax-model-enzymeml",
+          "api/catalax-model-equation",
+          "api/catalax-model-inaxes",
+          "api/catalax-model-model",
+          "api/catalax-model-ode",
+          "api/catalax-model-parameter",
+          "api/catalax-model-simconfig",
+          "api/catalax-model-species",
+          "api/catalax-model-utils"
+        ]
+      },
+      {
+        "group": "catalax.neural",
+        "pages": [
+          "api/catalax-neural-__init__",
+          "api/catalax-neural-mlp",
+          "api/catalax-neural-neuralbase",
+          "api/catalax-neural-neuralode",
+          {
+            "group": "penalties",
+            "pages": [
+              "api/catalax-neural-penalties-__init__",
+              "api/catalax-neural-penalties-penalties",
+              "api/catalax-neural-penalties-stoich_mat",
+              "api/catalax-neural-penalties-uode",
+              "api/catalax-neural-penalties-weight"
+            ]
+          },
+          {
+            "group": "plots",
+            "pages": [
+              "api/catalax-neural-plots-__init__",
+              "api/catalax-neural-plots-phaseplot",
+              "api/catalax-neural-plots-rateflow"
+            ]
+          },
+          "api/catalax-neural-rateflow",
+          "api/catalax-neural-rbf",
+          "api/catalax-neural-strategy",
+          "api/catalax-neural-trainer",
+          "api/catalax-neural-universalode",
+          "api/catalax-neural-utils"
+        ]
+      },
+      {
+        "group": "catalax.tools",
+        "pages": [
+          "api/catalax-tools-__init__",
+          "api/catalax-tools-enzymeml",
+          "api/catalax-tools-optimization",
+          "api/catalax-tools-simulation",
+          "api/catalax-tools-symbolicmodule"
+        ]
+      }
+    ],
+    "tab": "API reference"
+  }

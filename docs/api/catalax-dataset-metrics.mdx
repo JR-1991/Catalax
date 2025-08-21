@@ -1,0 +1,66 @@
+---
+title: metrics
+sidebarTitle: metrics
+---
+
+# `catalax.dataset.metrics`
+
+## Functions
+
+### `l1_loss` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/metrics.py#L262" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+l1_loss(y_true: Array, y_pred: Array) -> Array
+```
+
+## Classes
+
+### `FitMetrics` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/metrics.py#L9" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Statistical metrics for evaluating predictor performance on experimental datasets.
+
+This class provides a standardized way to compute and store model evaluation metrics
+following the lmfit convention. The metrics help assess both model fit quality and
+complexity, enabling model comparison and selection.
+
+The class supports custom objective functions for computing chi-square, defaulting to
+L2 loss but allowing any objective function that takes (y_true, y_pred) and returns
+loss values. For normalized objectives (like mean loss), the metrics automatically
+scale appropriately to maintain statistical interpretation.
+
+The class computes:
+- Chi-square: Objective function applied to residuals
+- Reduced chi-square: Chi-square normalized by degrees of freedom
+- AIC (Akaike Information Criterion): Balances model fit and complexity
+- BIC (Bayesian Information Criterion): Similar to AIC but with stronger penalty for complexity
+
+
+**Methods:**
+
+#### `from_predictions` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/metrics.py#L187" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_predictions(cls, y_true: Array, y_pred: Array, n_parameters: int, objective_fun: Callable[[Array, Array], Any] = lambda y_true, y_pred: jnp.abs(y_true - y_pred)) -> FitMetrics
+```
+
+Create FitMetrics from predicted and observed values.
+
+This factory method computes all statistical metrics from the provided
+predicted and observed values along with model characteristics, following
+the lmfit convention for statistical analysis.
+
+**Args:**
+- `y_true`: True/observed values as a JAX array
+- `y_pred`: Predicted values as a JAX array, must have the same shape as y_true
+- `n_parameters`: The number of variable parameters in the model being evaluated
+- `objective_fun`: Function to compute the objective/loss. Defaults to optax.l2_loss.
+         For normalized objectives (like mean loss), the result will be
+         scaled appropriately for chi-square calculation.
+
+**Returns:**
+- A FitMetrics instance with computed chi-square, reduced chi-square, AIC, and BIC values
+
+**Raises:**
+- `ValueError`: If y_true and y_pred have different shapes
+

@@ -1,0 +1,54 @@
+---
+title: assignment
+sidebarTitle: assignment
+---
+
+# `catalax.model.assignment`
+
+## Functions
+
+### `analyze_and_resolve_dependencies` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/assignment.py#L21" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+analyze_and_resolve_dependencies(model: Model) -> Dict[str, Expr]
+```
+
+
+Analyze dependencies between assignments and resolve them by substitution.
+
+This is the main function that orchestrates the complete dependency analysis
+and resolution workflow. It handles both catalax models and custom assignment
+dictionaries, providing a comprehensive solution for symbolic substitution.
+
+The function performs the following steps:
+1. Extract assignments from input (catalax model or dictionary)
+2. Analyze dependencies using dual detection methods
+3. Build hierarchical dependency tree
+4. Determine correct evaluation order
+5. Perform symbol substitutions
+6. Display results if verbose mode enabled
+
+**Args:**
+- `model_or_assignments`: Either a catalax Model object with an 'assignments'
+                 attribute, or a dictionary mapping symbol names to
+                 sympy expressions
+- `verbose`: Whether to print detailed analysis information including tree
+    structure, evaluation order, and substitution steps
+
+**Returns:**
+- Dict[str, Any]: Comprehensive results dictionary containing:
+- 'original_assignments': Dict[str, sp.Expr] - Original symbol mappings
+- 'resolved_assignments': Dict[str, sp.Expr] - Fully expanded expressions
+- 'dependency_tree': Node - Root of the bigtree dependency structure
+- 'evaluation_order': List[str] - Symbols in correct evaluation order
+- 'assignment_dependencies': Dict[str, Set[str]] - Assignment-only dependencies
+- 'all_dependencies': Dict[str, Set[str]] - All dependencies (including external)
+
+**Raises:**
+- `ValueError`: If input contains circular dependencies (though not explicitly checked)
+- `SympifyError`: If string-based substitution produces invalid sympy expressions
+
+
+## Classes
+
+### `Assignment` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/assignment.py#L17" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>

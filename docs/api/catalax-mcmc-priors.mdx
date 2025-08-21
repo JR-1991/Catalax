@@ -1,0 +1,60 @@
+---
+title: priors
+sidebarTitle: priors
+---
+
+# `catalax.mcmc.priors`
+
+## Classes
+
+### `Prior` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/priors.py#L6" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Base class for all prior distributions used in Bayesian inference.
+
+This class defines the interface for all prior distributions and provides
+common functionality for serialization and representation.
+
+
+**Methods:**
+
+#### `type` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/priors.py#L17" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+type(self) -> str
+```
+
+Return the name of the prior distribution class.
+
+
+### `Normal` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/priors.py#L22" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Normal (Gaussian) prior distribution.
+
+Represents a normal distribution with mean μ and standard deviation σ.
+
+
+### `TruncatedNormal` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/priors.py#L46" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Truncated Normal prior distribution.
+
+Represents a normal distribution truncated to a specific range.
+
+
+### `Uniform` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/priors.py#L76" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Uniform prior distribution.
+
+Represents a uniform distribution between low and high values.
+
+
+### `LogUniform` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/priors.py#L100" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Log-Uniform prior distribution.
+
+Represents a distribution that is uniform in log space.
+

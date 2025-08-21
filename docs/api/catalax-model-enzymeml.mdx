@@ -1,0 +1,37 @@
+---
+title: enzymeml
+sidebarTitle: enzymeml
+---
+
+# `catalax.model.enzymeml`
+
+## Functions
+
+### `from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/enzymeml.py#L12" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_enzymeml(cls: Type[Model], enzmldoc: pe.EnzymeMLDocument, name: str | None = None, from_reactions: bool = False) -> Model
+```
+
+
+Convert a PyEnzyme EnzymeMLDocument to a Catalax Model.
+
+This function creates a Catalax model from an EnzymeML document, supporting both
+direct ODE conversion and reaction-based conversion. The resulting model includes
+all species, parameters, and equations from the original document.
+
+**Args:**
+- `cls`: The Model class to instantiate (catalax.model.Model)
+- `enzmldoc`: The EnzymeML document to convert
+- `name`: Optional name for the model. If None, uses the document's name
+- `from_reactions`: If True, converts from reaction networks to ODEs.
+           If False, uses ODEs directly from the document.
+
+**Returns:**
+- A Catalax Model instance containing all species, parameters, and equations
+- from the EnzymeML document.
+
+**Raises:**
+- `ValueError`: If reactions are missing kinetic laws when from_reactions=True
+- `AssertionError`: If a parameter from the document is not found in the model
+

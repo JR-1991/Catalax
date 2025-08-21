@@ -1,0 +1,70 @@
+---
+title: widget
+sidebarTitle: widget
+---
+
+# `catalax.widget`
+
+## Functions
+
+### `create_interactive_prediction_widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L411" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+create_interactive_prediction_widget(model: Model, predictor: Predictor, t0: float = 0.0, t1: float = 100.0, ref_measurement: Optional[Measurement] = None) -> widgets.Widget
+```
+
+
+Create an interactive widget for exploring Neural ODE predictions with adjustable initial conditions.
+
+This function creates a comprehensive interactive interface that allows users to:
+- Adjust initial conditions for each species in the model
+- Modify the end time for predictions
+- View real-time updates of the prediction plot
+
+**Args:**
+- `model`: The model containing species information and structure
+- `predictor`: The predictor object for generating predictions (e.g., trained Neural ODE)
+- `t0`: Start time for predictions (default\: 0.0)
+- `t1`: End time for predictions (default\: 100.0)
+- `ref_measurement`: Reference measurement containing initial conditions to use as defaults.
+            If None, uses default values of 10.0 for all species
+- `plot_style`: Dictionary of matplotlib styling options. Merged with defaults\:
+       - figsize\: (12, 6)
+       - linewidth\: 2.5
+       - alpha\: 0.8
+       - grid\: True
+       - grid_alpha\: 0.3
+
+**Returns:**
+- Interactive widget with text inputs and plot output. The widget automatically
+- displays upon creation and updates plots in real-time as inputs change.
+
+**Raises:**
+- `ValueError`: If the model or predictor are invalid
+- `RuntimeError`: If widget creation fails
+
+
+## Classes
+
+### `PredictionWidget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L67" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A class to encapsulate the interactive prediction widget functionality.
+
+This class separates concerns and makes the widget more maintainable
+by organizing related functionality into methods.
+
+
+**Methods:**
+
+#### `create_widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L379" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+create_widget(self) -> widgets.Widget
+```
+
+Create and return the complete interactive widget.
+
+**Returns:**
+- Complete interactive widget ready for display
+

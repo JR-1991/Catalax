@@ -1,0 +1,330 @@
+---
+title: "Hamiltonian Monte Carlo"
+---
+
+Bayesian parameter estimation represents a powerful approach to quantifying uncertainty in biochemical modeling. Rather than providing single point estimates, Bayesian methods give you complete probability distributions over parameter values, enabling robust uncertainty quantification and rigorous model comparison. Catalax implements this through Hamiltonian Monte Carlo (HMC) sampling, providing researchers with state-of-the-art tools for parameter inference and uncertainty analysis.
+
+## Understanding Bayesian Inference in Biochemical Modeling
+
+### The Bayesian Framework
+
+Bayesian inference fundamentally changes how we think about parameters in biochemical models. Instead of treating parameters as fixed, unknown values to be estimated, Bayesian methods treat them as random variables with probability distributions. This approach acknowledges that experimental data contains noise and that our knowledge about parameters is inherently uncertain.
+
+The Bayesian framework combines three key components:
+
+1. **Prior knowledge**: What we believe about parameter values before seeing the data, encoded as probability distributions
+2. **Likelihood**: How well different parameter values explain the observed experimental data  
+3. **Posterior distribution**: The updated beliefs about parameters after combining prior knowledge with experimental evidence
+
+This mathematical framework follows Bayes' theorem: Posterior ∝ Likelihood × Prior, which provides a principled way to update our beliefs about biochemical parameters as new experimental evidence becomes available.
+
+### Why Bayesian Methods Matter for Biochemical Research
+
+Traditional parameter estimation methods provide point estimates that can be misleading when parameters are poorly constrained by the data. Bayesian methods address this limitation by providing complete uncertainty information through posterior distributions. This enables researchers to:
+
+- **Quantify parameter uncertainty**: Understand which parameters are well-constrained and which remain uncertain given the available data
+- **Compare competing models**: Use model evidence to determine which biochemical mechanisms best explain the observed behavior
+- **Design optimal experiments**: Identify which experimental conditions would most effectively reduce parameter uncertainty
+- **Make robust predictions**: Account for parameter uncertainty when making predictions about system behavior under new conditions
+
+### Hamiltonian Monte Carlo: Efficient Sampling
+
+Hamiltonian Monte Carlo (HMC) is a sophisticated sampling algorithm that efficiently explores complex parameter spaces by leveraging gradient information. Unlike traditional Monte Carlo methods that propose random moves, HMC uses the gradient of the log-posterior to guide sampling towards regions of high probability.
+
+The key advantages of HMC for biochemical modeling include:
+
+- **Efficient exploration**: HMC can quickly traverse large parameter spaces and escape local regions of low probability
+- **Reduced correlation**: Samples are less correlated than those from traditional methods, requiring fewer samples for accurate estimates
+- **Gradient-based**: Leverages automatic differentiation to compute gradients efficiently, making it suitable for complex biochemical models
+- **No-U-Turn Sampler (NUTS)**: Automatically adapts step sizes and trajectory lengths for optimal performance
+
+## Complete MCMC Workflow
+
+### Step 1: Model Setup and Prior Definition
+
+The first step in Bayesian inference is defining prior distributions that encode your knowledge about parameter values before seeing experimental data. This requires careful consideration of the biochemical constraints and literature knowledge about your system:
+
+```python
+import catalax as ctx
+import catalax.mcmc as cmc
+
+# Create your biochemical model
+model = ctx.Model(name="Enzyme Kinetics Study")
+model.add_species("S")  # Substrate
+model.add_ode("S", "-(v_max * S) / (K_m + S)")
+
+# Set initial parameter values (these will be overridden by MCMC)
+model.parameters["v_max"].value = 7.0
+model.parameters["K_m"].value = 100.0
+```
+
+**Understanding Prior Distributions**
+
+Priors encode what you know about parameters before analyzing the current dataset. Catalax provides several prior distributions commonly used in biochemical modeling:
+
+```python
+# Uniform prior: When you know plausible bounds but have no preference within that range
+model.parameters["v_max"].prior = cmc.priors.Uniform(low=1e-6, high=200.0)
+model.parameters["K_m"].prior = cmc.priors.Uniform(low=1e-6, high=1000.0)
+
+# Normal prior: When you have a best guess with known uncertainty
+model.parameters["v_max"].prior = cmc.priors.Normal(mu=7.0, sigma=2.0)
+
+# Log-normal prior: For parameters that must be positive and may span orders of magnitude
+model.parameters["K_m"].prior = cmc.priors.LogUniform(low=1.0, high=1000.0)
+
+# Truncated normal: Normal distribution constrained to a specific range
+model.parameters["v_max"].prior = cmc.priors.TruncatedNormal(
+    mu=7.0, sigma=2.0, low=0.1, high=50.0
+)
+```
+
+**Choosing Appropriate Priors**
+
+Prior selection requires balancing biological knowledge with mathematical considerations:
+
+- **Use uniform priors** when you know plausible parameter ranges but have no strong preference for specific values within those ranges
+- **Use normal priors** when you have reliable literature estimates with quantified uncertainty
+- **Use log-uniform priors** for parameters like rate constants that can vary over many orders of magnitude
+- **Ensure priors are wide enough** to not artificially constrain the posterior, but narrow enough to improve sampling efficiency
+
+### Step 2: Experimental Data Preparation
+
+Prepare your experimental dataset for Bayesian analysis. The quality and quantity of experimental data directly impacts the precision of your parameter estimates:
+
+```python
+# Load experimental data
+dataset = ctx.Dataset.from_croissant("experimental_data.zip")
+
+# Add realistic experimental noise to understand its impact
+dataset = dataset.augment(
+    n_augmentations=1,      # Create one noisy version
+    sigma=0.05,             # 5% measurement noise
+    multiplicative=True,    # Noise proportional to signal
+    append=False           # Replace original with noisy version
+)
+
+# Visualize the data you'll be fitting
+dataset.plot(
+    measurement_ids=[m.id for m in dataset.measurements[:4]],
+    show=True
+)
+```
+
+**Data Quality Considerations**
+
+The quality of your Bayesian inference depends heavily on experimental data characteristics:
+
+- **Temporal coverage**: Ensure measurements span the full time range of system dynamics
+- **Concentration range**: Include measurements across different initial conditions to constrain parameters effectively
+- **Measurement uncertainty**: Realistic error estimates are crucial for proper uncertainty quantification
+- **Replication**: Multiple measurements under identical conditions help distinguish signal from noise
+
+### Step 3: MCMC Configuration and Execution
+
+Configure the HMC sampler with appropriate settings for your system complexity and desired precision:
+
+```python
+# Configure HMC sampler
+hmc = cmc.HMC(
+    num_warmup=1000,        # Warmup samples to tune sampler
+    num_samples=2000,       # Posterior samples to collect
+    num_chains=4,           # Multiple chains for convergence assessment
+    chain_method="parallel", # Run chains in parallel for efficiency
+    verbose=1               # Show progress during sampling
+)
+
+# Run MCMC inference
+results = hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1              # Measurement error standard deviation
+)
+```
+
+**Understanding MCMC Configuration Parameters**
+
+Each configuration parameter affects the quality and efficiency of your inference:
+
+- **`num_warmup`**: Adaptation period where the sampler learns optimal step sizes and mass matrix. Should be at least 500-1000 for complex models
+- **`num_samples`**: Number of posterior samples to collect. More samples provide better approximation of the posterior distribution
+- **`num_chains`**: Multiple independent chains enable convergence diagnostics. Use at least 2 chains, preferably 4 for robust assessment
+- **`yerrs`**: Measurement error standard deviation. This should reflect the actual uncertainty in your experimental measurements
+
+**Advanced Configuration Options**
+
+For challenging models or specific research needs, additional configuration options are available:
+
+```python
+# Advanced HMC configuration
+import numpyro.distributions as dist
+
+hmc = cmc.HMC(
+    num_warmup=2000,
+    num_samples=4000,
+    num_chains=4,
+    chain_method="parallel",
+    likelihood=dist.SoftLaplace,  # Robust to outliers
+    max_tree_depth=12,           # Allow longer trajectories
+    dense_mass=True,             # Full mass matrix adaptation
+    thinning=2,                  # Keep every 2nd sample
+    verbose=1
+)
+```
+
+### Step 4: Results Analysis and Diagnostics
+
+After MCMC sampling completes, thoroughly analyze the results to ensure the inference was successful and interpret the parameter estimates:
+
+```python
+# Print comprehensive summary statistics
+results.print_summary()
+
+# Get the fitted model with posterior estimates
+fitted_model = results.get_fitted_model(hdi_prob=0.95)
+
+# Access raw posterior samples for custom analysis
+samples = results.get_samples()
+print("Posterior samples shape:", {name: arr.shape for name, arr in samples.items()})
+```
+
+**Interpreting Summary Statistics**
+
+The summary provides essential diagnostic information:
+
+- **Mean and std**: Central tendency and spread of posterior distributions
+- **HDI (Highest Density Interval)**: Credible intervals containing specified probability mass
+- **ESS (Effective Sample Size)**: Number of independent samples; should be greater than 400 per chain
+- **R-hat**: Convergence diagnostic; should be less than 1.01 for well-converged chains
+
+**Key Diagnostic Checks**
+
+Always verify that your MCMC inference was successful:
+
+1. **Convergence**: R-hat values should be very close to 1.0 (typically less than 1.01)
+2. **Effective sample size**: Should be substantial (greater than 400 per chain) for reliable estimates
+3. **Chain mixing**: Trace plots should show good mixing without obvious trends
+4. **Parameter correlations**: Check if parameters are strongly correlated, which might indicate identifiability issues
+
+### Step 5: Visualization and Interpretation
+
+Catalax provides comprehensive visualization tools to understand your posterior distributions and assess model fit:
+
+```python
+# Plot effective sample size diagnostics
+results.plot_ess(show=True)
+
+# Create corner plot showing all parameter correlations
+results.plot_corner(show=True)
+
+# Plot trace plots to assess convergence
+results.plot_trace(show=True)
+
+# Visualize posterior distributions
+results.plot_posterior(show=True)
+```
+
+**Understanding Visualization Output**
+
+Each plot provides different insights into your inference results:
+
+- **ESS plots**: Show sampling efficiency for each parameter; all bars should be reasonably high
+- **Corner plots**: Display marginal distributions and parameter correlations; look for non-pathological shapes
+- **Trace plots**: Show parameter evolution during sampling; should look like "fuzzy caterpillars" without trends
+- **Posterior plots**: Show final parameter distributions; compare with your prior beliefs
+
+### Step 6: Model Validation and Uncertainty Visualization
+
+The most powerful feature of Bayesian inference is the ability to visualize model predictions with uncertainty bands directly on your experimental data:
+
+```python
+# Plot experimental data with model predictions and uncertainty
+dataset.plot(
+    predictor=fitted_model,
+    measurement_ids=[m.id for m in dataset.measurements[:4]],
+    show=True
+)
+
+# The fitted model automatically includes HDI uncertainty bands
+print("Model includes uncertainty bands:", fitted_model.has_hdi())
+```
+
+**Understanding Uncertainty Visualization**
+
+When you plot with a fitted model that contains HDI information, Catalax automatically displays:
+
+- **Central prediction**: Model prediction using posterior mean parameters
+- **50% credible interval**: Dark shaded region containing 50% of posterior probability
+- **95% credible interval**: Light shaded region containing 95% of posterior probability
+- **Experimental data**: Your actual measurements for comparison
+
+This visualization immediately shows which aspects of system behavior are well-constrained by the data and which remain uncertain, providing crucial insights for experimental design and model interpretation.
+
+## Best Practices for Bayesian Inference
+
+### Prior Selection Guidelines
+
+Effective Bayesian inference requires thoughtful prior specification:
+
+1. **Use literature knowledge**: When reliable estimates exist, use informative priors centered on literature values with appropriate uncertainty
+2. **Be conservative with precision**: Avoid overly narrow priors that could bias results; err on the side of being too wide rather than too narrow
+3. **Consider parameter scales**: Use log-uniform priors for parameters that naturally vary over orders of magnitude
+4. **Validate prior sensitivity**: Run inference with different reasonable priors to ensure conclusions are robust
+
+### Computational Efficiency Tips
+
+Optimize your MCMC sampling for better performance:
+
+1. **Start with smaller samples**: Begin with fewer samples to identify and resolve convergence issues quickly
+2. **Use multiple chains**: Always run multiple chains to assess convergence and identify potential issues
+3. **Monitor diagnostics**: Pay attention to effective sample size and R-hat values throughout sampling
+4. **Parallelize when possible**: Use parallel chain execution to leverage multiple CPU cores
+
+### Validation and Quality Control
+
+Ensure reliable inference through systematic validation:
+
+1. **Check convergence diagnostics**: Verify that R-hat is less than 1.01 and effective sample size is adequate
+2. **Examine trace plots**: Look for proper mixing and absence of trends or sticking
+3. **Validate against simulated data**: Test your inference pipeline on data with known parameters
+4. **Compare with independent methods**: Cross-validate results using traditional optimization approaches
+
+### Interpretation and Communication
+
+Effectively communicate Bayesian results:
+
+1. **Report credible intervals**: Use HDI intervals rather than point estimates when possible
+2. **Show uncertainty visualization**: Include uncertainty bands in all model prediction plots
+3. **Discuss parameter correlations**: Acknowledge when parameters are difficult to estimate independently
+4. **Quantify model comparison**: Use information criteria or Bayes factors for model selection
+
+## Troubleshooting Common Issues
+
+### Poor Convergence
+
+If chains fail to converge (R-hat greater than 1.01):
+
+1. **Increase warmup samples**: Allow more time for adaptation
+2. **Check for identification issues**: Examine parameter correlations
+3. **Simplify the model**: Reduce the number of parameters if possible
+4. **Improve data quality**: Ensure experimental data adequately constrains parameters
+
+### Low Effective Sample Size
+
+If ESS is too low (less than 400 per chain):
+
+1. **Increase total samples**: Collect more posterior samples
+2. **Adjust step size**: Let the sampler adapt longer during warmup
+3. **Check for multimodality**: Look for multiple peaks in posterior distributions
+4. **Consider reparameterization**: Transform parameters to improve sampling geometry
+
+### Unrealistic Parameter Estimates
+
+If posterior estimates seem implausible:
+
+1. **Review prior specifications**: Ensure priors allow reasonable parameter ranges
+2. **Check data quality**: Verify experimental measurements are accurate
+3. **Examine model structure**: Confirm the model appropriately represents the system
+4. **Consider alternative mechanisms**: Test different biochemical hypotheses
+
+This comprehensive Bayesian inference framework in Catalax provides researchers with powerful tools for parameter estimation and uncertainty quantification. By following these workflows and best practices, you can leverage the full power of modern Bayesian methods to gain deeper insights into biochemical systems while rigorously quantifying the uncertainty in your conclusions.

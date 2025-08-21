@@ -1,0 +1,100 @@
+---
+title: rateflow
+sidebarTitle: rateflow
+---
+
+# `catalax.neural.rateflow`
+
+## Classes
+
+### `RateFlowODE` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/rateflow.py#L18" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+**Methods:**
+
+#### `stoich_func` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/rateflow.py#L88" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+stoich_func(self, t, y, args)
+```
+
+#### `rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/rateflow.py#L114" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+rates(self, t: jax.Array, y: jax.Array, constants: Optional[jax.Array] = None) -> jax.Array
+```
+
+Get the rates of the model.
+
+This basically evaluates the MLP at the given time points and states, which
+is useful for quiver plots and MCMC surrogates.
+
+**Args:**
+- `t`: Time points
+- `y`: States
+- `constants`: Constants, if any
+
+**Returns:**
+- Rates
+
+
+#### `reaction_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/rateflow.py#L137" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+reaction_rates(self, dataset: Dataset) -> jax.Array
+```
+
+Get the reaction rates of the model for a given dataset.
+
+**Args:**
+- `dataset`: Dataset containing measurements
+
+**Returns:**
+- Reaction rates
+
+
+#### `get_weights_and_biases` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/rateflow.py#L154" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_weights_and_biases(self) -> List[jax.Array]
+```
+
+Get all weights and biases from the model.
+
+**Returns:**
+- List of weights and biases
+
+
+#### `plot_learned_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/rateflow.py#L166" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_learned_rates(self, dataset: Dataset, model: Model, show: bool = True, save_path: str | None = None, round_stoich: bool = True) -> Figure
+```
+
+Plot learned rates for a trained RateFlowODE.
+
+
+#### `plot_rate_grid` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/rateflow.py#L186" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_rate_grid(self, dataset: Dataset, model: Model, rate_indices: List[int] | None = None, species_identifiers: List[str] | None = None, species_pairs: List[Tuple[str | int, str | int]] | None = None, representative_time: float = 0.0, grid_resolution: int = 30, figsize_per_subplot: Tuple[int, int] = (5, 4), save_path: str | None = None, range_extension: float = 0.2, show: bool = True) -> Figure
+```
+
+Create static visualizations showing how dynamics depend on concentration inputs.
+
+**Args:**
+- `dataset`: Dataset containing the measurements
+- `model`: Model to use for the analysis
+- `rate_indices`: List of rate indices to plot. If None, plots all rates.
+- `species_identifiers`: List of species to include (by name, symbol, or index).
+            If None, uses all species.
+- `species_pairs`: List of tuples specifying which species pairs to compare.
+          Each tuple should contain two species identifiers (name, symbol, or index).
+          If None, compares all possible pairs from species_identifiers.
+- `representative_time`: Time point to use for the analysis
+- `grid_resolution`: Number of points in each dimension of the concentration grid
+- `figsize_per_subplot`: Size of each subplot (width, height)
+- `save_path`: Path to save the figure
+- `range_extension`: Factor to extend concentration ranges beyond data bounds (0.0-1.0).
+           Default 0.2 extends ranges by 20% above and below data bounds.
+           Lower bound is clamped to 0.0.
+

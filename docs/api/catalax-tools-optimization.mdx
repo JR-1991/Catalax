@@ -1,0 +1,43 @@
+---
+title: optimization
+sidebarTitle: optimization
+---
+
+# `catalax.tools.optimization`
+
+## Functions
+
+### `optimize` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/optimization.py#L14" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+optimize(model: Model, dataset: Dataset, global_upper_bound: Optional[float] = 100000.0, global_lower_bound: Optional[float] = 1e-06, dt0: float = 0.01, objective_fun: Callable[[jax.Array, jax.Array], jax.Array] = optax.l2_loss, max_steps: int = 64 ** 4, method: str = 'bfgs') -> Tuple[MinimizerResult, Model]
+```
+
+
+Optimization functions to determine the parameters of a model of a system, given data.
+
+This method uses the LMFit library to perform parameter inference and thus
+supports all methods provided by LMFit.
+
+In order to perform an optimization, first specify your ODE model and configure
+the parameter objects in your model. This means to add a lower and upper bound
+for each parameter. You can also set a global upper/lower bound if you want to
+use the same bounds for all parameters. When you pass the model to this function,
+everything will be setup and a parameter optimization will be performed.
+
+This function returns a results object as well as an update version of your model
+including the inferred parameters. Please note, that the returned model is a modified
+COPY of your input system plus the parameter values. The input system will not be modified.
+
+**Args:**
+- `model`: The model to fit.
+- `dataset`: The dataset to fit the model to.
+- `global_upper_bound`: Global upper bound - Only applies to unspecified params. Defaults to 1e5.
+- `global_lower_bound`: Global lower bound - Only applies to unspecified params. Defaults to 1e-6.
+- `dt0`: Integration step width. Defaults to 0.01.
+- `max_steps`: Maximum number of integration steps. Defaults to 64**4.
+- `method`: Optimization method. Defaults to "bfgs".
+
+**Returns:**
+- Tuple[MinimizerResult, Model]: Results object and updated model with inferred parameters
+

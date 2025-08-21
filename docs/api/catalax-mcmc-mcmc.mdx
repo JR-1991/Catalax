@@ -1,0 +1,143 @@
+---
+title: mcmc
+sidebarTitle: mcmc
+---
+
+# `catalax.mcmc.mcmc`
+
+## Functions
+
+### `run_mcmc` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L373" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+run_mcmc(model: 'Model', dataset: Dataset, yerrs: Union[float, Array], config: MCMCConfig, surrogate: Optional[Surrogate] = None, pre_model: Optional[PreModel] = None, post_model: Optional[PostModel] = None) -> HMCResults
+```
+
+
+Run MCMC simulation to infer posterior distribution of parameters.
+
+Uses NumPyro to perform Markov Chain Monte Carlo simulation with the No-U-Turn
+Sampler (NUTS) algorithm. Parameter priors are automatically extracted from the model.
+The simulation compares model output against observed data to infer the posterior
+distribution of parameters.
+
+**Args:**
+- `model`: Model to fit
+- `dataset`: Dataset containing observations to fit against
+- `yerrs`: Standard deviation of observed data
+- `config`: MCMC configuration parameters
+- `surrogate`: Optional surrogate model for rate prediction
+- `pre_model`: Optional function to transform inputs and parameters before simulation
+- `post_model`: Optional function to transform outputs after simulation
+
+**Returns:**
+- Tuple of (MCMC object with results, Bayesian model function)
+
+**Raises:**
+- `AssertionError`: If any parameters lack prior distributions
+- `TypeError`: If pre_model or post_model functions are not callable
+- `ValueError`: If pre_model or post_model signatures don't match Protocol requirements
+
+
+## Classes
+
+### `MCMCConfig` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L36" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Configuration parameters for MCMC simulation.
+
+**Args:**
+- `num_warmup`: Number of warmup steps before sampling
+- `num_samples`: Number of posterior samples to collect
+- `likelihood`: Likelihood distribution class (default\: SoftLaplace)
+- `dense_mass`: Whether to use dense mass matrix (default\: True)
+- `thinning`: Factor by which to thin samples (default\: 1)
+- `max_tree_depth`: Maximum depth of NUTS binary tree (default\: 10)
+- `dt0`: Time step resolution for simulation (default\: 0.1)
+- `chain_method`: Chain execution method - "sequential", "parallel", or "vectorized"
+- `num_chains`: Number of Markov chains to run (default\: 1)
+- `seed`: Random seed for reproducibility (default\: 420)
+- `verbose`: Verbosity level; 0 for silent, 1 for progress (default\: 1)
+- `max_steps`: Maximum number of integration steps (default\: 64^4)
+
+
+### `Modes` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L69" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Modes of the model.
+
+
+### `ModelSetup` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L77" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Container for model setup results.
+
+
+### `DataPreparation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L84" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Container for prepared MCMC data.
+
+
+### `HMC` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L96" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Hamiltonian Monte Carlo sampler wrapper.
+
+This class provides a high-level interface for running HMC/NUTS sampling
+with integrated configuration and result handling.
+
+
+**Methods:**
+
+#### `run` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L150" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+run(self, model: 'Model', dataset: Dataset, yerrs: Union[float, Array], surrogate: Optional[Surrogate] = None, pre_model: Optional[PreModel] = None, post_model: Optional[PostModel] = None) -> HMCResults
+```
+
+Run MCMC simulation to infer posterior distribution of parameters.
+
+Uses NumPyro to perform Markov Chain Monte Carlo simulation with the No-U-Turn
+Sampler (NUTS) algorithm. Parameter priors are automatically extracted from the model.
+The simulation compares model output against observed data to infer the posterior
+distribution of parameters.
+
+**Args:**
+- `model`: Model to fit
+- `dataset`: Dataset containing observations to fit against
+- `yerrs`: Standard deviation of observed data
+- `surrogate`: Optional surrogate model for rate prediction
+- `pre_model`: Optional function to transform inputs and parameters before simulation
+- `post_model`: Optional function to transform outputs after simulation
+
+**Returns:**
+- Tuple of (MCMC object with results, Bayesian model function)
+
+**Raises:**
+- `AssertionError`: If any parameters lack prior distributions
+- `TypeError`: If pre_model or post_model functions are not callable
+- `ValueError`: If pre_model or post_model signatures don't match Protocol requirements
+
+
+#### `from_config` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L228" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_config(cls, config: MCMCConfig) -> HMC
+```
+
+Create HMC instance from configuration.
+
+**Args:**
+- `config`: MCMC configuration parameters
+
+
+### `BayesianModel` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L250" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Bayesian model for MCMC parameter inference.
+
+This class creates a callable Bayesian model that can be used with NumPyro's
+MCMC samplers. It encapsulates the model parameters, priors, and likelihood
+configuration.
+

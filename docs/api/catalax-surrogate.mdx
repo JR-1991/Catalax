@@ -1,0 +1,46 @@
+---
+title: surrogate
+sidebarTitle: surrogate
+---
+
+# `catalax.surrogate`
+
+## Classes
+
+### `Surrogate` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/surrogate.py#L13" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Abstract base class for predictors in the catalax framework.
+
+All predictors must implement the predict method which takes a dataset
+and returns predictions based on the model.
+
+
+**Methods:**
+
+#### `rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/surrogate.py#L22" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+rates(self, t: jax.Array, y: jax.Array, constants: Optional[jax.Array] = None) -> jax.Array
+```
+
+Get the rates of the predictor.
+
+
+#### `predict_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/surrogate.py#L34" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+predict_rates(self, dataset: Dataset) -> jax.Array
+```
+
+Make predictions using the predictor.
+
+**Args:**
+- `dataset`: Dataset containing initial conditions
+- `config`: Optional simulation configuration parameters
+- `parameters`: Optional array of model parameters
+- `**kwargs`: Additional keyword arguments specific to the predictor implementation
+
+**Returns:**
+- Dataset containing the predictions
+

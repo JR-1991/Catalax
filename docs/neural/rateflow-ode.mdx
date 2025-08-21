@@ -1,0 +1,477 @@
+---
+title: "RateFlow ODE Training"
+---
+
+RateFlowODE represents a breakthrough approach to biochemical network discovery, combining neural networks with stoichiometric principles to automatically uncover reaction mechanisms from experimental time-series data. Unlike traditional Neural ODEs that learn species dynamics directly, RateFlowODE learns individual reaction rates and combines them through a stoichiometric matrix, enabling the discovery of interpretable biochemical reaction networks without prior mechanistic knowledge.
+
+## Understanding the `RateFlowODE` Architecture
+
+### Stoichiometric Decomposition of Biochemical Systems
+
+The fundamental innovation of RateFlowODE lies in its decomposition of species dynamics into individual reaction contributions. Rather than learning the net rate of change for each species directly, the approach models the system as:
+
+$$
+\frac{dy}{dt} = S \cdot r(y, t, \theta)
+$$
+
+where:
+- $y$ represents species concentrations
+- $S$ is the stoichiometric matrix ($n_{species} \times n_{reactions}$)
+- $r(y, t, \theta)$ are individual reaction rates predicted by the neural network
+
+This mathematical structure enforces biochemical realism by explicitly representing the relationship between individual reactions and their collective effect on species concentrations.
+
+### Neural Network Rate Prediction
+
+The neural network component predicts reaction rates based on current species concentrations and time:
+
+$$
+r(y, t, \theta) = \text{ReLU}(\text{MLP}(y, t, \theta))
+$$
+
+The ReLU activation ensures that reaction rates remain non-negative, consistent with the physical interpretation of reaction rates as positive quantities. The MLP (Multi-Layer Perceptron) learns the complex concentration dependencies that govern reaction kinetics.
+
+### Stoichiometric Matrix Learning
+
+The stoichiometric matrix $S$ can be handled in three distinct modes:
+
+1. **Fully learnable**: $S$ is initialized randomly and optimized during training
+2. **Fixed structure**: $S$ is provided based on known reaction mechanisms
+3. **Constrained learning**: $S$ starts from a known structure but can be refined
+
+This flexibility enables applications ranging from complete reaction discovery to refinement of existing mechanistic models.
+
+## Core Implementation and Usage
+
+### Basic RateFlowODE Construction
+
+Create a RateFlowODE instance for reaction network discovery:
+
+```python
+import catalax as ctx
+import catalax.neural as ctn
+import jax.random as jrandom
+
+# Define system structure (species must be known)
+species_order = ["S", "E", "P", "ES"]  # Substrate, Enzyme, Product, Complex
+observable_indices = [0, 2]  # Only S and P are measurable
+
+# Create RateFlowODE with learnable stoichiometry
+key = jrandom.PRNGKey(42)
+rateflow_ode = ctn.RateFlowODE(
+    data_size=len(species_order),      # Number of species
+    reaction_size=3,                   # Number of reactions to discover
+    width_size=64,                     # Neural network width
+    depth=3,                           # Neural network depth
+    species_order=species_order,
+    observable_indices=observable_indices,
+    learn_stoich=True,                 # Enable stoichiometry learning
+    activation=jax.nn.softplus,        # Smooth activation for rates
+    key=key
+)
+```
+
+### Supplied Stoichiometric Matrix
+
+When reaction mechanisms are partially known, provide the stoichiometric structure:
+
+```python
+import jax.numpy as jnp
+
+# Define known reaction mechanism for Michaelis-Menten kinetics
+# Reactions: E + S ⇌ ES, ES → E + P
+stoich_matrix = jnp.array([
+    [-1,  0],  # S: consumed in reaction 1, not involved in reaction 2
+    [-1,  1],  # E: consumed in reaction 1, produced in reaction 2  
+    [ 1, -1],  # ES: produced in reaction 1, consumed in reaction 2
+    [ 0,  1]   # P: not involved in reaction 1, produced in reaction 2
+])
+
+# Create RateFlowODE with fixed stoichiometry
+rateflow_ode_fixed = ctn.RateFlowODE(
+    data_size=4,
+    reaction_size=2,
+    width_size=32,
+    depth=2,
+    species_order=species_order,
+    observable_indices=observable_indices,
+    learn_stoich=False,               # Fix stoichiometry
+    stoich_matrix=stoich_matrix,      # Provide known structure
+    key=key
+)
+```
+
+### Mass Conservation Constraints
+
+Mass conservation represents a fundamental constraint in biochemical systems where the total amount of certain molecular species remains constant throughout the reaction process. This is particularly important for enzyme systems where the total enzyme concentration should remain unchanged, or in metabolic pathways where specific atomic groups are conserved.
+
+The mass constraint is mathematically represented as:
+
+$$
+\mathbf{M} \cdot \mathbf{y}(t) = \mathbf{c}
+$$
+
+where $\mathbf{M}$ is the mass constraint matrix, $\mathbf{y}(t)$ is the vector of species concentrations, and $\mathbf{c}$ is the vector of conserved quantities. For enzyme conservation in Michaelis-Menten kinetics, this ensures that $E(t) + ES(t) = E_{total}$ at all times during the reaction.
+
+```python
+# Define conservation constraints
+# Example: Total enzyme conservation (E + ES = constant)
+mass_constraint = jnp.array([
+    [0, 1, 1, 0]  # E + ES conservation constraint
+])
+
+# Create RateFlowODE with conservation constraints
+rateflow_ode_conserved = ctn.RateFlowODE(
+    data_size=4,
+    reaction_size=3,
+    width_size=64,
+    depth=3,
+    species_order=species_order,
+    observable_indices=observable_indices,
+    learn_stoich=True,
+    mass_constraint=mass_constraint,  # Enforce conservation
+    key=key
+)
+```
+
+## Analysis and Visualization
+
+### Learned Reaction Visualization
+
+Analyze the discovered reaction network using built-in visualization tools:
+
+```python
+# Visualize learned reactions and stoichiometry
+fig = trained_rateflow.plot_learned_rates(
+    dataset=experimental_data,
+    model=original_model,  # For species labels
+    show=True,
+    save_path="./figures/discovered_reactions.png",
+    round_stoich=True      # Round coefficients for clarity
+)
+```
+
+The visualization provides three panels:
+- **Stoichiometric matrix heatmap**: Shows discovered reaction coefficients
+- **Reaction rates over time**: Displays individual reaction dynamics
+- **Model fit comparison**: Compares predictions with experimental data
+
+### Rate Dependency Analysis
+
+Examine how reaction rates depend on species concentrations:
+
+```python
+# Create phase plots showing rate dependencies
+rate_grid_fig = trained_rateflow.plot_rate_grid(
+    dataset=experimental_data,
+    model=original_model,
+    rate_indices=[0, 1, 2],        # Analyze first three reactions
+    species_pairs=[("S", "E"), ("ES", "P")],  # Focus on key species pairs
+    representative_time=0.0,        # Time point for analysis
+    grid_resolution=50,            # Resolution of concentration grid
+    figsize_per_subplot=(6, 5),
+    range_extension=0.3,           # Extend beyond data range
+    show=True
+)
+```
+
+### Reaction Rate Extraction
+
+Access individual reaction rates for detailed analysis:
+
+```python
+# Extract reaction rates at experimental conditions
+reaction_rates = trained_rateflow.reaction_rates(experimental_data)
+print(f"Reaction rates shape: {reaction_rates.shape}")  # [n_timepoints, n_reactions]
+
+# Analyze rate magnitudes and patterns
+import jax.numpy as jnp
+
+mean_rates = jnp.mean(reaction_rates, axis=0)
+rate_variations = jnp.std(reaction_rates, axis=0)
+
+for i, (mean_rate, variation) in enumerate(zip(mean_rates, rate_variations)):
+    print(f"Reaction {i+1}: Mean rate = {mean_rate:.3f}, Std = {variation:.3f}")
+```
+
+## Mathematical Interpretation and Analysis
+
+### Stoichiometric Matrix Interpretation
+
+Analyze the learned stoichiometric matrix for biochemical insights:
+
+```python
+# Extract and analyze stoichiometric matrix
+stoich_matrix = trained_rateflow.stoich_matrix
+print(f"Stoichiometry shape: {stoich_matrix.shape}")  # [n_species, n_reactions]
+
+# Round to nearest integers for chemical interpretation
+rounded_stoich = jnp.round(stoich_matrix)
+
+# Check mass balance for each reaction
+for j in range(rounded_stoich.shape[1]):
+    reaction_vector = rounded_stoich[:, j]
+    print(f"Reaction {j+1} stoichiometry: {reaction_vector}")
+    
+    # Identify reactants (negative coefficients) and products (positive coefficients)
+    reactants = [(species_order[i], -int(coeff)) for i, coeff in enumerate(reaction_vector) if coeff < 0]
+    products = [(species_order[i], int(coeff)) for i, coeff in enumerate(reaction_vector) if coeff > 0]
+    
+    print(f"  Reactants: {reactants}")
+    print(f"  Products: {products}")
+```
+
+### Reaction Network Reconstruction
+
+Reconstruct the discovered biochemical network:
+
+```python
+def print_reaction_network(stoich_matrix, species_order, threshold=0.1):
+    """Print discovered reactions in chemical equation format."""
+    
+    rounded_stoich = jnp.round(stoich_matrix)
+    
+    for j in range(rounded_stoich.shape[1]):
+        reaction_vector = rounded_stoich[:, j]
+        
+        # Skip reactions with very small coefficients
+        if jnp.max(jnp.abs(reaction_vector)) < threshold:
+            continue
+            
+        # Build reaction equation
+        reactants = []
+        products = []
+        
+        for i, coeff in enumerate(reaction_vector):
+            if coeff < -threshold:
+                if abs(coeff) == 1:
+                    reactants.append(species_order[i])
+                else:
+                    reactants.append(f"{int(abs(coeff))}{species_order[i]}")
+            elif coeff > threshold:
+                if coeff == 1:
+                    products.append(species_order[i])
+                else:
+                    products.append(f"{int(coeff)}{species_order[i]}")
+        
+        if reactants and products:
+            equation = " + ".join(reactants) + " → " + " + ".join(products)
+            print(f"Reaction {j+1}: {equation}")
+
+# Print discovered reaction network
+print("Discovered Biochemical Network:")
+print_reaction_network(trained_rateflow.stoich_matrix, species_order)
+```
+
+## Advanced Applications and Integration
+
+### Hybrid Mechanistic-Discovery Models
+
+Combine known mechanisms with discovery of unknown pathways:
+
+```python
+# Start with partial mechanistic knowledge
+partial_stoich = jnp.array([
+    [-1,  0,  0],  # S: known consumption in reaction 1
+    [-1,  1,  0],  # E: known mechanism for reactions 1-2
+    [ 1, -1,  0],  # ES: known complex formation/breakdown
+    [ 0,  1,  0]   # P: known production in reaction 2
+])
+# Third column is zero - unknown reaction to be discovered
+
+rateflow_hybrid = ctn.RateFlowODE(
+    data_size=4,
+    reaction_size=3,
+    width_size=32,
+    depth=2,
+    species_order=species_order,
+    observable_indices=observable_indices,
+    learn_stoich=True,
+    stoich_matrix=partial_stoich,  # Starting point for learning
+    key=key
+)
+```
+
+### Integration with MCMC Inference
+
+Use discovered networks for Bayesian parameter estimation:
+
+```python
+# Convert discovered network to mechanistic model
+def create_mechanistic_model_from_rateflow(rateflow_ode, species_order):
+    """Convert learned RateFlowODE to interpretable mechanistic model."""
+    
+    model = ctx.Model(name="Discovered Network")
+    
+    # Add species
+    for species in species_order:
+        model.add_species(species)
+    
+    # Extract stoichiometric matrix
+    stoich = jnp.round(rateflow_ode.stoich_matrix)
+    
+    # Build ODEs from stoichiometry (simplified example)
+    for i, species in enumerate(species_order):
+        # Create equation based on stoichiometric coefficients
+        terms = []
+        for j in range(stoich.shape[1]):
+            coeff = stoich[i, j]
+            if abs(coeff) > 0.1:
+                terms.append(f"{coeff} * k{j+1} * reaction_rate_{j+1}")
+        
+        if terms:
+            equation = " + ".join(terms)
+            model.add_ode(species, equation)
+        else:
+            model.add_ode(species, "0")
+    
+    return model
+
+# Create mechanistic model from discovery
+discovered_model = create_mechanistic_model_from_rateflow(trained_rateflow, species_order)
+
+# Use for Bayesian inference
+import catalax.mcmc as cmc
+
+# Set priors for discovered parameters
+for param_name in discovered_model.parameters:
+    discovered_model.parameters[param_name].prior = cmc.priors.LogUniform(1e-3, 1e3)
+
+# Run MCMC on discovered network
+hmc = cmc.HMC(num_warmup=1000, num_samples=2000)
+mcmc_results = hmc.run(
+    model=discovered_model,
+    dataset=experimental_data,
+    yerrs=0.1
+)
+```
+
+## Best Practices and Guidelines
+
+### Reaction Network Design
+
+Choose appropriate network sizes and structures:
+
+```python
+# Guidelines for reaction_size selection
+n_species = len(species_order)
+min_reactions = n_species - 1      # Minimum for connectivity
+max_reactions = n_species * 2      # Avoid overparameterization
+
+# Conservative choice
+reaction_size = min(max_reactions, n_species + 2)
+
+print(f"Recommended reaction_size: {reaction_size}")
+```
+
+### Training Monitoring
+
+Monitor training progress and biological validity:
+
+```python
+# Custom training with validation
+def validate_stoichiometry(rateflow_ode, threshold=0.1):
+    """Check if learned stoichiometry is biochemically reasonable."""
+    
+    stoich = jnp.round(rateflow_ode.stoich_matrix)
+    
+    # Check for mass balance (simplified)
+    mass_imbalance = jnp.sum(jnp.abs(stoich), axis=0)
+    
+    # Check for reaction sparsity
+    sparsity = jnp.mean(jnp.abs(stoich) < threshold)
+    
+    return {
+        "mass_imbalance": float(jnp.mean(mass_imbalance)),
+        "sparsity": float(sparsity),
+        "max_coefficient": float(jnp.max(jnp.abs(stoich)))
+    }
+
+# Validate during training
+validation_metrics = validate_stoichiometry(trained_rateflow)
+print("Stoichiometry validation:")
+for metric, value in validation_metrics.items():
+    print(f"  {metric}: {value:.3f}")
+```
+
+### Model Selection and Comparison
+
+Compare different network architectures and reaction sizes:
+
+```python
+# Compare multiple RateFlowODE configurations
+configurations = [
+    {"reaction_size": 2, "width_size": 32},
+    {"reaction_size": 3, "width_size": 64},
+    {"reaction_size": 4, "width_size": 32}
+]
+
+model_comparison = []
+
+for config in configurations:
+    # Train model with configuration
+    rateflow = ctn.RateFlowODE(
+        data_size=len(species_order),
+        species_order=species_order,
+        observable_indices=observable_indices,
+        key=jrandom.PRNGKey(42),
+        **config
+    )
+    
+    trained_model = rateflow.train(dataset=experimental_data, strategy=strategy)
+    
+    # Evaluate model performance
+    predictions = trained_model.predict(experimental_data)
+    metrics = experimental_data.metrics(trained_model)
+    
+    model_comparison.append({
+        "config": config,
+        "r2": metrics.r2,
+        "aic": metrics.aic,
+        "rmse": metrics.rmse
+    })
+
+# Select best model based on AIC
+best_model = min(model_comparison, key=lambda x: x["aic"])
+print(f"Best configuration: {best_model['config']}")
+print(f"Best AIC: {best_model['aic']:.2f}")
+```
+
+## Limitations and Considerations
+
+### Identifiability Challenges
+
+RateFlowODE learning faces fundamental identifiability challenges:
+
+1. **Stoichiometric non-uniqueness**: Multiple stoichiometric representations can produce identical dynamics
+2. **Parameter correlation**: Reaction rates and stoichiometric coefficients can be correlated
+3. **Limited observability**: Unobserved species can lead to ambiguous network structures
+
+### Biological Constraint Enforcement
+
+Ensure learned networks respect biochemical principles:
+
+```python
+# Post-training validation and correction
+def enforce_biochemical_constraints(rateflow_ode, min_coeff=0.1):
+    """Apply post-training constraints to learned stoichiometry."""
+    
+    stoich = rateflow_ode.stoich_matrix
+    
+    # Round small coefficients to zero
+    corrected_stoich = jnp.where(jnp.abs(stoich) < min_coeff, 0, jnp.round(stoich))
+    
+    # Remove reactions with no net effect
+    reaction_magnitudes = jnp.sum(jnp.abs(corrected_stoich), axis=0)
+    active_reactions = reaction_magnitudes > min_coeff
+    
+    final_stoich = corrected_stoich[:, active_reactions]
+    
+    return final_stoich
+
+# Apply constraints to trained model
+constrained_stoich = enforce_biochemical_constraints(trained_rateflow)
+print(f"Reduced from {trained_rateflow.stoich_matrix.shape[1]} to {constrained_stoich.shape[1]} active reactions")
+```
+
+RateFlowODE provides a powerful framework for discovering biochemical reaction networks from experimental data. By combining neural network flexibility with stoichiometric structure, it enables the automated discovery of interpretable reaction mechanisms while maintaining biochemical realism through appropriate constraints and penalties. The approach bridges data-driven discovery with mechanistic understanding, opening possibilities for biochemical network reconstruction and analysis.

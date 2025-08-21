@@ -1,0 +1,495 @@
+---
+title: dataset
+sidebarTitle: dataset
+---
+
+# `catalax.dataset.dataset`
+
+## Classes
+
+### `DatasetType` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L48" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+Enumeration of dataset types in the Catalax framework.
+
+
+### `Dataset` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L56" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A class representing a collection of experimental measurements.
+
+This class hosts multiple measurements from an experiment and enables
+integration with other Catalax functionalities, including data processing,
+visualization, and model fitting.
+
+
+**Methods:**
+
+#### `get_measurement` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L105" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_measurement(self, id: str) -> Measurement
+```
+
+Retrieve a measurement from the dataset by its ID.
+
+**Args:**
+- `id`: The unique identifier of the measurement to retrieve
+
+**Returns:**
+- The measurement object with the specified ID
+
+**Raises:**
+- `ValueError`: If no measurement with the given ID exists
+
+
+#### `get_observable_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L127" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_observable_species_order(self) -> List[str]
+```
+
+Get the ordered list of species that are observed across measurements.
+
+This method determines which species have measurement data and ensures
+consistency across different measurements in the dataset.
+
+**Returns:**
+- Ordered list of observable species names
+
+**Raises:**
+- `ValueError`: If no common observable species exist across measurements
+
+
+#### `get_observable_indices` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L169" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_observable_indices(self) -> List[int]
+```
+
+Get the indices of observable species within the full species list.
+
+**Returns:**
+- List of integer indices corresponding to the positions of observable
+- species in the full species list
+
+
+#### `add_initial` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L182" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_initial(self, time: Array | list[float] | None = None, **kwargs) -> None
+```
+
+Add an empty measurement with only initial conditions.
+
+**Args:**
+- `time`: Time points for the initial condition. Useful if you want to predict
+  using neural ODEs.
+- `**kwargs`: Initial condition values as keyword arguments where
+      keys are species names and values are concentrations
+
+
+#### `add_measurement` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L202" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_measurement(self, measurement: Measurement) -> None
+```
+
+Add a complete measurement to the dataset.
+
+**Args:**
+- `measurement`: The measurement object to add
+
+**Raises:**
+- `AssertionError`: If a measurement with the same ID already exists
+- `ValueError`: If species in the measurement are inconsistent with dataset species
+
+
+#### `add_from_jax_array` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L235" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_from_jax_array(self, species_order: List[str], initial_condition: Dict[str, float], data: Array, time: Array) -> None
+```
+
+Add a measurement from JAX arrays directly.
+
+**Args:**
+- `species_order`: Ordered list of species names matching data array columns
+- `initial_condition`: Dictionary mapping species names to initial concentrations
+- `data`: JAX array of concentration measurements (shape\: time_points x species)
+- `time`: JAX array of time points
+
+
+#### `pad` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L260" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+pad(self) -> 'Dataset'
+```
+
+Return a copy of the dataset with uniform array lengths, padded with NaN.
+
+This method deep-copies the dataset and ensures that each `Measurement`
+has:
+* A `data` entry for every species in `self.species`.
+* All per-species arrays right-padded to the maximum length with NaN.
+* A `time` array right-padded to the same maximum length with NaN
+    (if present). If `time` is `None`, it is left unchanged.
+
+The maximum length is determined from the longest `time` array among
+all measurements. Measurements with `time=None` are ignored when
+computing this length.
+
+**Returns:**
+- A new dataset instance where all measurements have
+- homogeneously shaped 1-D lists for all species and padded `time`
+- arrays.
+
+**Raises:**
+- `ValueError`: If any measurement's `initial_conditions` do not cover
+
+
+#### `to_dataframe` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L340" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_dataframe(self) -> Tuple[pd.DataFrame, pd.DataFrame]
+```
+
+Export dataset as two pandas DataFrames for data and initial conditions.
+
+**Returns:**
+- Tuple containing:
+- - DataFrame with time course data (columns: measurementId, time, species...)
+- - DataFrame with initial conditions (columns: measurementId, species...)
+
+
+#### `to_jax_arrays` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L356" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_jax_arrays(self, species_order: List[str], inits_to_array: bool = False) -> tuple[Array, Array, Union[Array, List[Union[Array, Dict[str, float]]]]]
+```
+
+Convert dataset to JAX arrays for computational use.
+
+**Args:**
+- `species_order`: Ordered list of species names to ensure consistent array structure
+- `inits_to_array`: Whether to convert initial conditions to a JAX array
+
+**Returns:**
+- A tuple containing:
+- - data: JAX array of shape (n_measurements, n_time_points, n_species)
+- - time: JAX array of shape (n_measurements, n_time_points)
+- - initial_conditions: Either a JAX array of shape (n_measurements, n_species)
+if inits_to_array=True, or a list of dictionaries mapping species names
+to initial concentrations
+
+
+#### `to_y0_matrix` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L402" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_y0_matrix(self, species_order: List[str]) -> Array
+```
+
+Create a matrix of initial conditions for all measurements.
+
+**Args:**
+- `species_order`: Ordered list of species names for the matrix columns
+
+**Returns:**
+- JAX array of shape (n_measurements, n_species) containing initial
+- conditions for all measurements
+
+
+#### `has_data` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L419" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+has_data(self) -> bool
+```
+
+Check if the dataset has any data.
+
+**Returns:**
+- True if the dataset has any data, False otherwise
+
+
+#### `to_croissant` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L427" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_croissant(self, dirpath: str, license: str = 'CC BY-SA 4.0', version: str = '1.0.0', name: Optional[str] = None, cite_as: Optional[str] = None, url: Optional[str] = None, date_published: datetime = datetime.now()) -> None
+```
+
+Export dataset to a Croissant archive.
+
+The Croissant format is a JSON-LD standard for describing datasets that enables
+interoperability between different tools and platforms. This method exports
+the dataset to a directory structure compatible with the Croissant specification.
+
+**Args:**
+- `dirpath`: Directory path where the Croissant archive will be saved
+- `license`: License identifier for the dataset
+- `version`: Version string for the dataset
+- `name`: Optional custom name for the dataset archive
+- `cite_as`: Citation information for the dataset
+- `url`: URL where the dataset is available
+- `date_published`: Publication date for the dataset
+
+
+#### `from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L477" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_enzymeml(cls, enzmldoc: pe.EnzymeMLDocument) -> Dataset
+```
+
+Create a dataset from an EnzymeML document.
+
+**Args:**
+- `enzmldoc`: EnzymeML document containing experimental data
+
+**Returns:**
+- A new Dataset object with measurements extracted from the EnzymeML document
+
+
+#### `from_dataframe` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L510" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_dataframe(cls, name: str, data: pd.DataFrame, inits: pd.DataFrame, meas_id: Optional[str] = None, description: Optional[str] = '') -> 'Dataset'
+```
+
+Create a dataset from pandas DataFrames.
+
+**Args:**
+- `name`: Name for the dataset
+- `data`: DataFrame containing time course data
+  Expected columns\: measurementId, time, species1, species2...
+- `inits`: DataFrame containing initial conditions
+   Expected columns\: measurementId, species1, species2...
+- `meas_id`: Optional custom ID for the dataset
+- `description`: Optional description for the dataset
+
+**Returns:**
+- A new Dataset object populated with measurements from the DataFrames
+
+**Raises:**
+- `AssertionError`: If required columns are missing from the DataFrames
+- `ValueError`: If measurement IDs are inconsistent between data and inits
+
+
+#### `from_model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L597" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_model(cls, model: 'Model') -> 'Dataset'
+```
+
+Create an empty dataset with species from a model.
+
+**Args:**
+- `model`: Model object containing species information
+
+**Returns:**
+- A new Dataset object with species from the model but no measurements
+
+**Raises:**
+- `AssertionError`: If the provided object is not a Model instance
+
+
+#### `from_croissant` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L620" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_croissant(cls, path: str) -> 'Dataset'
+```
+
+Create a dataset from a Croissant archive.
+
+**Args:**
+- `path`: Path to the Croissant archive file
+
+**Returns:**
+- A new Dataset object populated from the Croissant archive
+
+**Raises:**
+- `AssertionError`: If measurements lack corresponding initial conditions
+
+
+#### `from_jax_arrays` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L692" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_jax_arrays(cls, species_order: List[str], data: Array, time: Array, y0s: Array) -> 'Dataset'
+```
+
+Create a dataset directly from JAX arrays.
+
+**Args:**
+- `species_order`: Ordered list of species names
+- `data`: JAX array of concentrations with shape (n_measurements, n_timepoints, n_species)
+- `time`: JAX array of timepoints with shape (n_measurements, n_timepoints)
+- `y0s`: JAX array of initial conditions with shape (n_measurements, n_species)
+
+**Returns:**
+- A new Dataset object with measurements constructed from the arrays
+
+**Raises:**
+- `AssertionError`: If array shapes are incompatible
+
+
+#### `leave_one_out` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L752" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+leave_one_out(self)
+```
+
+Generator that yields dataset copies with one measurement left out.
+
+This method implements leave-one-out cross-validation by yielding tuples
+containing a copy of the dataset with one measurement removed and the ID
+of the removed measurement.
+
+
+#### `train_test_split` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L779" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+train_test_split(self, test_size: float = 0.2)
+```
+
+Split dataset into training and testing sets.
+
+This method splits the dataset into training and testing sets based on a specified test size.
+
+**Args:**
+- `test_size`: Proportion of dataset to include in the test set (default\: 0.2)
+
+**Returns:**
+- Tuple[Dataset, Dataset]: A tuple containing:
+- Training dataset
+- Testing dataset
+
+
+#### `plot` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L821" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot(self, ncols: int = 2, show: Literal[True] = True, path: Optional[str] = None, measurement_ids: List[str] = [], figsize: Tuple[int, int] = (5, 3), predictor: Optional[Predictor] = None, n_steps: int = 100, xlim: Optional[Tuple[float, float | None]] = (0, None), **kwargs) -> None
+```
+
+#### `plot` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L835" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot(self, ncols: int = 2, show: Literal[False] = False, path: Optional[str] = None, measurement_ids: List[str] = [], figsize: Tuple[int, int] = (5, 3), predictor: Optional[Predictor] = None, n_steps: int = 100, xlim: Optional[Tuple[float, float | None]] = (0, None), **kwargs) -> Figure
+```
+
+#### `plot` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L848" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot(self, ncols: int = 2, show: bool = False, path: Optional[str] = None, measurement_ids: List[str] = [], figsize: Tuple[int, int] = (5, 3), predictor: Optional[Predictor] = None, n_steps: int = 100, xlim: Optional[Tuple[float, float | None]] = (0, None), **kwargs) -> Optional[Figure]
+```
+
+Plot all measurements in the dataset.
+
+Creates a multi-panel figure with one panel per measurement, with
+optional overlay of model predictions.
+
+**Args:**
+- `ncols`: Number of columns in the figure grid
+- `show`: Whether to display the figure
+- `path`: Path to save the figure (if provided)
+- `measurement_ids`: List of measurement IDs to plot (defaults to all measurements)
+- `figsize`: Size of each individual subplot
+- `model`: Optional model to overlay predictions
+- `n_steps`: Number of points to use for model prediction curves
+- `**kwargs`: Additional arguments passed to the measurement plot function
+
+**Returns:**
+- The matplotlib figure object
+
+
+#### `augment` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L1067" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+augment(self, n_augmentations: int, sigma: float = 0.5, seed: int = 42, append: bool = True, multiplicative: bool = False) -> 'Dataset'
+```
+
+Generate augmented versions of the dataset with added noise.
+
+This method creates artificial variants of the dataset by adding
+Gaussian noise to the measurements, which can be useful for
+uncertainty quantification and model robustness testing.
+
+**Args:**
+- `n_augmentations`: Number of augmented copies to generate
+- `sigma`: Standard deviation of the Gaussian noise
+- `seed`: Random seed for reproducibility
+- `append`: Whether to include original measurements in the result
+- `multiplicative`: Whether to use multiplicative rather than additive noise
+
+**Returns:**
+- A new Dataset containing the augmented measurements
+
+
+#### `metrics` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L1123" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+metrics(self, predictor: Predictor, objective_fun: Callable[[Array, Array], Array] = l1_loss) -> FitMetrics
+```
+
+Calculate comprehensive fit metrics for evaluating predictor performance on this dataset.
+
+This method computes statistical metrics following the lmfit convention to assess
+how well a predictor fits the experimental data. The metrics are calculated by comparing
+predictions from the given predictor against the actual measurements in this dataset.
+
+The method performs the following steps:
+1. Generate predictions using the provided predictor
+2. Extract observable species data from both predictions and measurements
+3. Calculate chi-square, reduced chi-square, AIC, and BIC statistics
+
+**Args:**
+- `predictor`: The predictor model to evaluate. Must implement the predict()
+method and provide parameter count information.
+- `objective_fun`: Objective function to use for calculating chi-square.
+Defaults to L2 loss.
+
+**Returns:**
+- A metrics object containing:
+- chisqr (float): Chi-square statistic
+- redchi (float): Reduced chi-square statistic
+- aic (float): Akaike Information Criterion
+- bic (float): Bayesian Information Criterion
+
+**Raises:**
+- `ValueError`: If predictor cannot generate predictions for this dataset
+- `RuntimeError`: If observable species orders don't match between dataset and predictions
+
+
+#### `get_vmap_dims` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L1189" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_vmap_dims(data: jax.Array, time: jax.Array, y0s: Union[jax.Array, List[Dict[str, float]]]) -> Tuple[Optional[int], None, Optional[int]]
+```
+
+Determines the dimensions for JAX's vmap operation based on input array shapes.
+
+This method analyzes the shapes of data, time, and initial condition arrays to determine
+which dimensions should be mapped over when using JAX's vectorized mapping.
+
+**Args:**
+- `data`: JAX array of concentration time courses with shape
+ (n_measurements, n_timepoints, n_species) or (n_timepoints, n_species)
+- `time`: JAX array of time points with shape (n_measurements, n_timepoints) or (n_timepoints,)
+- `y0s`: Either a JAX array of initial conditions with shape (n_measurements, n_species)
+ or a list of dictionaries mapping species names to initial concentrations
+
+**Returns:**
+- A tuple of three elements:
+- - First element: 0 if data has 3 dimensions (batched), None otherwise
+- - Second element: Always None (time dimension is not mapped over)
+- - Third element: 0 if multiple initial conditions are present, None otherwise
+
+**Raises:**
+- `TypeError`: If y0s is not a list or JAX array
+
+
+#### `to_config` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/dataset.py#L1229" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_config(self, nsteps: int = 100) -> SimulationConfig
+```
+
+Convert dataset to a SimulationConfig object.
+

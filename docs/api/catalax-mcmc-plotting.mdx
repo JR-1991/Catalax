@@ -1,0 +1,182 @@
+---
+title: plotting
+sidebarTitle: plotting
+---
+
+# `catalax.mcmc.plotting`
+
+## Functions
+
+### `plot_corner` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L16" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_corner(mcmc: MCMC, quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84), figsize: Optional[Tuple[float, float]] = None, backend: BackendType = None)
+```
+
+
+Plots the correlation between the parameters.
+
+**Args:**
+- `mcmc`: The MCMC object to plot.
+- `quantiles`: Quantiles to display in the corner plot.
+Default is (0.16, 0.5, 0.84).
+- `figsize`: Figure size as (width, height) in inches.
+If None, uses default size.
+- `backend`: Plotting backend ('matplotlib' or 'bokeh').
+If None, uses default backend.
+
+**Returns:**
+- matplotlib.figure.Figure or bokeh plot: The corner plot figure.
+
+
+### `plot_posterior` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L60" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_posterior(mcmc: MCMC, model, figsize: Optional[Tuple[float, float]] = None, backend: BackendType = None, **kwargs)
+```
+
+
+Plots the posterior distribution of the parameters.
+
+**Args:**
+- `mcmc`: The MCMC object containing posterior samples.
+- `model`: The model object with parameter information.
+- `figsize`: Figure size as (width, height) in inches.
+If None, uses default size.
+- `backend`: Plotting backend ('matplotlib' or 'bokeh').
+If None, uses default backend.
+- `**kwargs`: Additional keyword arguments to pass to arviz.plot_posterior.
+
+**Returns:**
+- matplotlib.figure.Figure or bokeh plot: The posterior plot figure.
+
+
+### `plot_credibility_interval` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L100" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_credibility_interval(mcmc: MCMC, model, initial_condition: Dict[str, float], time: jax.Array, dt0: float = 0.1, figsize: Optional[Tuple[float, float]] = None, backend: BackendType = None)
+```
+
+
+Plots the credibility interval for model simulations.
+
+Simulates the model using posterior parameter samples and plots the mean
+trajectory with credibility intervals.
+
+**Args:**
+- `mcmc`: The MCMC object containing posterior samples.
+- `model`: The model to simulate.
+- `initial_condition`: Initial conditions for the simulation.
+- `time`: Time points for the simulation.
+- `dt0`: Time step for the simulation. Default is 0.1.
+- `figsize`: Figure size as (width, height) in inches.
+If None, uses default size.
+- `backend`: Plotting backend. Note\: This function currently only
+supports matplotlib backend regardless of the backend parameter value.
+
+**Returns:**
+- matplotlib.figure.Figure: The credibility interval plot.
+
+
+### `plot_trace` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L168" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_trace(mcmc: MCMC, model, figsize: Optional[Tuple[float, float]] = None, backend: BackendType = None, **kwargs)
+```
+
+
+Plots the MCMC trace for each parameter.
+
+**Args:**
+- `mcmc`: The MCMC object containing samples.
+- `model`: The model object with parameter information.
+- `figsize`: Figure size as (width, height) in inches.
+If None, uses default size.
+- `backend`: Plotting backend ('matplotlib' or 'bokeh').
+If None, uses default backend.
+- `**kwargs`: Additional keyword arguments to pass to arviz.plot_trace.
+
+**Returns:**
+- matplotlib.figure.Figure or bokeh plot: The trace plot figure.
+
+
+### `plot_forest` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L208" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_forest(mcmc: MCMC, model, figsize: Optional[Tuple[float, float]] = None, backend: BackendType = None, **kwargs)
+```
+
+
+Plots a forest plot of parameter distributions.
+
+**Args:**
+- `mcmc`: The MCMC object containing samples.
+- `model`: The model object with parameter information.
+- `figsize`: Figure size as (width, height) in inches.
+If None, uses default size.
+- `backend`: Plotting backend ('matplotlib' or 'bokeh').
+If None, uses default backend.
+- `**kwargs`: Additional keyword arguments to pass to arviz.plot_forest.
+
+**Returns:**
+- matplotlib.figure.Figure or bokeh plot: The forest plot figure.
+
+
+### `plot_mcse` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L250" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_mcse(mcmc: MCMC, figsize: Optional[Tuple[float, float]] = None, backend: BackendType = None, **kwargs)
+```
+
+
+Plots the Monte Carlo standard error for each parameter.
+
+**Args:**
+- `mcmc`: The MCMC object containing samples.
+- `figsize`: Figure size as (width, height) in inches.
+If None, uses default size.
+- `backend`: Plotting backend ('matplotlib' or 'bokeh').
+If None, uses default backend.
+- `**kwargs`: Additional keyword arguments to pass to arviz.plot_mcse.
+
+**Returns:**
+- matplotlib.figure.Figure or bokeh plot: The MCSE plot figure.
+
+
+### `plot_ess` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L288" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot_ess(mcmc: MCMC, figsize: Optional[Tuple[float, float]] = None, backend: BackendType = None)
+```
+
+
+Plots the effective sample size for each parameter.
+
+**Args:**
+- `mcmc`: The MCMC object containing samples.
+- `figsize`: Figure size as (width, height) in inches.
+If None, uses default size.
+- `backend`: Plotting backend ('matplotlib' or 'bokeh').
+If None, uses default backend.
+
+**Returns:**
+- matplotlib.figure.Figure or bokeh plot: The ESS plot figure.
+
+
+### `summary` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/plotting.py#L333" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+summary(mcmc: MCMC, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]
+```
+
+
+Generates a summary of the MCMC results.
+
+**Args:**
+- `mcmc`: The MCMC object containing samples.
+- `hdi_prob`: The probability mass to include in the highest density interval.
+Default is 0.95.
+
+**Returns:**
+- Union\[pd.DataFrame, az.Dataset]: Summary statistics of the posterior distributions.
+
