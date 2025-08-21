@@ -38,68 +38,6 @@ Neural ODEs have demonstrated remarkable success across diverse areas of biochem
 - **Drug pharmacokinetics**: Modeling absorption, distribution, metabolism, and excretion processes with complex, patient-specific variations
 - **Systems biology**: Integrating multi-omics data to understand cellular behavior at the systems level
 
-### Key Advantages for Researchers
-
-1. **Mechanistic insight without complete knowledge**: Neural ODEs can learn meaningful system behaviors even when mechanistic details are uncertain, providing a bridge between purely empirical models and fully mechanistic approaches.
-
-2. **Flexible model architecture**: The neural network component can adapt to different system complexities without requiring researchers to restructure their entire modeling framework.
-
-3. **Natural noise handling**: Experimental uncertainty and measurement noise are naturally incorporated through the training process, making Neural ODEs particularly suitable for real-world experimental data.
-
-4. **Scalability**: The approach scales gracefully to high-dimensional systems with many interacting components, limited primarily by available computational resources rather than mathematical complexity.
-
-5. **Predictive capability**: Well-trained Neural ODEs can generate reliable predictions for experimental design, hypothesis testing, and system optimization.
-
-### Tutorial Scope and Learning Objectives
-
-This tutorial will guide you through the complete Neural ODE workflow, providing both practical implementation details and the scientific reasoning behind each methodological choice:
-
-1. Creating a biochemical model structure that serves as the scaffold for neural learning
-2. Loading, processing, and augmenting experimental datasets for robust training
-3. Selecting appropriate neural network architectures for biochemical systems
-4. Implementing multi-phase training approaches for optimal convergence
-5. Assessing model performance and interpreting results in a biochemical context
-6. Saving, loading, and using trained models for prediction and analysis
-
-## Prerequisites and Installation
-
-Before beginning this tutorial, ensure you have a solid understanding of:
-- Basic differential equations and their role in modeling dynamic systems
-- Fundamental biochemical kinetics and enzyme mechanisms
-- Python programming and scientific computing libraries
-- Neural network concepts (though deep expertise is not required)
-
-Install Catalax using pip:
-
-```bash
-pip install catalax
-```
-
-Catalax is built on top of JAX, providing automatic differentiation and efficient numerical computing capabilities essential for Neural ODE training. The library is designed specifically for biochemical modeling applications, offering domain-specific tools and abstractions that simplify the implementation of complex modeling workflows.
-
-## Setting Up the Research Environment
-
-### Library Imports and Configuration
-
-First, let's import the necessary libraries and configure the environment for optimal performance:
-
-```python
-import catalax as ctx
-import catalax.neural as ctn
-import warnings
-
-# Suppress warnings for cleaner output during training
-warnings.filterwarnings("ignore")
-```
-
-**Understanding the imports:**
-
-- **`catalax as ctx`**: This provides access to the core Catalax functionality, including the `Model` class for defining biochemical systems, the `Dataset` class for managing experimental data, and various utilities for data visualization and analysis.
-
-- **`catalax.neural as ctn`**: This module contains all neural network components specifically designed for biochemical modeling, including the `NeuralODE` class, various activation functions optimized for continuous dynamics, training strategies, and specialized loss functions.
-
-**Warning suppression**: During Neural ODE training, various numerical libraries may generate informational warnings that don't affect the results but can clutter the output. Suppressing these warnings helps maintain focus on the actual training progress and results.
-
 ## Step 1: Creating a Biochemical Model Foundation
 
 ### Understanding Model Structure in Neural ODEs
@@ -323,8 +261,6 @@ Batch training provides several research advantages:
 
 ## Step 5: Neural ODE Training and Monitoring
 
-### Executing the Training Process
-
 Now we train the Neural ODE using our carefully configured multi-phase strategy. This process involves iterative optimization where the neural network learns to approximate the derivative function governing your biochemical system:
 
 ```python
@@ -400,8 +336,6 @@ trained = neural_ode.train(
 
 ## Step 6: Model Evaluation and Scientific Interpretation
 
-### Comprehensive Model Assessment
-
 After training, thorough evaluation is essential for determining whether the Neural ODE has learned meaningful biochemical relationships and can provide reliable scientific insights:
 
 ```python
@@ -428,43 +362,17 @@ print(metrics)
 - **Akaike Information Criterion**: Model selection criterion
 - **Bayesian Information Criterion**: Model selection criterion
 
-## Step 7: Model Persistence and Deployment
-
-### Research-Grade Model Saving
+## Model Persistence
 
 Proper model persistence is crucial for reproducible research and future scientific applications:
 
 ```python
 # Save the trained model for later use
 trained.save_to_eqx("./trained/", "menten_trained")
+
+# Load the trained model for later use
+trained_loaded = ctn.NeuralODE.load_from_eqx("./trained/menten_trained.eqx")
 ```
-
-**Research benefits of comprehensive model documentation:**
-
-1. **Reproducibility**: Future researchers can understand exactly how the model was created
-2. **Traceability**: Link models to specific experimental datasets and conditions
-3. **Version control**: Track model evolution throughout a research project
-4. **Publication support**: Provide complete information for peer review and publication
-
-### Model Loading and Validation
-
-```python
-# Load saved models with integrity checking
-loaded_model = ctn.NeuralODE.load_from_eqx("./trained/menten_trained.eqx")
-
-# Verify model integrity against known benchmarks
-metrics = dataset.metrics(loaded_model)
-
-print(metrics)
-```
-
-**Best practices for model management:**
-
-1. **Version control**: Include model files in research repositories (consider Git LFS for large models)
-2. **Documentation**: Maintain detailed records of all training conditions and hyperparameters
-3. **Validation**: Test loaded models against known benchmarks before use
-4. **Backup strategies**: Maintain multiple copies of important trained models
-5. **Sharing protocols**: Establish clear procedures for sharing models with collaborators
 
 ## Best Practices and Tips
 

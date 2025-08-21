@@ -256,29 +256,6 @@ print(f"Model fit quality: RMSE = {metrics.rmse:.3f}")
 
 For comprehensive information about importing data from various formats, managing datasets, and data augmentation techniques, see the [Data Management](./data-management.mdx) guide. This covers importing from EnzymeML documents, pandas DataFrames, Croissant archives, and various data processing workflows.
 
-## Key Concepts
-
-### Dataset Structure
-
-Understanding the structure of Catalax datasets is essential for effectively working with simulation results and experimental data. A `Dataset` serves as a container that organizes related measurements and provides a consistent interface for analysis and visualization.
-
-A `Dataset` contains several key components:
-- **`species`**: A list of chemical species names that defines what molecules are tracked in this dataset
-- **`measurements`**: A list of `Measurement` objects, where each measurement represents one experimental condition or simulation run
-- **`name`, `description`**: Metadata fields that help organize and document your datasets for reproducibility and sharing
-
-Each individual `Measurement` within a dataset contains the detailed information for one experimental condition:
-- **`initial_conditions`**: A dictionary mapping species names to their initial concentrations, which serves as the starting point for simulation or represents the experimental setup
-- **`time`**: An array of time points at which measurements were taken (this can be None for datasets that only contain initial conditions)
-- **`data`**: A dictionary that maps each species name to its complete concentration time series, providing the full temporal evolution of the system
-
-### Simulation vs. Prediction
-
-It's important to understand the distinction between simulation and prediction in Catalax, as these serve different purposes in the modeling workflow:
-
-- **`model.simulate()`**: This method generates complete time-series data starting from initial conditions and integrating the differential equations forward in time. It's used when you want to create new datasets or explore system behavior under different conditions.
-- **`model.predict()`**: This method evaluates the model at specific time points, typically matching experimental data points. It's used internally by the plotting system and for model comparison workflows.
-
 ### Model as Predictor
 
 An important feature of the Catalax design is that any `Model` can serve as a `Predictor`, which creates a unified interface for model evaluation and comparison. This means that whether you're working with mechanistic models, neural ODEs, or hybrid approaches, they all implement the same prediction interface. This allows models to be used seamlessly for plotting model curves over experimental data, calculating fit metrics for model validation, and serving as components in parameter estimation workflows.

@@ -377,66 +377,6 @@ Effectively communicate Bayesian results:
 3. **Discuss parameter correlations**: Acknowledge when parameters are difficult to estimate independently
 4. **Quantify model comparison**: Use information criteria or Bayes factors for model selection
 
-## Research Applications and Case Studies
-
-### Enzyme Kinetics Parameter Estimation
-
-Bayesian methods excel at quantifying uncertainty in enzyme kinetic parameters:
-
-```python
-# Typical enzyme kinetics study
-model = ctx.Model(name="Enzyme Kinetics")
-model.add_species("S", "P", "E")
-model.add_ode("S", "-(k_cat * E * S) / (K_m + S)")
-model.add_ode("P", "(k_cat * E * S) / (K_m + S)")
-model.add_ode("E", "0")  # Enzyme conservation
-
-# Set priors based on literature knowledge
-model.parameters["k_cat"].prior = cmc.priors.LogUniform(low=0.1, high=1000.0)
-model.parameters["K_m"].prior = cmc.priors.LogUniform(low=1.0, high=1000.0)
-
-# This approach provides:
-# - Uncertainty quantification for kinetic parameters
-# - Robust predictions under new conditions
-# - Rigorous comparison of different kinetic mechanisms
-```
-
-### Inhibition Mechanism Determination
-
-Use Bayesian model comparison to determine inhibition mechanisms:
-
-```python
-# Competitive inhibition model
-competitive_model = ctx.Model(name="Competitive Inhibition")
-competitive_model.add_species("S", "P", "E", "I")
-competitive_model.add_ode("S", "-(k_cat * E * S) / (K_m * (1 + I/K_i) + S)")
-
-# Non-competitive inhibition model  
-noncompetitive_model = ctx.Model(name="Non-competitive Inhibition")
-noncompetitive_model.add_ode("S", "-(k_cat * E * S) / ((K_m + S) * (1 + I/K_i))")
-
-# Compare models using Bayesian evidence to determine mechanism
-```
-
-### Multi-experiment Integration
-
-Combine data from multiple experimental conditions for robust parameter estimation:
-
-```python
-# Integrate data from multiple pH values, temperatures, or cofactor concentrations
-combined_dataset = ctx.Dataset.from_model(model)
-
-# Add measurements from different experimental conditions
-for ph in [6.0, 7.0, 8.0]:
-    for temp in [25, 30, 37]:
-        # Add measurements at each condition
-        condition_data = load_experimental_data(ph=ph, temperature=temp)
-        combined_dataset.measurements.extend(condition_data.measurements)
-
-# Single MCMC run estimates parameters across all conditions
-results = hmc.run(model=model, dataset=combined_dataset, yerrs=0.1)
-```
-
 ## Troubleshooting Common Issues
 
 ### Poor Convergence

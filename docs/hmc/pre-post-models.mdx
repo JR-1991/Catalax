@@ -112,30 +112,6 @@ def total_protein_observable(ctx: PostModelContext):
 
 This example shows the core pattern: the decorated function receives a `PostModelContext` with `ctx.states` containing simulation results, and can modify it to match experimental observables.
 
-### Complex Observable Relationships
-
-```python
-@post_model
-def binding_fraction_observable(ctx: PostModelContext):
-    """Convert binding model to experimentally observable binding fraction."""
-    
-    # Extract species: [Protein_A_free, Protein_B_free, Complex_AB]
-    protein_a_free = ctx.states[:, 0]
-    complex_ab = ctx.states[:, 2]
-    
-    # Calculate total protein A concentration
-    total_protein_a = protein_a_free + complex_ab
-    
-    # Observable: binding fraction
-    binding_fraction = numpyro.deterministic(
-        "binding_fraction",
-        complex_ab / (total_protein_a + 1e-12)  # Numerical stability
-    )
-    
-    ctx.states = binding_fraction[:, None]
-```
-
-The `ctx.pre_output` attribute allows access to information passed from PreModel transformations, enabling coordinated pre- and post-processing workflows.
 
 ## Integration with MCMC Workflows
 
