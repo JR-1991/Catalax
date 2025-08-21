@@ -11,9 +11,9 @@
     "decoration": "windows"
   },
   "colors": {
-    "dark": "#6c757d",
-    "light": "#adb5bd",
-    "primary": "#495057"
+    "dark": "#f72585",
+    "light": "#4cc9f0",
+    "primary": "#016e88"
   },
   "logo": "assets/logo.png",
   "description": "Biochemical modelling with JAX",
