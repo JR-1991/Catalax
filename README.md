@@ -5,6 +5,7 @@
 **A High-Performance JAX Framework for Biochemical Modeling, Neural ODEs, and Bayesian Inference**
 
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
+[![Documentation](https://img.shields.io/badge/documentation-blue)](https://catalax.mintlify.app/welcome)
 [![JAX](https://img.shields.io/badge/JAX-powered-orange.svg)](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -22,7 +23,7 @@ Catalax combines the power of **JAX** with advanced numerical methods for bioche
 - **📊 Comprehensive model analysis** with fit metrics and model comparison
 - **🔬 Biochemical data integration** with EnzymeML support
 
-🚧 **Note**: Catalax is in active development. API may change in future versions.
+Check out the [documentation](https://catalax.mintlify.app/) for more details.
 
 ## 🌟 Key Features
 
@@ -236,183 +237,9 @@ summary_stats = results.summary(hdi_prob=0.95)
 
 </details>
 
-### 4. **Advanced Neural Network Training**
+## 📝 Documentation
 
-Train neural ODEs with sophisticated biological constraints and multi-stage optimization strategies. The penalty system enforces biochemical principles like mass conservation, reaction sparsity, and integer stoichiometry, while the training strategy allows fine-grained control over different model components.
-
-**Key features:**
-
-- **Biological penalties** that enforce mass balance, sparsity, and integer coefficients
-- **Multi-stage training** with different learning rates and penalty weights
-- **Component-specific training** (MLP only, stoichiometry only, or both)
-- **Adaptive penalty scheduling** for improved convergence
-- **Built-in regularization** with L1/L2 weight penalties
-
-<details>
-<summary><strong>⚙️ Click to see advanced training code</strong></summary>
-
-```python
-from catalax.neural.penalties import Penalties
-
-# Create penalty system for biological constraints
-penalties = Penalties.for_rateflow(
-    alpha=0.1,
-    density_alpha=0.05,      # Encourage sparse reactions
-    bipolar_alpha=0.1,       # Enforce mass balance
-    integer_alpha=0.02,      # Encourage integer stoichiometry
-    l2_alpha=0.01           # L2 regularization
-)
-
-# Create training dataset
-training_dataset = ctx.Dataset.from_model(model)
-training_dataset.add_initial(S=100, E=10, ES=0, P=0)
-
-# Multi-step training with different penalties
-strategy = Strategy()
-strategy.add_step(
-    lr=1e-3, steps=1000, batch_size=32,
-    penalties=penalties,
-    train=ctx.neural.Modes.MLP  # Train only neural network
-)
-strategy.add_step(
-    lr=1e-4, steps=1000, batch_size=64,
-    penalties=penalties.update_alpha(0.05),
-    train=ctx.neural.Modes.BOTH  # Train network + stoichiometry
-)
-
-trained_model = neural_model.train(
-    model=neural_model,
-    dataset=training_dataset,
-    strategy=strategy
-)
-```
-
-</details>
-
-## 🎨 Advanced Features
-
-### 🔬 **EnzymeML Integration**
-
-Seamlessly integrate with the EnzymeML standard for biochemical data exchange. Import experimental data and model structures from EnzymeML documents, run analysis in Catalax, and export results back to the standardized format for interoperability with other tools.
-
-<details>
-<summary><strong>🔬 Click to see EnzymeML integration code</strong></summary>
-
-```python
-import pyenzyme as pe
-
-# Load from EnzymeML
-doc = pe.read_enzymeml("experiment.json")
-model = ctx.Model.from_enzymeml(doc, from_reactions=True)
-
-# Export back to EnzymeML
-model.update_enzymeml_parameters(doc)
-```
-
-</details>
-
-### 📊 **Model Comparison**
-
-Evaluate and compare model performance using comprehensive statistical metrics following the lmfit convention. Calculate goodness-of-fit measures and information criteria to assess model quality and select the best model among competing hypotheses.
-
-<details>
-<summary><strong>📊 Click to see model comparison code</strong></summary>
-
-```python
-from catalax.dataset.metrics import FitMetrics
-
-# Create experimental dataset for comparison
-experimental_data = ctx.Dataset.from_model(model)
-experimental_data.add_initial(S=100, E=10, ES=0, P=0)
-
-# Calculate metrics using the dataset's built-in method
-metrics = experimental_data.metrics(predictor=model)
-
-print(f"AIC: {metrics.aic:.2f}")
-print(f"BIC: {metrics.bic:.2f}")
-print(f"Reduced χ²: {metrics.redchi:.3f}")
-```
-
-</details>
-
-### 🎯 **Surrogate-Accelerated MCMC**
-
-Dramatically accelerate Bayesian inference by replacing expensive mechanistic model evaluations with fast neural network surrogates. Train a neural ODE on synthetic data, then use it as a proxy during MCMC sampling to achieve 10-100x speedups while maintaining accuracy.
-
-<details>
-<summary><strong>🎯 Click to see surrogate MCMC code</strong></summary>
-
-```python
-from catalax.mcmc import HMC
-from catalax.neural import train_neural_ode
-
-# Create dataset for surrogate training
-training_data = ctx.Dataset.from_model(mechanistic_model)
-training_data.add_initial(S=100, E=10, ES=0, P=0)
-
-# Train neural surrogate
-surrogate = train_neural_ode(neural_model, training_data, strategy)
-
-# Create HMC sampler
-hmc = HMC(
-    num_warmup=1000,
-    num_samples=2000,
-    num_chains=4,
-    chain_method="parallel"
-)
-
-# Use surrogate for fast MCMC (10-100x speedup!)
-results = hmc.run(
-    model=mechanistic_model,
-    dataset=experimental_data,
-    yerrs=0.1,
-    surrogate=surrogate
-)
-
-# Analyze results
-results.print_summary()
-fig = results.plot_corner()
-credible_intervals = results.plot_credibility_interval(
-    initial_condition={"S": 100, "E": 10, "ES": 0, "P": 0},
-    time=jnp.linspace(0, 100, 200)
-)
-```
-
-</details>
-
-### 📈 **Phase Plot Analysis**
-
-Visualize how reaction rates depend on species concentrations using interactive phase plots and heatmaps. This powerful analysis tool helps understand rate limiting steps, identify optimal operating conditions, and reveal complex concentration dependencies in biochemical networks.
-
-<details>
-<summary><strong>📈 Click to see phase plot analysis code</strong></summary>
-
-```python
-# Create dataset for phase plot analysis
-analysis_data = ctx.Dataset.from_model(mechanistic_model)
-analysis_data.add_initial(S=100, E=10, ES=0, P=0)
-
-# Analyze rate dependencies
-rateflow_model.plot_rate_grid(
-    dataset=analysis_data,
-    model=mechanistic_model,
-    species_pairs=[("S", "E"), ("ES", "P")],
-    grid_resolution=50
-)
-```
-
-</details>
-
-## 🔧 Core Components
-
-| Component     | Description                                                       |
-| ------------- | ----------------------------------------------------------------- |
-| **Model**     | Core mechanistic modeling with ODEs, species, and parameters      |
-| **Dataset**   | Experimental data handling with simulation integration            |
-| **Neural**    | Neural ODE implementations (NeuralODE, RateFlowODE, UniversalODE) |
-| **MCMC**      | Bayesian inference with NumPyro backend                           |
-| **Penalties** | Biological constraint enforcement for neural networks             |
-| **Metrics**   | Statistical model evaluation and comparison                       |
+Catalax documentation is available at [https://catalax.mintlify.app/](https://catalax.mintlify.app/).
 
 ## 📚 Examples
 
