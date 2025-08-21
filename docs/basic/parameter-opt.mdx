@@ -1,0 +1,120 @@
+---
+title: "Parameter Estimation"
+---
+
+Parameter estimation in Catalax enables precise estimation of kinetic constants and other model parameters from experimental data using deterministic optimization algorithms. Built on the robust [LmFit](https://lmfit.github.io/lmfit-py/) library, this approach provides fast, reliable parameter estimation with comprehensive statistical analysis and uncertainty bounds. Parameter optimization is ideal for well-posed problems where you have sufficient experimental data and need precise point estimates of model parameters.
+
+## Understanding Parameter Estimation
+
+### The Optimization Problem
+
+Parameter optimization in biochemical modeling involves finding parameter values that minimize the difference between model predictions and experimental observations. The optimization problem seeks parameter values θ that minimize the sum of squared residuals between experimental data and model predictions across all experimental conditions, species, and time points.
+
+This deterministic approach contrasts with Bayesian methods by providing single "best-fit" parameter values rather than probability distributions, making it computationally efficient and mathematically straightforward.
+
+### When to Use Parameter Optimization
+
+Parameter optimization is particularly effective for:
+
+**Well-characterized systems**: Models with established mechanistic understanding where you need precise parameter values
+
+**Sufficient data**: Experimental datasets with good coverage of the parameter space and low measurement noise
+
+**Point estimates**: Situations where single "best" parameter values are sufficient for your analysis
+
+**Initial estimates**: Generating starting points for more complex Bayesian inference procedures
+
+**Model comparison**: Rapidly evaluating different model structures through goodness-of-fit metrics
+
+## Basic Workflow
+
+The optimization process begins with defining your biochemical model and configuring parameters for estimation. This involves setting up the model structure, specifying which parameters should be optimized, providing initial guesses for parameter values, and defining physically meaningful bounds that constrain the search space to biochemically realistic values:
+
+```python
+import catalax as ctx
+import jax.numpy as jnp
+
+# Create biochemical model
+model = ctx.Model(name="Michaelis-Menten Kinetics")
+
+# Define species and dynamics
+model.add_species("S", "Substrate")
+model.add_ode("S", "-(v_max * S) / (K_m + S)")
+
+# Configure parameters for optimization
+model.parameters.v_max.initial_value = 10.0    # Starting guess
+model.parameters.v_max.lower_bound = 0.1       # Physical lower limit
+model.parameters.v_max.upper_bound = 100.0     # Physical upper limit
+
+model.parameters.K_m.initial_value = 50.0      # Starting guess  
+model.parameters.K_m.lower_bound = 1.0         # Physical lower limit
+model.parameters.K_m.upper_bound = 500.0       # Physical upper limit
+
+# Clear current values to enable optimization
+model.parameters.v_max.value = None
+model.parameters.K_m.value = None
+
+# Perform optimization
+result, optimized_model = ctx.optimize(
+    model=model,
+    dataset=dataset,
+    global_upper_bound=1e5,          # Default upper bound for unconstrained parameters
+    global_lower_bound=1e-6,         # Default lower bound for unconstrained parameters
+    method="lbfgs",                  # Optimization algorithm
+    dt0=0.01,                        # Integration step size
+    max_steps=64**4                  # Maximum integration steps
+)
+```
+
+## Model selection
+
+Model selection is a crucial step in parameter estimation that helps identify the most appropriate model structure for a given dataset. Catalax provides several metrics to assist with model selection, including:
+
+### Akaike Information Criterion (AIC)
+
+The Akaike Information Criterion (AIC) is a measure of the quality of a model. It is defined as:
+
+$$
+AIC = 2k - 2\ln(L)
+$$
+
+where $k$ is the number of parameters in the model and $L$ is the likelihood of the model.
+
+### Bayesian Information Criterion (BIC)
+
+The Bayesian Information Criterion (BIC) is a measure of the quality of a model. It is defined as:
+
+$$
+BIC = k\ln(n) - 2\ln(L)
+$$
+
+where $k$ is the number of parameters in the model and $n$ is the number of data points and $L$ is the likelihood of the model.
+
+### Coefficient of determination (R²)
+
+The R² is a measure of the quality of a model. It is defined as:
+
+$$
+R^2 = 1 - \frac{\sum_{i=1}^n (y_i - \hat{y}_i)^2}{\sum_{i=1}^n (y_i - \bar{y})^2}
+$$
+
+where $y_i$ is the observed value, $\hat{y}_i$ is the predicted value, and $\bar{y}$ is the mean of the observed values.
+
+### Assessing metrics with `Dataset`
+
+Catalax provides a `Dataset` native method that can be used to derive the metrics for a given model.
+
+```python
+metrics = dataset.metrics(model)
+```
+
+The metrics are returned as a dictionary with the following keys:
+
+- `aic`: Akaike Information Criterion
+- `bic`: Bayesian Information Criterion
+- `chisqr`: Chi-squared
+- `redchi`: Reduced chi-squared
+- `r2`: R-squared
+- `weighted_mape`: Weighted mean absolute percentage error
+
+The metrics can be used to select the best model structure for a given dataset. For instance, the AIC and BIC can be used to select the best model based on complexity and fit.
