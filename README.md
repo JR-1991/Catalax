@@ -1,6 +1,6 @@
 
 <div align="center">
-<h1>Catalax 🧬⚡</h1>
+<img src="docs/assets/logo-light.png" width=300 alt="hi" class="inline"/>
 
 **A High-Performance JAX Framework for Biochemical Modeling, Neural ODEs, and Bayesian Inference**
 
@@ -8,8 +8,6 @@
 [![Documentation](https://img.shields.io/badge/documentation-blue)](https://catalax.mintlify.app/welcome)
 [![JAX](https://img.shields.io/badge/JAX-powered-orange.svg)](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
-*Accelerate your biochemical modeling with differentiable programming*
 
 </div>
 
