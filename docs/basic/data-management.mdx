@@ -108,7 +108,7 @@ EnzymeML is a standardized format for enzyme kinetics data that provides rich me
 import pyenzyme as pe
 
 # Load EnzymeML document
-enzmldoc = pe.EnzymeMLDocument.from_file("experiment.omex")
+enzmldoc = pe.read_enzymeml("experiment.omex")
 
 # Convert to Catalax dataset
 dataset = ctx.Dataset.from_enzymeml(enzmldoc)
