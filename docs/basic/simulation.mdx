@@ -14,7 +14,7 @@ The simulation process follows a straightforward pattern:
 4. **Run Simulation**: Generate time-series data
 5. **Analyze Results**: Plot and evaluate the data
 
-## Step 1: Creating a Biochemical Model
+### Step 1: Creating a Biochemical Model
 
 Start by defining your biochemical system:
 
@@ -37,7 +37,7 @@ model.parameters["K_m"].value = 100.0
 
 The model automatically infers parameters (`v_max`, `K_m`) from the equation and creates `Parameter` objects that you can configure.
 
-## Step 2: Setting Up Initial Conditions
+### Step 2: Setting Up Initial Conditions
 
 Create a Dataset linked to your model and add initial conditions:
 
@@ -57,7 +57,7 @@ print(f"Dataset has {len(dataset.measurements)} initial conditions")
 
 Each call to `add_initial()` creates a new `Measurement` in the dataset with the specified initial conditions.
 
-## Step 3: Configuring the Simulation
+### Step 3: Configuring the Simulation
 
 Define simulation parameters using `SimulationConfig`:
 
@@ -76,7 +76,7 @@ config = ctx.SimulationConfig(
 - `dt0`: Initial step size (default: 0.1)
 - `rtol`, `atol`: Numerical tolerances (defaults: 1e-5)
 
-## Step 4: Running the Simulation
+### Step 4: Running the Simulation
 
 Once you have defined your model, set up initial conditions, and configured the simulation parameters, you can execute the simulation to generate time-series data. The simulation process integrates the differential equations forward in time, starting from each set of initial conditions:
 
@@ -101,9 +101,9 @@ The `simulate()` method is the core function that transforms your initial condit
 
 This structure means that your simulation results are immediately ready for analysis, plotting, and integration with other Catalax workflows.
 
-## Step 5: Visualization and Analysis
+### Step 5: Visualization and Analysis
 
-### Basic Plotting
+## Basic Plotting
 
 Catalax datasets come with built-in plotting capabilities that make it easy to visualize your simulation results. The plotting system automatically handles multiple trajectories and provides clean, publication-ready figures:
 
@@ -121,7 +121,7 @@ simulated_dataset.plot(
 
 The `plot()` method creates a multi-panel figure where each panel shows one simulation trajectory. When you plot all trajectories at once, you can easily compare how different initial conditions lead to different system behaviors, which is particularly useful for understanding concentration-dependent effects in biochemical systems.
 
-### Model Evaluation
+## Model Evaluation
 
 One of the most powerful features of the Catalax plotting system is the ability to compare model predictions with experimental data by passing a `predictor` to the plot function. This enables direct visual assessment of how well your model captures the observed behavior:
 
@@ -135,7 +135,7 @@ experimental_data.plot(predictor=model, show=True)
 
 When you pass a `predictor` to the plot function, Catalax automatically generates model predictions at the same time points as your experimental data and overlays them on the same plot. This creates a comprehensive visualization that shows both the experimental observations and the model's predictions, making it immediately clear how well the model captures the system behavior. The plot displays experimental data as points or lines while model predictions appear as smooth overlaid curves, providing an intuitive visual comparison to assess model fit quality.
 
-### Quantitative Evaluation
+## Quantitative Evaluation
 
 Beyond visual assessment, Catalax provides quantitative metrics to evaluate model performance numerically. The `metrics()` method calculates comprehensive fit statistics that help you assess model quality objectively:
 
@@ -256,7 +256,7 @@ print(f"Model fit quality: RMSE = {metrics.rmse:.3f}")
 
 For comprehensive information about importing data from various formats, managing datasets, and data augmentation techniques, see the [Data Management](./data-management.mdx) guide. This covers importing from EnzymeML documents, pandas DataFrames, Croissant archives, and various data processing workflows.
 
-### Model as Predictor
+## Model as Predictor
 
 An important feature of the Catalax design is that any `Model` can serve as a `Predictor`, which creates a unified interface for model evaluation and comparison. This means that whether you're working with mechanistic models, neural ODEs, or hybrid approaches, they all implement the same prediction interface. This allows models to be used seamlessly for plotting model curves over experimental data, calculating fit metrics for model validation, and serving as components in parameter estimation workflows.
 
