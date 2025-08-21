@@ -6,7 +6,7 @@
   "background": {
     "color": {
       "dark": "#222831",
-      "light": "#EEEEEE"
+      "light": "#F8FAFB"
     }
   },
   "colors": {
@@ -14,7 +14,10 @@
     "light": "#4cc9f0",
     "primary": "#016e88"
   },
-  "logo": "assets/logo.png",
+  "logo": {
+    "light": "assets/logo-light.png",
+    "dark": "assets/logo-dark.png"
+  },
   "description": "Biochemical modelling with JAX",
   "name": "Catalax",
   "navbar": {
