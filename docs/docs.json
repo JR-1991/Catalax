@@ -36,9 +36,10 @@
             "group": "Basics",
             "icon": "flask",
             "pages": [
-              "usage/model-class",
-              "usage/simulation",
-              "usage/data-management"
+              "basic/model-class",
+              "basic/simulation",
+              "basic/data-management",
+              "basic/parameter-opt"
             ],
             "tab": "Basics"
           },
@@ -46,19 +47,19 @@
             "group": "Bayesian Inference",
             "icon": "chart-line",
             "pages": [
-              "usage/mcmc-basic",
-              "usage/pre-post-models",
-              "usage/surrogate-hmc"
+              "hmc/mcmc-basic",
+              "hmc/pre-post-models",
+              "hmc/surrogate-hmc"
             ]
           },
           {
             "group": "Neural ODEs",
             "icon": "brain",
             "pages": [
-              "usage/neural-ode",
-              "usage/universal-ode",
-              "usage/rateflow-ode",
-              "usage/neural-regularization"
+              "neural/neural-ode",
+              "neural/universal-ode",
+              "neural/rateflow-ode",
+              "neural/neural-regularization"
             ]
           }
         ],
