@@ -1,0 +1,31 @@
+---
+title: neuralode
+sidebarTitle: neuralode
+---
+
+# `catalax.neural.neuralode`
+
+## Classes
+
+### `NeuralODE` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralode.py#L9" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+**Methods:**
+
+#### `get_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralode.py#L61" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_rates(self, t: jax.Array, y: jax.Array) -> jax.Array
+```
+
+Get the rates of the model.
+
+This basically evaluates the MLP at the given time points and states, which
+is useful for quiver plots and MCMC surrogates.
+
+**Args:**
+- `t`: Time points
+- `y`: States
+
+**Returns:**
+- Rates
+

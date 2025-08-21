@@ -1,0 +1,110 @@
+---
+title: stoich_mat
+sidebarTitle: stoich_mat
+---
+
+# `catalax.neural.penalties.stoich_mat`
+
+## Functions
+
+### `penalize_null_space` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/penalties/stoich_mat.py#L7" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+penalize_null_space(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array
+```
+
+
+Penalize the null space of the stoichiometric matrix.
+
+This penalty function encourages the stoichiometric matrix to have a null space of zero.
+
+
+### `penalize_density` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/penalties/stoich_mat.py#L29" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+penalize_density(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array
+```
+
+
+Penalize dense stoichiometric matrices by encouraging sparsity.
+
+This penalty function encourages the stoichiometric matrix to have fewer
+non-zero entries by penalizing values greater than 0.5. This promotes
+sparse reaction networks which are often more interpretable and realistic.
+
+**Args:**
+- `stoich_matrix`: The stoichiometric matrix to penalize, shape (n_species, n_reactions)
+- `alpha`: Penalty strength coefficient, higher values increase sparsity pressure
+
+**Returns:**
+- Scalar penalty value proportional to the density of the matrix
+
+
+### `penalize_non_bipolar` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/penalties/stoich_mat.py#L50" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+penalize_non_bipolar(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array
+```
+
+
+Penalize stoichiometric matrices that violate mass balance constraints.
+
+This penalty function encourages reactions to be mass-balanced by penalizing
+columns (reactions) where the sum of stoichiometric coefficients is non-zero.
+In a bipolar representation, balanced reactions should have equal numbers of
+reactants (-1) and products (+1), resulting in zero column sums.
+
+**Args:**
+- `stoich_matrix`: The stoichiometric matrix to penalize, shape (n_species, n_reactions)
+- `alpha`: Penalty strength coefficient, higher values enforce stricter mass balance
+
+**Returns:**
+- Scalar penalty value proportional to mass balance violations
+
+
+### `penalize_non_conservative` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/penalties/stoich_mat.py#L74" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+penalize_non_conservative(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array
+```
+
+
+Penalize non-conservative reactions.
+
+**Args:**
+- `stoich_matrix`: The stoichiometric matrix to penalize
+- `alpha`: Penalty strength coefficient
+
+
+### `penalize_duplicate_reactions` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/penalties/stoich_mat.py#L94" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+penalize_duplicate_reactions(model: RateFlowODE, alpha: float = 1.0, **kwargs) -> jax.Array
+```
+
+### `penalize_non_integer` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/penalties/stoich_mat.py#L113" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+penalize_non_integer(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array
+```
+
+
+Penalize non-integer values in the stoichiometric matrix.
+
+**Args:**
+- `stoich_matrix`: The stoichiometric matrix to penalize
+- `alpha`: Penalty strength coefficient
+
+**Returns:**
+- Scalar penalty value proportional to deviation from integers
+
+
+### `l1_stoich_penalty` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/penalties/stoich_mat.py#L133" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+l1_stoich_penalty(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Array
+```
+
+
+Penalize the L1 norm of the stoichiometric matrix.
+

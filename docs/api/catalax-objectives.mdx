@@ -1,0 +1,54 @@
+---
+title: objectives
+sidebarTitle: objectives
+---
+
+# `catalax.objectives`
+
+
+Loss functions for model fitting and evaluation.
+
+This module provides loss functions commonly used in optimization and model
+evaluation tasks, particularly for scientific computing and experimental
+data fitting.
+
+
+## Functions
+
+### `l1_loss` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/objectives.py#L12" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+l1_loss(y_true: Array, y_pred: Array) -> Array
+```
+
+
+Calculate the L1 (Manhattan) loss between true and predicted values.
+
+The L1 loss, also known as Mean Absolute Error (MAE) or Manhattan distance,
+computes the absolute difference between true and predicted values. This loss
+function is robust to outliers compared to L2 loss and is commonly used in
+regression tasks where outlier robustness is desired.
+
+**Args:**
+- `y_true`: True/observed values as a JAX array
+- `y_pred`: Predicted values as a JAX array, must have the same shape as y_true
+
+**Returns:**
+- JAX array containing the element-wise absolute differences between y_true
+- and y_pred, with the same shape as the input arrays
+
+
+### `mean_absolute_error` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/objectives.py#L44" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+mean_absolute_error(y_true: Array, y_pred: Array) -> Array
+```
+
+
+Calculate the mean absolute error between true and predicted values.
+
+The mean absolute error computes the average absolute difference between
+true and predicted values. This loss function is robust to outliers compared
+to mean squared error and is commonly used in regression tasks where outlier
+robustness is desired.
+

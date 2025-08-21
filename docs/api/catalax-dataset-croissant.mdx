@@ -1,0 +1,75 @@
+---
+title: croissant
+sidebarTitle: croissant
+---
+
+# `catalax.dataset.croissant`
+
+## Functions
+
+### `dataset_to_croissant` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/croissant.py#L19" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+dataset_to_croissant(dataset: Dataset, dirpath: str, name: Optional[str] = None, license: str = 'CC BY-SA 4.0', version: str = '1.0.0', cite_as: Optional[str] = None, url: Optional[str] = None, date_published: datetime = datetime.now()) -> None
+```
+
+
+Exports a Dataset to a Croissant (https://github.com/mlcommons/croissant) archive.
+
+The croissant format is a JSON-LD standard to describe datasets and enable
+interoperability between different tools and platforms. The format is
+designed to be simple and easy to use, while still providing the necessary
+information to describe a dataset.
+
+This implementation breaks up all measurements found in a dataset into
+individual JSON Lines files, and then zips them up with a metadata file in
+the Croissant format. Initial conditions are stored within the croissant metadata.
+
+Catalax support a method to read in Croissant archives, so this method can be
+used to export a dataset to a format that can be read back in. However, you can also
+use the official Croissant tools to read in the dataset. For this to do, you
+can use the `mlcommons/croissant` Python package to parse the unzipped files.
+
+**Args:**
+- `name`: The name of the dataset. Defaults to None.
+- `date_published`: The date the dataset was published.
+- `dataset`: The Dataset to export.
+- `dirpath`: The directory to save the Croissant archive to.
+- `license`: The license for the dataset. Defaults to "CC BY-SA 4.0".
+- `version`: The version of the dataset. Defaults to "1.0.0".
+- `cite_as`: The citation for the dataset. Defaults to None.
+- `url`: The URL for the dataset. Defaults to None.
+
+
+### `extract_record_set` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/croissant.py#L93" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+extract_record_set(croissant: mlc.Dataset, uuid_filter = lambda x: True) -> Dict[str, mlc.Records]
+```
+
+
+Extracts the record sets from a Croissant dataset.
+
+**Args:**
+- `croissant`: The Croissant dataset.
+- `uuid_filter`: A filter function to apply to the UUIDs. Defaults to lambda x\: True.
+
+**Returns:**
+- Dict[str, mlc.RecordSet]: The record sets keyed by their UUID minus `/inits`.
+
+
+### `json_lines_to_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/croissant.py#L114" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+json_lines_to_dict(record_set: mlc.Records) -> Dict[str, List[float]]
+```
+
+
+Converts a given record set to a dictionary.
+
+**Args:**
+- `record_set`: The record set to convert.
+
+**Returns:**
+- Dict[str, List[float]]: The record set as a dictionary.
+

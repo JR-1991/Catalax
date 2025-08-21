@@ -1,0 +1,252 @@
+---
+title: measurement
+sidebarTitle: measurement
+---
+
+# `catalax.dataset.measurement`
+
+## Classes
+
+### `Measurement` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L32" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A class representing a measurement dataset with species concentrations over time.
+
+The Measurement class stores time series data for chemical species, including their
+initial concentrations and concentration values at each time point. It provides
+methods for data manipulation, conversion, visualization, and integration with
+other data formats.
+
+Key capabilities:
+- Store and manage time series concentration data
+- Convert data between different formats (JAX arrays, pandas, dictionaries)
+- Visualize measurement data with optional model comparison
+- Data augmentation with noise for simulation purposes
+- Import/export from common scientific data formats
+
+
+**Methods:**
+
+#### `species` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L131" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+species(self) -> List[str]
+```
+
+Returns the list of species names present in the data.
+
+
+#### `serialize_time` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L176" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+serialize_time(self, value)
+```
+
+Convert JAX array time data to Python list for serialization.
+
+
+#### `serialize_data` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L181" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+serialize_data(self, value)
+```
+
+Convert JAX array species data to Python lists for serialization.
+
+
+#### `add_data` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L186" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_data(self, species: str, data: Union[jax.Array, np.ndarray, List[float]], initial_concentration: float) -> None
+```
+
+Add or update data for a species in the measurement.
+
+**Args:**
+- `species`: The species name to add or update.
+- `data`: Concentration values over time.
+- `initial_concentration`: The initial concentration of the species.
+
+**Raises:**
+- `AssertionError`: If the provided data length doesn't match the existing time points.
+
+
+#### `add_initial` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L213" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_initial(self, species: str, initial_concentration: float) -> None
+```
+
+Add or update an initial condition for a species in the measurement.
+
+**Args:**
+- `species`: The species name to add or update.
+- `initial_concentration`: The initial concentration of the species.
+
+
+#### `has_data` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L222" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+has_data(self) -> bool
+```
+
+Check if the measurement contains any non-empty data.
+
+**Returns:**
+- True if any species has data points, False otherwise.
+
+
+#### `to_dataframe` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L231" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_dataframe(self) -> pd.DataFrame
+```
+
+Convert the measurement to a pandas DataFrame.
+
+The resulting DataFrame contains columns for each species, time points,
+and a measurementId column.
+
+**Returns:**
+- pd.DataFrame: DataFrame with time series data and metadata.
+
+
+#### `to_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L246" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_dict(self) -> Dict[str, Union[List[float], jax.Array, np.ndarray]]
+```
+
+Convert the measurement to a dictionary with time and species data.
+
+**Returns:**
+- Dict[str, Union\[List[float], jax.Array, np.ndarray]]: Dictionary with time and species data.
+
+
+#### `to_jsonl` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L257" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_jsonl(self) -> str
+```
+
+Convert the measurement to JSON Lines format.
+
+Each line contains a JSON object with time and all species values for that time point.
+
+**Returns:**
+- JSON Lines formatted string.
+
+
+#### `to_jax_arrays` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L273" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_jax_arrays(self, species_order: List[str], inits_to_array: bool = False) -> Tuple[jax.Array, jax.Array, Union[jax.Array, Dict[str, float]]]
+```
+
+Convert measurement data to JAX arrays in the specified species order.
+
+Arranges the data following the provided species order for use in models.
+
+**Args:**
+- `species_order`: Order of species to arrange data.
+- `inits_to_array`: If True, convert initial conditions to a JAX array.
+                  If False, return initial conditions as a dictionary.
+
+**Returns:**
+- Tuple containing:
+- data array (shape: n_time_points × n_species)
+- time array (shape: n_time_points)
+- initial conditions (as array or dict)
+
+**Raises:**
+- `ValueError`: If any species in species_order is missing from the measurement data.
+
+
+#### `to_y0_array` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L318" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_y0_array(self, species_order: List[str]) -> jax.Array
+```
+
+Convert initial conditions to a JAX array in the specified species order.
+
+**Args:**
+- `species_order`: Order of species to arrange initial conditions.
+
+**Returns:**
+- jax.Array: Initial conditions array.
+
+
+#### `from_dataframe` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L331" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_dataframe(cls, df: pd.DataFrame, initial_conditions: Dict[str, float], **kwargs) -> 'Measurement'
+```
+
+Create a Measurement object from a pandas DataFrame.
+
+**Args:**
+- `df`: DataFrame containing time series data.
+              Must include a 'time' column.
+- `initial_conditions`: Mapping of species names to initial concentrations.
+- `**kwargs`: Additional arguments to pass to the Measurement constructor.
+
+**Returns:**
+- New Measurement object with data from the DataFrame.
+
+**Raises:**
+- `AssertionError`: If the DataFrame doesn't have a 'time' column.
+- `ValueError`: If species in DataFrame don't match those in initial_conditions.
+
+
+#### `from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L383" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_enzymeml(cls, measurement: pe.Measurement) -> 'Measurement'
+```
+
+Create a Measurement object from a pyenzyme Measurement object.
+
+**Args:**
+- `measurement`: PyEnzyme measurement object.
+
+**Returns:**
+- New Measurement object with data from the PyEnzyme measurement.
+
+
+#### `plot` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L475" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+plot(self, show: bool = True, ax = None, model_data: Optional[Measurement] = None, xlim: Optional[Tuple[float, float | None]] = (0, None), _lower_95: Optional[Measurement] = None, _upper_95: Optional[Measurement] = None, _lower_50: Optional[Measurement] = None, _upper_50: Optional[Measurement] = None, **kwargs) -> None
+```
+
+Plot the measurement data with optional model fit comparison.
+
+**Args:**
+- `show`: Whether to show the plot immediately.
+- `ax`: Matplotlib axes to plot on. If None, creates a new figure.
+- `model_data`: Model prediction data to overlay on the plot.
+- `xlim`: Optional\[Tuple[float, float]]\: Limits of the x-axis.
+- `_lower_95`: Optional\[Measurement]\: Lower 95% HDI data. Internally used for MCMC.
+- `_upper_95`: Optional\[Measurement]\: Upper 95% HDI data. Internally used for MCMC.
+- `_lower_50`: Optional\[Measurement]\: Lower 50% HDI data. Internally used for MCMC.
+- `_upper_50`: Optional\[Measurement]\: Upper 50% HDI data. Internally used for MCMC.
+- `**kwargs`: Additional arguments to pass to plot functions.
+
+
+#### `augment` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/dataset/measurement.py#L612" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+augment(self, sigma: float, seed: int, multiplicative: bool = False) -> 'Measurement'
+```
+
+Create a new Measurement with noise-augmented data.
+
+**Args:**
+- `sigma`: Standard deviation of the Gaussian noise.
+- `seed`: Random seed for reproducibility.
+- `multiplicative`: If True, noise is multiplicative rather than additive.
+
+**Returns:**
+- New Measurement object with noise-augmented data.
+

@@ -1,0 +1,222 @@
+---
+title: neuralbase
+sidebarTitle: neuralbase
+---
+
+# `catalax.neural.neuralbase`
+
+## Classes
+
+### `NeuralBase` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L43" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+**Methods:**
+
+#### `train` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L110" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+train(self, dataset: Dataset, strategy: Strategy, optimizer = optax.adabelief, print_every: int = 10, weight_scale: float = 1e-08, save_milestones: bool = False, milestone_dir: str = './milestones', log: Optional[str] = None, seed: int = 420) -> Self
+```
+
+Train the model on the given dataset.
+
+This method trains the neural ODE model using the specified training strategy and
+hyperparameters. The training process involves optimizing the neural network parameters
+to minimize the loss function defined in the strategy over multiple epochs and batches.
+
+The method will:
+- Extract training data from the provided dataset
+- Initialize the optimizer with the specified learning rate schedule
+- Scale model weights according to the weight_scale parameter
+- Execute the training loop following the provided strategy
+- Optionally save model checkpoints at specified milestones
+- Log training progress if a log file is specified
+
+The training uses JAX for automatic differentiation and JIT compilation to ensure
+efficient computation. The model parameters are updated using the specified optimizer
+(default: AdaBelief) to minimize prediction errors on the training data.
+
+Returns the trained model with optimized parameters that can be used for making
+predictions on new data or for further analysis.
+
+**Args:**
+- `dataset`: Dataset containing initial conditions for training
+- `strategy`: Training strategy to use
+- `print_every`: Print progress every n steps
+- `weight_scale`: Weight scale for the optimizer
+- `save_milestones`: Save model checkpoints
+- `log`: Log file to save progress
+
+**Returns:**
+- The trained neural ODE model with updated parameters.
+The model will have learned to approximate the dynamics from the provided
+dataset using the specified training strategy and hyperparameters.
+
+
+#### `predict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L172" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+predict(self, dataset: Dataset, config: Optional[SimulationConfig] = None, n_steps: int = 100, use_times: bool = False, solver: Optional[Type[diffrax.AbstractSolver]] = None, rtol: Optional[float] = None, atol: Optional[float] = None, dt0: Optional[float] = None)
+```
+
+Predict model behavior using the given dataset.
+
+This is a convenience wrapper around the `simulate` method that automatically
+creates a simulation configuration if one is not provided.
+
+**Args:**
+- `dataset`: Dataset containing initial conditions for prediction
+- `config`: Optional simulation configuration parameters. If None,
+   a configuration will be created from the dataset.
+- `n_steps`: Number of time steps for the simulation. This will override
+   the nsteps value in the provided config if both are specified.
+- `use_times`: Whether to use the time points from the dataset or to simulate at fixed time steps
+
+**Returns:**
+- A Dataset object containing the prediction results
+
+
+#### `rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L233" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+rates(self, t: jax.Array, y: jax.Array, constants: Optional[jax.Array] = None) -> jax.Array
+```
+
+Get the rates of the predictor.
+
+
+#### `predict_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L243" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+predict_rates(self, dataset: Dataset) -> jax.Array
+```
+
+Predict rates using the given dataset.
+
+**Args:**
+- `dataset`: Dataset containing initial conditions for prediction
+
+**Returns:**
+- A Dataset object containing the prediction results
+
+
+#### `loss` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L260" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+loss(self, dataset: Dataset, loss: Callable = optax.log_cosh) -> jax.Array
+```
+
+Calculate the loss of the model on the given dataset.
+
+**Args:**
+- `dataset`: Dataset to calculate the loss on
+- `loss`: Loss function to use
+
+**Returns:**
+- Loss value
+
+
+#### `from_model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L279" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_model(cls, model: Model, width_size: int, depth: int, seed: int = 0, use_final_bias: bool = False, final_activation: Optional[Callable] = None, solver = diffrax.Tsit5, activation = jax.nn.softplus, **kwargs)
+```
+
+Intializes a NeuralODE from a catalax.Model
+
+**Args:**
+- `model`: Model to initialize NeuralODE from
+
+
+#### `from_dataset` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L325" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_dataset(cls, dataset: Dataset, width_size: int, depth: int, seed: int = 0, use_final_bias: bool = True, solver = diffrax.Tsit5, activation = jax.nn.softplus, **kwargs)
+```
+
+Intializes a NeuralODE from a catalax.Model
+
+**Args:**
+- `model`: Model to initialize NeuralODE from
+
+
+#### `from_eqx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L359" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_eqx(cls, path) -> Self
+```
+
+Loads a NeuralODE from an eqx file
+
+**Args:**
+- `path`: Path to the eqx file
+
+**Returns:**
+- Trained NeuralODE model.
+
+
+#### `save_to_eqx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L385" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+save_to_eqx(self, path: str, name: str, **kwargs)
+```
+
+Saves a NeuralODE to an eqx file
+
+**Args:**
+- `path`: Path to the directory to save the eqx file
+- `name`: Name of the eqx file
+
+
+#### `save_to_onnx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L408" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+save_to_onnx(self)
+```
+
+#### `get_weights_and_biases` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L411" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_weights_and_biases(self) -> List[jax.Array]
+```
+
+Get all weights and biases from the model.
+
+**Returns:**
+- List of weights and biases
+
+
+#### `get_extra_hyperparams` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L421" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_extra_hyperparams(self) -> Dict[str, Any]
+```
+
+Get extra hyperparameters from the model.
+
+**Returns:**
+- Dict of extra hyperparameters
+
+
+#### `get_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L429" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_species_order(self) -> list[str]
+```
+
+Get the species order of the predictor.
+
+**Returns:**
+- List of species order
+
+
+#### `n_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L437" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+n_parameters(self) -> int
+```
+
+Get the number of parameters of the predictor.
+
+**Returns:**
+- Number of parameters
+

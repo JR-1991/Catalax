@@ -1,0 +1,30 @@
+---
+title: enzymeml
+sidebarTitle: enzymeml
+---
+
+# `catalax.tools.enzymeml`
+
+## Functions
+
+### `dataset_and_model_from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/enzymeml.py#L7" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+dataset_and_model_from_enzymeml(enzmldoc: pe.EnzymeMLDocument, from_reactions: bool = False) -> tuple[Dataset, Model]
+```
+
+
+Convert an EnzymeML document to a Catalax Dataset and/or Model.
+
+**Args:**
+- `enzmldoc`: The EnzymeML document to convert.
+- `from_reactions`: Whether to convert the reactions to ODEs. If False, the
+equations from the `equations` section are used.
+
+**Returns:**
+- tuple\[Dataset, Model]: The dataset and model.
+
+**Raises:**
+- `ValueError`: If required elements are missing or if species differ
+between dataset and model.
+

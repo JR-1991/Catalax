@@ -1,0 +1,415 @@
+---
+title: "Model Definition"
+---
+
+The `Model` class serves as the foundational component for describing biochemical systems in Catalax. It provides a unified framework for defining species, reactions, parameters, and constraints that govern system dynamics. Whether you're modeling simple enzyme kinetics or complex metabolic networks, the Model class offers the flexibility and mathematical rigor needed for advanced computational analysis including simulation, optimization, and Bayesian inference.
+
+## Understanding the Model Architecture
+
+### Core Components and Structure
+
+The Model class organizes biochemical systems into five main components, each serving a specific purpose in mathematical modeling:
+
+ - **Species**: Chemical entities whose concentrations change over time (substrates, products, enzymes, inhibitors)
+ - **ODEs**: Differential equations governing the rate of change for each species
+ - **Parameters**: Kinetic constants and other model coefficients that characterize system behavior
+ - **Constants**: Time-invariant quantities that influence dynamics but don't change during simulation
+ - **Assignments**: Derived quantities calculated from other model components
+
+This modular architecture enables systematic model construction while maintaining mathematical consistency and biological interpretability.
+
+### Mathematical Foundation
+
+The Model class implements systems of ordinary differential equations (ODEs) of the form:
+
+$$
+\frac{dy_i}{dt} = f_i(y, \theta, c, t)
+$$
+
+where $y_i$ represents species concentrations, $\theta$ contains parameters, $c$ represents constants, and $t$ is time. This mathematical framework supports a wide range of biochemical phenomena from simple mass action kinetics to complex regulatory mechanisms.
+
+## Basic Model Construction Workflow
+
+### Step 1: Model Instantiation
+
+Begin by creating a model instance with a descriptive name that clearly identifies your biochemical system:
+
+```python
+import catalax as ctx
+
+# Create a model with descriptive naming
+model = ctx.Model(name="Enzyme Kinetics Study")
+```
+
+The model name serves important documentation purposes and appears in output files, visualizations, and analysis reports. Choose names that will be meaningful in research publications and collaborative work.
+
+### Step 2: Species Definition
+
+Add chemical species that participate in your system using flexible syntax options:
+
+```python
+# Method 1: Comma-separated string (simplest for basic models)
+model.add_species("S, E, P, ES")
+
+# Method 2: Keyword arguments with descriptive names
+model.add_species(
+    S="Substrate",
+    E="Enzyme", 
+    P="Product",
+    ES="Enzyme-Substrate Complex"
+)
+
+# Method 3: Dictionary unpacking for programmatic construction
+species_dict = {"I": "Inhibitor", "EI": "Enzyme-Inhibitor Complex"}
+model.add_species(**species_dict)
+```
+
+**Species naming considerations:**
+
+- **Symbols**: Short identifiers used in equations (S, E, P)
+- **Names**: Descriptive labels for documentation and visualization
+- **Consistency**: Maintain consistent naming conventions across related models
+- **Biological meaning**: Choose symbols that reflect chemical reality and facilitate interpretation
+
+### Step 3: ODE Definition
+
+Define the differential equations that govern species dynamics:
+
+```python
+# Basic Michaelis-Menten kinetics
+model.add_ode("S", "-(k_cat * E * S) / (K_m + S)")
+model.add_ode("E", "0")  # Enzyme conservation
+model.add_ode("P", "(k_cat * E * S) / (K_m + S)")
+model.add_ode("ES", "0")  # Assuming rapid equilibrium
+```
+
+**Key features of ODE definition:**
+
+- **Automatic parameter inference**: Parameters (k_cat, K_m) are automatically detected and added to the model
+- **Symbolic processing**: Equations are converted to SymPy expressions for mathematical manipulation
+- **Observable species**: By default, all species are observable; use `observable=False` for hidden states
+- **Validation**: The system prevents duplicate ODEs for the same species
+
+### Step 4: Parameter Configuration
+
+Configure model parameters with values, bounds, and constraints:
+
+```python
+# Set parameter values
+model.parameters["k_cat"].value = 7.0
+model.parameters["K_m"].value = 100.0
+
+# Set parameter bounds for optimization
+model.parameters["k_cat"].lower_bound = 0.1
+model.parameters["k_cat"].upper_bound = 50.0
+
+# Add parameter descriptions for documentation
+model.parameters["k_cat"].name = "Turnover number"
+model.parameters["K_m"].name = "Michaelis constant"
+```
+
+## Advanced Model Features
+
+### Constants and External Parameters
+
+Define time-invariant quantities that influence system behavior:
+
+```python
+# Add constants that remain fixed during simulation
+model.add_constant("pH", "solution_pH")
+model.add_constant("temperature", "reaction_temperature") 
+
+# Constants can be accessed and used in ODEs
+model.add_ode("S", "-(k_cat * E * S * pH_factor) / (K_m + S)")
+```
+
+Constants are particularly useful for:
+- **Environmental conditions**: pH, temperature, ionic strength
+- **Total concentrations**: Total enzyme, total substrate pools
+- **System parameters**: Reactor volume, flow rates
+
+### Assignment Equations
+
+Create derived quantities that depend on other model components:
+
+```python
+# Define total enzyme concentration
+model.add_assignment("E_total", "E + ES + EI")
+
+# Calculate reaction velocity
+model.add_assignment("velocity", "(k_cat * ES)")
+
+# Define equilibrium constants
+model.add_assignment("K_eq", "k_forward / k_reverse")
+```
+
+Assignments enable:
+- **Conservation relationships**: Mass balance and stoichiometric constraints
+- **Derived quantities**: Calculated properties for analysis and visualization
+- **Complex expressions**: Multi-parameter relationships and equilibrium definitions
+
+### Model Reparameterization
+
+Transform models by substituting symbols with expressions or values:
+
+```python
+# Fix specific parameter values
+simplified_model = model.reparametrize(k_cat=7.0, K_m=100.0)
+
+# Replace with more complex expressions
+regulated_model = model.reparametrize(
+    k_cat="k_cat_max * regulator / (K_reg + regulator)"
+)
+
+# Eliminate terms by setting to zero
+reduced_model = model.reparametrize(inhibition_constant=None)
+```
+
+Reparameterization supports:
+- **Model simplification**: Fixing well-known parameters
+- **Sensitivity analysis**: Systematic parameter variation
+- **Model comparison**: Testing different mechanistic hypotheses
+
+## Simulation and Analysis
+
+### Basic Simulation Workflow
+
+Run model simulations using the Dataset interface:
+
+```python
+from catalax.model.simconfig import SimulationConfig
+
+# Create simulation configuration
+config = SimulationConfig(
+    t0=0,        # Start time
+    t1=100,      # End time  
+    nsteps=200,  # Number of time points
+    dt0=0.1      # Initial time step
+)
+
+# Create dataset with initial conditions
+dataset = ctx.Dataset.from_model(model)
+dataset.add_initial(S=100.0, E=1.0, P=0.0, ES=0.0)
+
+# Run simulation
+results = model.simulate(dataset, config)
+
+# Visualize results
+results.plot(show=True)
+```
+
+### Model as Predictor
+
+The Model class implements the Predictor interface, enabling use in analysis workflows:
+
+```python
+# Generate predictions for new conditions
+predictions = model.predict(dataset, config)
+
+# Calculate prediction metrics
+metrics = dataset.metrics(model)
+print(f"Model R²: {metrics.r2:.3f}")
+print(f"Model RMSE: {metrics.rmse:.6f}")
+```
+
+### Rate Function Evaluation
+
+Access instantaneous reaction rates for specialized analysis:
+
+```python
+import jax.numpy as jnp
+
+# Define time and state points
+times = jnp.linspace(0, 100, 50)
+states = jnp.array([[100.0, 1.0, 0.0, 0.0]])  # [S, E, P, ES]
+
+# Calculate rates at specific points
+rates = model.rates(times, states)
+print(f"Rate dimensions: {rates.shape}")  # [n_times, n_species]
+```
+
+Rate evaluation enables:
+- **Phase plane analysis**: Vector field visualization
+- **Stability analysis**: Equilibrium point characterization  
+- **Sensitivity analysis**: Gradient-based parameter studies
+
+## Model Persistence and Exchange
+
+### Saving and Loading Models
+
+Preserve models for reproducible research and collaboration:
+
+```python
+# Save model to JSON format
+model.save("./models/", "enzyme_kinetics_v1")
+
+# Load model from file
+loaded_model = ctx.Model.load("./models/enzyme_kinetics_v1.json")
+
+# Verify model integrity
+assert loaded_model.name == model.name
+assert len(loaded_model.parameters) == len(model.parameters)
+```
+
+### EnzymeML Integration
+
+Exchange models with the broader biochemical modeling community:
+
+```python
+import pyenzyme as pe
+
+# Create EnzymeML document from model
+enzmldoc = pe.EnzymeMLDocument(name="Enzyme Study")
+model.update_enzymeml_parameters(enzmldoc)
+
+# Load model from existing EnzymeML document
+enzymeml_model = ctx.Model.from_enzymeml(enzmldoc)
+```
+
+The EnzymeML integration supports:
+- **Standards compliance**: FAIR data principles and community standards
+- **Tool interoperability**: Exchange with other modeling platforms
+- **Metadata preservation**: Experimental context and provenance information
+
+## Integration with Analysis Workflows
+
+### Bayesian Parameter Estimation
+
+Models integrate seamlessly with MCMC inference:
+
+```python
+import catalax.mcmc as cmc
+
+# Define parameter priors
+model.parameters["k_cat"].prior = cmc.priors.LogUniform(low=1e-2, high=1e3)
+model.parameters["K_m"].prior = cmc.priors.LogUniform(low=1e-1, high=1e4)
+
+# Run Bayesian inference
+hmc = cmc.HMC(num_warmup=1000, num_samples=2000)
+results = hmc.run(model=model, dataset=experimental_data, yerrs=0.1)
+
+# Update model with posterior estimates
+fitted_model = results.get_fitted_model()
+```
+
+### Neural Network Training
+
+Models provide mechanistic structure for Neural ODE training:
+
+```python
+import catalax.neural as ctn
+
+# Create Neural ODE based on model structure
+neural_ode = ctn.NeuralODE.from_model(model, width_size=32, depth=3)
+
+# Train neural network to learn system dynamics
+strategy = ctn.Strategy()
+strategy.add_step(lr=1e-3, length=1.0, steps=1000)
+trained_neural_ode = neural_ode.train(dataset=training_data, strategy=strategy)
+```
+
+### Optimization Studies
+
+Models support parameter optimization and identifiability analysis:
+
+```python
+from catalax.tools.optimization import optimize_parameters
+
+# Define optimization bounds
+bounds = {
+    "k_cat": (0.1, 50.0),
+    "K_m": (1.0, 1000.0)
+}
+
+# Run optimization
+optimal_params, optimization_result = optimize_parameters(
+    model=model,
+    dataset=experimental_data,
+    bounds=bounds,
+    method="L-BFGS-B"
+)
+
+# Update model with optimal parameters
+for param_name, value in optimal_params.items():
+    model.parameters[param_name].value = value
+```
+
+## Advanced Model Construction Patterns
+
+### Multi-Scale Systems
+
+Handle systems spanning multiple time scales or spatial domains:
+
+```python
+# Fast equilibrium approximation
+model.add_ode("S", "-(k_cat * E_total * S) / (K_m + S)")  # Rapid equilibrium
+model.add_ode("P", "(k_cat * E_total * S) / (K_m + S)")
+
+# Add slow regulatory dynamics
+model.add_ode("E_total", "synthesis_rate - degradation_rate * E_total")
+```
+
+### Modular Model Construction
+
+Build complex models from reusable components:
+
+```python
+def add_michaelis_menten_kinetics(model, substrate, enzyme, product, k_cat, K_m):
+    """Add Michaelis-Menten kinetics to a model."""
+    model.add_ode(substrate, f"-({k_cat} * {enzyme} * {substrate}) / ({K_m} + {substrate})")
+    model.add_ode(product, f"({k_cat} * {enzyme} * {substrate}) / ({K_m} + {substrate})")
+    return model
+
+# Build complex pathway
+pathway_model = ctx.Model(name="Metabolic Pathway")
+pathway_model.add_species("A, B, C, D, E1, E2, E3")
+
+# Add multiple enzymatic steps
+add_michaelis_menten_kinetics(pathway_model, "A", "E1", "B", "k1", "K1")
+add_michaelis_menten_kinetics(pathway_model, "B", "E2", "C", "k2", "K2") 
+add_michaelis_menten_kinetics(pathway_model, "C", "E3", "D", "k3", "K3")
+```
+
+### Regulatory Mechanisms
+
+Incorporate complex regulatory patterns:
+
+```python
+# Competitive inhibition
+model.add_ode("S", "-(k_cat * E * S) / (K_m * (1 + I/K_i) + S)")
+
+# Allosteric regulation  
+model.add_ode("S", "-(k_cat * E * S^n) / (K_m^n + S^n)")
+model.add_assignment("n", "n_max * activator / (K_act + activator)")
+
+# Cooperative binding
+model.add_ode("ES", "k_on * E * S^h - k_off * ES")
+```
+
+## Best Practices and Guidelines
+
+### Model Development Workflow
+
+Follow systematic approaches for robust model development:
+
+1. **Start simple**: Begin with minimal mechanisms and add complexity incrementally
+2. **Validate incrementally**: Test each addition with simulations and basic analysis
+3. **Document assumptions**: Use clear names and comments to explain modeling choices
+4. **Version control**: Save model states at key development milestones
+5. **Test reproducibility**: Verify that saved/loaded models produce identical results
+
+### Parameter Management
+
+Maintain organized parameter handling:
+
+```python
+# Group related parameters with consistent naming
+model.parameters["k_cat_forward"].value = 10.0
+model.parameters["k_cat_reverse"].value = 1.0
+model.parameters["K_m_substrate"].value = 100.0
+model.parameters["K_m_product"].value = 50.0
+
+# Document parameter sources and units
+model.parameters["k_cat_forward"].name = "Forward turnover (1/s)"
+model.parameters["K_m_substrate"].name = "Substrate binding affinity (μM)"
+```

@@ -1,0 +1,515 @@
+---
+title: "Data Management"
+---
+
+Data management in Catalax revolves around the `Dataset` class, which provides a unified interface for handling experimental measurements, simulation results, and synthetic data. This guide covers the essential workflows for creating, importing, manipulating, and exporting datasets in various formats commonly used in biochemical research.
+
+## Understanding Dataset Structure
+
+The `Dataset` class serves as the central data container in Catalax, designed to handle the complexities of biochemical data while providing a clean, consistent interface. Understanding its structure is essential for effectively working with experimental and computational data.
+
+### Core Components
+
+A `Dataset` contains several key components that work together to organize and manage your data:
+
+- **`species`**: A list of chemical species names that defines what molecules are tracked in this dataset. This serves as the schema that ensures consistency across all measurements.
+- **`measurements`**: A list of `Measurement` objects, where each measurement represents one experimental condition, simulation run, or data point in your study.
+- **`name`, `description`**: Metadata fields that help organize and document your datasets for reproducibility, sharing, and long-term data management.
+- **`id`**: A unique identifier that distinguishes this dataset from others, automatically generated to ensure uniqueness.
+- **`type`**: Classification of the dataset (measurement, simulation, or prediction) that helps organize different types of data in your research workflow.
+
+### Measurement Structure
+
+Each individual `Measurement` within a dataset contains the detailed information for one experimental condition or simulation run:
+
+- **`initial_conditions`**: A dictionary mapping species names to their initial concentrations, which serves as the starting point for simulation or represents the experimental setup conditions.
+- **`time`**: An array of time points at which measurements were taken. This can be `None` for datasets that only contain initial conditions (such as when setting up simulations).
+- **`data`**: A dictionary that maps each species name to its complete concentration time series, providing the full temporal evolution of the system under the given conditions.
+- **`id`**: A unique identifier for the individual measurement, allowing precise referencing and data retrieval.
+
+## Creating Datasets
+
+### From Models
+
+The most common way to create a new dataset is from an existing model, which automatically sets up the correct species structure:
+
+```python
+import catalax as ctx
+
+# Create a model
+model = ctx.Model(name="Enzyme Kinetics")
+model.add_species("S", "P", "E")  # Substrate, Product, Enzyme
+
+# Create an empty dataset from the model
+dataset = ctx.Dataset.from_model(model)
+
+print(f"Dataset species: {dataset.species}")
+print(f"Dataset name: {dataset.name}")
+```
+
+This approach ensures that your dataset is properly configured with the correct species names and maintains consistency between your model definition and data structure.
+
+### Adding Initial Conditions
+
+Once you have a dataset structure, you can add initial conditions that represent different experimental scenarios or simulation starting points:
+
+```python
+# Add single initial condition
+dataset.add_initial(S=300.0, P=0.0, E=10.0)
+
+# Add multiple conditions systematically
+for substrate_conc in [50.0, 100.0, 200.0, 400.0]:
+    dataset.add_initial(S=substrate_conc, P=0.0, E=10.0)
+
+# Add conditions with experimental variation
+import numpy as np
+for i in range(10):
+    noisy_substrate = np.random.normal(200.0, 10.0)  # 200 ± 10
+    dataset.add_initial(S=noisy_substrate, P=0.0, E=10.0)
+
+print(f"Total measurements: {len(dataset.measurements)}")
+```
+
+Each call to `add_initial()` creates a new `Measurement` object with the specified initial conditions. This flexible approach allows you to build datasets that represent complex experimental designs with multiple conditions and replicates.
+
+### Adding Complete Measurements
+
+For more complex scenarios, you can create complete measurements with time-series data and add them to your dataset:
+
+```python
+from catalax.dataset.measurement import Measurement
+
+# Create a measurement with time-series data
+measurement = Measurement(
+    initial_conditions={"S": 200.0, "P": 0.0, "E": 10.0},
+    time=[0, 10, 20, 30, 40, 50],
+    data={
+        "S": [200.0, 150.0, 120.0, 95.0, 75.0, 60.0],
+        "P": [0.0, 50.0, 80.0, 105.0, 125.0, 140.0],
+        "E": [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+    }
+)
+
+# Add to dataset
+dataset.add_measurement(measurement)
+```
+
+This approach is useful when you have experimental data that you want to incorporate into your analysis pipeline or when you need fine control over the measurement structure.
+
+## Importing Data from External Sources
+
+Catalax supports multiple data formats commonly used in biochemical research, making it easy to import experimental data from various sources and analysis platforms.
+
+### From EnzymeML Documents
+
+EnzymeML is a standardized format for enzyme kinetics data that provides rich metadata and structured experimental information:
+
+```python
+import pyenzyme as pe
+
+# Load EnzymeML document
+enzmldoc = pe.EnzymeMLDocument.from_file("experiment.omex")
+
+# Convert to Catalax dataset
+dataset = ctx.Dataset.from_enzymeml(enzmldoc)
+
+print(f"Imported {len(dataset.measurements)} measurements")
+print(f"Species: {dataset.species}")
+```
+
+The EnzymeML import automatically extracts species information, experimental conditions, and time-series data while preserving important metadata about the experimental setup and measurement protocols.
+
+### From Pandas DataFrames
+
+Many researchers work with data in pandas DataFrames, either from spreadsheet exports or data analysis pipelines. Catalax can import from this format using a structured approach:
+
+```python
+import pandas as pd
+
+# Load data from CSV files
+data_df = pd.read_csv("timecourse_data.csv")
+inits_df = pd.read_csv("initial_conditions.csv")
+
+# Data DataFrame should have columns: measurementId, time, species1, species2, ...
+# Inits DataFrame should have columns: measurementId, species1, species2, ...
+
+dataset = ctx.Dataset.from_dataframe(
+    name="Experimental Dataset",
+    data=data_df,
+    inits=inits_df,
+    description="Enzyme kinetics measurements from lab notebook 2024-01"
+)
+```
+
+This import method provides flexibility for working with data that has been processed in other analysis environments while ensuring proper structure and validation.
+
+### From Croissant Archives
+
+Croissant is a standardized format for dataset sharing that includes both data and rich metadata. This format is particularly useful for sharing datasets between research groups:
+
+```python
+# Import from Croissant archive
+dataset = ctx.Dataset.from_croissant("shared_dataset.zip")
+
+print(f"Dataset: {dataset.name}")
+print(f"Description: {dataset.description}")
+print(f"Measurements: {len(dataset.measurements)}")
+```
+
+Croissant archives preserve not only the data but also important metadata about experimental conditions, measurement protocols, and data provenance.
+
+### From JAX Arrays
+
+For computational workflows that work directly with numerical arrays, Catalax can import from JAX arrays with proper structure:
+
+```python
+import jax.numpy as jnp
+
+# Define array structures
+species_order = ["S", "P", "E"]
+data = jnp.array([...])  # Shape: (n_measurements, n_timepoints, n_species)
+time = jnp.array([...])  # Shape: (n_measurements, n_timepoints)
+y0s = jnp.array([...])   # Shape: (n_measurements, n_species)
+
+# Create dataset
+dataset = ctx.Dataset.from_jax_arrays(
+    species_order=species_order,
+    data=data,
+    time=time,
+    y0s=y0s
+)
+```
+
+This approach is particularly useful when working with simulation results or when interfacing with other computational tools that operate on array data.
+
+## Data Export and Sharing
+
+### Exporting to Croissant Format
+
+The Croissant format provides a standardized way to package and share datasets with rich metadata:
+
+```python
+# Export with comprehensive metadata
+dataset.to_croissant(
+    dirpath="./shared_data",
+    name="enzyme_kinetics_study",
+    license="CC BY-SA 4.0",
+    version="1.0.0",
+    cite_as="Smith et al., Journal of Biochemical Methods (2024)",
+    url="https://example.com/datasets/enzyme_kinetics",
+    description="Comprehensive enzyme kinetics dataset with multiple substrates"
+)
+```
+
+This creates a standardized archive that includes both your data and important metadata, making it easy to share with collaborators and ensuring reproducibility.
+
+### Converting to DataFrames
+
+For analysis in other tools or export to spreadsheet formats, you can convert datasets to pandas DataFrames:
+
+```python
+# Export as separate DataFrames
+data_df, inits_df = dataset.to_dataframe()
+
+# Save to CSV files
+data_df.to_csv("timecourse_data.csv", index=False)
+inits_df.to_csv("initial_conditions.csv", index=False)
+
+print("Data structure:")
+print(data_df.head())
+print("\nInitial conditions structure:")
+print(inits_df.head())
+```
+
+This format is useful for sharing data with researchers who use different analysis platforms or for creating supplementary materials for publications.
+
+### Converting to JAX Arrays
+
+For computational workflows, you can extract data as JAX arrays with proper structure:
+
+```python
+# Convert to arrays for computation
+species_order = dataset.get_observable_species_order()
+data, time, initial_conditions = dataset.to_jax_arrays(
+    species_order=species_order,
+    inits_to_array=True
+)
+
+print(f"Data shape: {data.shape}")      # (n_measurements, n_timepoints, n_species)
+print(f"Time shape: {time.shape}")      # (n_measurements, n_timepoints)
+print(f"Inits shape: {initial_conditions.shape}")  # (n_measurements, n_species)
+```
+
+This provides direct access to the numerical data in a format suitable for mathematical operations and machine learning workflows.
+
+## Data Validation and Quality Control
+
+### Checking Data Consistency
+
+Catalax provides methods to validate data integrity and identify potential issues:
+
+```python
+# Check if dataset has actual time-series data
+has_data = dataset.has_data()
+print(f"Dataset contains time-series data: {has_data}")
+
+# Get observable species (those with actual measurements)
+observable_species = dataset.get_observable_species_order()
+print(f"Observable species: {observable_species}")
+
+# Get measurement by ID
+measurement_id = dataset.measurements[0].id
+measurement = dataset.get_measurement(measurement_id)
+print(f"Retrieved measurement with {len(measurement.time)} time points")
+```
+
+These methods help ensure data quality and identify any structural issues that might affect analysis.
+
+### Data Padding and Standardization
+
+When working with measurements that have different lengths or missing data, you can standardize the dataset structure:
+
+```python
+# Pad dataset to ensure uniform array lengths
+padded_dataset = dataset.pad()
+
+print("Original lengths:")
+for i, meas in enumerate(dataset.measurements[:3]):
+    print(f"  Measurement {i}: {len(meas.time) if meas.time is not None else 0} time points")
+
+print("Padded lengths:")
+for i, meas in enumerate(padded_dataset.measurements[:3]):
+    print(f"  Measurement {i}: {len(meas.time) if meas.time is not None else 0} time points")
+```
+
+The padding operation ensures that all measurements have the same array lengths by filling missing values with NaN, which is essential for batch processing and vectorized operations.
+
+## Data Augmentation and Enhancement
+
+### Creating Synthetic Variations
+
+Data augmentation is a powerful technique for increasing dataset size and diversity by creating controlled variations of existing measurements:
+
+```python
+# Add controlled noise to create variations
+augmented_dataset = dataset.augment(
+    n_augmentations=10,      # Create 10 noisy copies of each measurement
+    sigma=0.02,              # 2% noise level
+    seed=42,                 # For reproducibility
+    multiplicative=True      # Use multiplicative rather than additive noise
+)
+
+print(f"Original dataset: {len(dataset.measurements)} measurements")
+print(f"Augmented dataset: {len(augmented_dataset.measurements)} measurements")
+
+# Augmentation can also exclude original data
+synthetic_only = dataset.augment(
+    n_augmentations=5,
+    sigma=0.01,
+    append=False  # Don't include original measurements
+)
+```
+
+This technique is particularly valuable when preparing datasets for machine learning applications or when you need to test the robustness of analysis methods.
+
+### Controlling Augmentation Parameters
+
+The augmentation process can be fine-tuned to match the characteristics of your experimental system:
+
+```python
+# Different noise models for different scenarios
+additive_noise = dataset.augment(
+    n_augmentations=5,
+    sigma=0.5,               # Absolute noise level
+    multiplicative=False     # Additive Gaussian noise
+)
+
+multiplicative_noise = dataset.augment(
+    n_augmentations=5,
+    sigma=0.02,              # Relative noise level (2%)
+    multiplicative=True      # Multiplicative noise (percentage-based)
+)
+```
+
+Multiplicative noise is often more realistic for concentration measurements, as measurement errors typically scale with the magnitude of the signal.
+
+## Data Splitting and Cross-Validation
+
+### Train-Test Splits
+
+For machine learning and model validation workflows, you can split datasets into training and testing portions:
+
+```python
+# Split dataset for model validation
+train_dataset, test_dataset = dataset.train_test_split(test_size=0.2)
+
+print(f"Training set: {len(train_dataset.measurements)} measurements")
+print(f"Test set: {len(test_dataset.measurements)} measurements")
+
+# The split maintains the dataset structure while randomly assigning measurements
+```
+
+This random splitting ensures that your training and testing sets are representative of the overall dataset distribution.
+
+### Leave-One-Out Cross-Validation
+
+For thorough model validation, especially with limited data, you can use leave-one-out cross-validation:
+
+```python
+# Perform leave-one-out cross-validation
+validation_results = []
+
+for single_measurement, remaining_dataset in dataset.leave_one_out():
+    # Train model on remaining data
+    # Test on single measurement
+    # Store results
+    
+    print(f"Testing on measurement {single_measurement.measurements[0].id}")
+    print(f"Training on {len(remaining_dataset.measurements)} measurements")
+    
+    # Your validation logic here
+    # validation_results.append(result)
+```
+
+This approach provides comprehensive validation by testing the model's ability to predict each measurement when trained on all others.
+
+## Advanced Data Operations
+
+### Working with Observable Species
+
+In many experiments, not all species in your model are directly observable. Catalax provides methods to work specifically with measured species:
+
+```python
+# Get indices of observable species
+observable_indices = dataset.get_observable_indices()
+print(f"Observable species indices: {observable_indices}")
+
+# Get only observable species data
+species_order = dataset.species
+observable_species = dataset.get_observable_species_order()
+
+data, time, inits = dataset.to_jax_arrays(species_order=observable_species)
+print(f"Full dataset shape: {data.shape}")
+
+# This automatically filters to include only species with actual measurements
+```
+
+This functionality is essential when working with complex models where some species are intermediates or unmeasured components.
+
+### Creating Configuration Objects
+
+You can extract simulation configurations directly from datasets that contain time-series data:
+
+```python
+# Extract simulation configuration from dataset
+config = dataset.to_config(nsteps=100)
+
+print(f"Time range: {config.t0} to {config.t1}")
+print(f"Number of steps: {config.nsteps}")
+
+# This configuration can be used for simulations that match your experimental setup
+```
+
+This feature is particularly useful when you want to simulate models using the same temporal parameters as your experimental measurements.
+
+### Batch Processing Utilities
+
+For large datasets, Catalax provides utilities to determine appropriate vectorization strategies:
+
+```python
+# Get vectorization dimensions for batch processing
+data, time, y0s = dataset.to_jax_arrays(species_order=dataset.species, inits_to_array=True)
+vmap_dims = dataset.get_vmap_dims(data, time, y0s)
+
+print(f"Vectorization dimensions: {vmap_dims}")
+
+# This information helps optimize computational workflows
+```
+
+These utilities help ensure efficient computation when working with large datasets in vectorized operations.
+
+## Integration with Analysis Workflows
+
+### Model Evaluation
+
+Datasets provide direct interfaces for evaluating model performance:
+
+```python
+# Calculate comprehensive fit metrics
+model = ctx.Model(...)  # Your fitted model
+metrics = dataset.metrics(model)
+
+print(f"Model performance:")
+print(f"  RMSE: {metrics.rmse:.3f}")
+print(f"  R²: {metrics.r2:.3f}")
+print(f"  AIC: {metrics.aic:.1f}")
+print(f"  BIC: {metrics.bic:.1f}")
+```
+
+The metrics calculation automatically handles the comparison between model predictions and experimental data, providing comprehensive statistics for model evaluation.
+
+### Visualization and Plotting
+
+Datasets include sophisticated plotting capabilities that handle multiple measurements and model comparisons:
+
+```python
+# Plot all measurements
+dataset.plot(show=True, figsize=(8, 6))
+
+# Plot with model predictions
+dataset.plot(predictor=model, show=True)
+
+# Plot subset of measurements
+selected_ids = [m.id for m in dataset.measurements[:4]]
+dataset.plot(measurement_ids=selected_ids, show=True)
+
+# Customize plot appearance
+dataset.plot(
+    ncols=3,
+    figsize=(10, 6),
+    xlim=(0, 50),
+    show=True
+)
+```
+
+The plotting system automatically handles multiple measurements, creates appropriate subplot layouts, and provides clean visualizations for publication and presentation.
+
+## Best Practices for Data Management
+
+### Organizational Strategies
+
+Effective data management requires consistent organizational approaches:
+
+1. **Use descriptive names**: Give your datasets meaningful names that describe their content and purpose. This becomes essential when managing multiple datasets across different experiments.
+
+2. **Include comprehensive metadata**: Always fill in description fields and other metadata. This information becomes invaluable when sharing data or returning to analyses after time has passed.
+
+3. **Maintain data provenance**: Keep track of how datasets were created, what processing steps were applied, and what experimental conditions they represent.
+
+4. **Version your datasets**: When modifying datasets through augmentation or processing, consider creating new versions rather than overwriting original data.
+
+### Quality Control Procedures
+
+Implement systematic quality control to ensure data reliability:
+
+1. **Validate imports**: Always check the structure and content of imported datasets to ensure they match your expectations and contain the expected species and measurements.
+
+2. **Check for consistency**: Use the built-in validation methods to identify inconsistencies between measurements or missing data that might affect analysis.
+
+3. **Document assumptions**: When augmenting data or making modifications, document the assumptions and parameters used so that the process can be reproduced.
+
+4. **Test with known data**: Validate your data processing workflows using datasets with known properties to ensure that your methods produce expected results.
+
+### Sharing and Collaboration
+
+Facilitate effective collaboration through standardized data sharing:
+
+1. **Use standard formats**: Export data in Croissant format when sharing with other researchers to ensure that metadata and structure are preserved.
+
+2. **Include documentation**: Provide clear documentation about experimental conditions, measurement protocols, and any processing that has been applied to the data.
+
+3. **Respect data licenses**: When working with shared datasets, respect any licensing requirements and properly cite the original data sources.
+
+4. **Enable reproducibility**: Ensure that your data processing workflows can be reproduced by others by documenting parameters and providing clear instructions.
+
+This comprehensive data management framework in Catalax provides the foundation for robust, reproducible biochemical research. By leveraging these tools and following best practices, you can effectively manage complex datasets while ensuring data quality and facilitating collaboration with other researchers.

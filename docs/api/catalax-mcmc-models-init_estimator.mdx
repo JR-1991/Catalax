@@ -1,0 +1,31 @@
+---
+title: init_estimator
+sidebarTitle: init_estimator
+---
+
+# `catalax.mcmc.models.init_estimator`
+
+## Functions
+
+### `estimate_initials` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/models/init_estimator.py#L8" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+estimate_initials(y0_sigma_dist: dist.Distribution = dist.HalfNormal(10.0)) -> PreModel
+```
+
+
+Create a pre-model to estimate true initial conditions from uncertain measurements.
+
+This function returns a pre-model that handles measurement uncertainty in initial
+conditions by:
+1. Sampling measurement uncertainty (sigma) from a specified distribution
+2. Sampling corrected initial conditions from a distribution centered on the
+   observed values with the estimated uncertainty
+
+**Args:**
+- `y0_sigma_dist`: Distribution for sampling measurement uncertainty.
+          Defaults to HalfNormal(10.0).
+
+**Returns:**
+- A pre-model function that can be used with MCMC inference.
+

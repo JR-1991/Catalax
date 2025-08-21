@@ -1,0 +1,78 @@
+---
+title: "Welcome to Catalax 🧬⚡"
+icon: "hand-wave"
+sidebarTitle: "Welcome"
+---
+
+Catalax is a computational framework that bridges mechanistic biochemical modeling with modern machine learning. Built on JAX for lightning-fast performance, Catalax enables researchers to tackle the most challenging problems in systems biology, from parameter estimation in complex reaction networks to discovering unknown biochemical mechanisms directly from experimental data.
+
+Whether you're modeling enzyme kinetics, discovering metabolic pathways, or quantifying parameter uncertainty through Bayesian inference, Catalax provides the tools and mathematical rigor needed for reproducible, publication-quality research.
+
+# Installation
+
+Catalax is available on PyPI and can be installed with:
+
+```bash
+pip install catalax
+```
+
+## Quick Start: From Reaction to Simulation
+
+Get started with Catalax in just a few lines of code. Here's how to build and simulate a complete enzyme kinetics model:
+
+```python
+import catalax as ctx
+import jax.numpy as jnp
+
+# Create and define the biochemical system
+model = ctx.Model(name="Michaelis-Menten Kinetics")
+
+# Add species and their dynamics
+model.add_species(S="Substrate", E="Enzyme", ES="Complex", P="Product")
+model.add_ode("S", "-k1*E*S + k2*ES")
+model.add_ode("E", "-k1*E*S + k2*ES + kcat*ES") 
+model.add_ode("ES", "k1*E*S - k2*ES - kcat*ES")
+model.add_ode("P", "kcat*ES")
+
+# Set kinetic parameters
+model.parameters.k1.value = 0.1    # Association rate
+model.parameters.k2.value = 0.05   # Dissociation rate  
+model.parameters.kcat.value = 0.02 # Catalytic rate
+
+# Create experimental conditions and simulate
+dataset = ctx.Dataset.from_model(model)
+dataset.add_initial(S=100, E=10, ES=0, P=0)  # Initial concentrations
+
+config = ctx.SimulationConfig(t0=0, t1=100, nsteps=1000)
+results = model.simulate(dataset=dataset, config=config)
+
+# Visualize the simulation
+results.plot()
+```
+
+**That's it!** You've just created a complete biochemical model, simulated its dynamics, and generated publication-ready visualizations. Now let's explore what makes Catalax powerful for advanced research.
+
+## Getting Started
+
+Ready to accelerate your biochemical research? Choose your path:
+
+### New to Catalax?
+Start with the fundamentals and build your expertise systematically:
+
+1. **[Build your first model](/docs/usage/model-class)** - Learn the core Model class and basic simulation
+2. **[Handle experimental data](/docs/usage/data-management)** - Import, process, and analyze your datasets  
+3. **[Run parameter inference](/docs/usage/mcmc-basic)** - Quantify uncertainty with Bayesian methods
+
+### Ready for Discovery?
+Dive into data-driven approaches for unknown systems:
+
+1. **[Train Neural ODEs](/docs/usage/neural-ode)** - Learn dynamics directly from data
+2. **[Discover reaction networks](/docs/usage/reactflow-ode)** - Uncover biochemical mechanisms
+3. **[Apply biological constraints](/docs/usage/regularization)** - Ensure realistic discoveries
+
+### Want Maximum Performance?  
+Explore advanced techniques for complex research problems:
+
+1. **[Hybrid modeling](/docs/usage/universal-ode)** - Combine mechanistic and neural approaches
+2. **[Surrogate acceleration](/docs/usage/surrogate-hmc)** - Achieve 10-100x inference speedup
+3. **[Custom protocols](/docs/usage/pre-post-models)** - Extend models for complex scenarios

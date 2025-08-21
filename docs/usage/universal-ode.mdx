@@ -1,0 +1,422 @@
+---
+title: "Universal ODE Training"
+---
+
+Universal ODEs represent a powerful hybrid modeling paradigm that seamlessly combines the interpretability of mechanistic models with the flexibility of neural networks. This approach allows researchers to encode known biochemical mechanisms while using neural networks to capture unknown dynamics, model uncertainties, or missing regulatory components that traditional models might overlook.
+
+## Concept and Mathematical Foundation
+
+The core concept of Universal ODEs is to augment a traditional mechanistic ODE system with a neural network component:
+
+$$
+\frac{dy}{dt} = f(y, t, \theta) + \alpha \cdot \text{Gate}(y) \cdot \text{NN}(y, t, \phi)
+$$
+
+where:
+- $f(y, t, \theta)$ represents the known mechanistic component with parameters $\theta$
+- $NN(y, t, \phi)$ is a neural network with parameters $\phi$ that learns unknown dynamics
+- $\alpha$ is a scaling factor that controls the neural network contribution magnitude
+- $Gate(y)$ is a smooth gating function that determines when and which parts of the neural network are active
+
+This formulation provides several research advantages:
+
+1. **Mechanistic foundation**: Preserves interpretable biochemical knowledge in the model structure
+2. **Data-driven discovery**: Neural networks identify missing mechanisms or regulatory effects
+3. **Controlled learning**: Gating mechanisms prevent neural networks from overwhelming mechanistic components
+4. **Scientific interpretability**: Corrective terms can be analyzed and potentially converted to symbolic expressions
+
+### The Gate function
+
+The gate function is a sigmoid-activated linear transformation that controls neural network activation based on species concentrations. Its primary purpose is to prevent unphysical dynamics by suppressing corrections when species are absent (avoiding creation from nothing) while allowing the corrective network to focus on meaningful rate adjustments when species are present.
+
+$$
+\text{Gate}(y) = \sigma(W_g \cdot y + b_g)
+$$
+
+
+
+## Research Applications
+
+Universal ODEs are particularly valuable for:
+
+- **Incomplete mechanistic knowledge**: When known mechanisms partially explain system behavior
+- **Regulatory discovery**: Identifying unknown allosteric effects, inhibition, or activation mechanisms
+- **Model refinement**: Improving existing mechanistic models with data-driven corrections
+- **Hypothesis generation**: Using neural network corrections to suggest new mechanistic hypotheses
+
+## Step-by-Step Workflow
+
+### Step 1: Environmental Setup and Data Generation
+
+```python
+import optax
+import jax.numpy as jnp
+import sympy as sp
+import matplotlib.pyplot as plt
+
+import catalax as ctx
+import catalax.neural as cnn
+import warnings
+
+warnings.filterwarnings("ignore")
+```
+
+For this tutorial, we'll use competitive substrate inhibition as our test system, where the neural network will discover the missing inhibition term:
+
+```python
+# Create true system with substrate inhibition
+model = ctx.Model(name="Universal ODE Example")
+model.add_species(s0="Substrate")
+
+# True equation includes inhibition term (Ki)
+model.add_ode("s0", "-v_max * s0 / ( K_m + s0 * ( 1 + s0 / K_i ) )")
+
+# Set realistic parameter values
+model.parameters["v_max"].value = 7.0
+model.parameters["K_m"].value = 200.0
+model.parameters["K_i"].value = 137.0
+```
+
+Generate experimental data with multiple initial conditions to provide comprehensive training coverage:
+
+```python
+# Create dataset with multiple initial conditions
+dataset = ctx.Dataset.from_model(model)
+
+# Add diverse initial conditions spanning the concentration range
+for conc in [10.0, 50.0, 100.0, 200.0, 400.0]:
+    dataset.add_initial(s0=conc)
+
+# Simulate the true system
+config = ctx.SimulationConfig(t1=200, nsteps=10)
+simulated = model.simulate(dataset, config)
+```
+
+### Step 2: Fit Incomplete Mechanistic Model
+
+Next, fit a simplified Michaelis-Menten model that intentionally omits the inhibition term:
+
+```python
+# Create incomplete mechanistic model (missing inhibition)
+incomplete_model = ctx.Model(name="Michaelis Menten Example")
+incomplete_model.add_species(s0="Substrate")
+incomplete_model.add_ode("s0", "-v_max * s0 / ( K_m + s0 )")
+
+# Set initial parameter estimates
+incomplete_model.parameters["v_max"].initial_value = 10.0
+incomplete_model.parameters["K_m"].initial_value = 200.0
+
+# Optimize incomplete model
+result, fitted_model = ctx.optimize(
+    model=incomplete_model,
+    dataset=simulated,
+    objective_fun=ctx.l1_loss,
+    method="cobyla",
+)
+```
+
+This incomplete model will show systematic deviations from the true data, particularly at high substrate concentrations where inhibition effects become significant.
+
+### Step 3: Universal ODE Architecture and Training
+
+#### Architecture Design
+
+Create a Universal ODE that combines the fitted mechanistic model with a neural network corrective term:
+
+```python
+# Define Universal ODE with small neural network
+universal_ode = cnn.UniversalODE.from_model(
+    model=fitted_model,           # Base mechanistic model
+    width_size=3,                 # Small network to prevent overfitting
+    depth=1,                      # Single hidden layer
+    use_final_bias=True,          # Allow baseline corrections
+    weight_scale=1e-8,            # Small initial weights
+    final_activation=lambda x: x, # Linear output for rate corrections
+)
+```
+
+**Architecture considerations for research:**
+- **Small networks** (width=3, depth=1) prevent overfitting and encourage discovery of simple corrective terms
+- **Linear final activation** ensures rate corrections remain physically interpretable
+- **Small weight initialization** allows mechanistic components to dominate initially
+
+#### Training Strategy
+
+Design a multi-phase training strategy that progressively integrates neural and mechanistic components:
+
+```python
+strategy = cnn.Strategy()
+
+# Phase 1: Train only neural network component
+strategy.add_step(
+    lr=1e-2,                    # Higher learning rate for exploration
+    steps=1000,                 # Limited steps to prevent overfitting
+    batch_size=2,               # Small batches for detailed gradient information
+    length=0.1,                 # Short trajectories for initial learning
+    loss=optax.log_cosh,        # Robust loss function
+    train=cnn.Modes.MLP,        # Train only neural network
+)
+
+# Phase 2: Joint training of neural and mechanistic components
+strategy.add_step(
+    lr=1e-3,                    # Reduced learning rate for refinement
+    steps=2000,                 # More steps for convergence
+    batch_size=2,
+    loss=optax.log_cosh,
+    train=cnn.Modes.BOTH,       # Train both components
+)
+
+# Phase 3: Fine-tuning
+strategy.add_step(
+    lr=1e-4,                    # Very small learning rate for precision
+    steps=5000,                 # Extended training for convergence
+    batch_size=2,
+    loss=optax.log_cosh,
+    train=cnn.Modes.BOTH,
+)
+```
+
+**Scientific rationale for training phases:**
+1. **MLP-only phase**: Allows neural network to identify systematic errors without interfering with mechanistic parameters
+2. **Joint training**: Enables fine-tuning of both components for optimal integration
+3. **Extended fine-tuning**: Ensures convergence and stability of the hybrid model
+
+#### Execute Training
+
+```python
+# Train the Universal ODE
+trained = universal_ode.train(
+    dataset=simulated,
+    strategy=strategy,
+)
+```
+
+### Step 4: Analysis of Neural Network Corrections
+
+#### Visualizing Corrective Terms
+
+Universal ODEs provide unique analysis capabilities for understanding what the neural network learned:
+
+```python
+# Plot neural network corrections across the input space
+trained.plot_corrections_over_input(
+    simulated,
+    show=True,
+    figsize=(10, 4),
+)
+```
+
+This visualization reveals the magnitude and direction of neural network corrections as a function of substrate concentration, providing insights into:
+- **Where** the mechanistic model fails (regions with large corrections)
+- **How** the corrections scale with concentration (functional form insights)
+- **Whether** corrections follow biologically plausible patterns
+
+#### Extracting Corrective Data
+
+For quantitative analysis, extract the raw corrective terms:
+
+```python
+# Get corrective terms and corresponding states
+corrections, states = trained.corrective_term(simulated)
+
+# Analyze correction patterns
+print(f"Correction range: {corrections.min():.3f} to {corrections.max():.3f}")
+print(f"Mean absolute correction: {jnp.abs(corrections).mean():.3f}")
+```
+
+### Step 5: Symbolic Regression Integration
+
+#### Scientific Motivation
+
+The neural network corrections, while effective, remain black boxes. Symbolic regression can convert these corrections into interpretable mathematical expressions, enabling:
+
+1. **Mechanistic insight**: Understanding what regulatory mechanisms the neural network discovered
+2. **Model validation**: Checking if discovered terms align with known biochemical principles
+3. **Hypothesis generation**: Suggesting new experimental directions based on discovered relationships
+
+#### Implementing Symbolic Regression
+
+```python
+from pysr import PySRRegressor
+
+# Configure PySR for biochemical expressions
+model_sr = PySRRegressor(
+    niterations=400,
+    deterministic=True,
+    model_selection="score",
+    unary_operators=["square"],         # Common in kinetic expressions
+    binary_operators=["+", "-", "*", "/"],
+    maxsize=20,                         # Limit complexity
+    maxdepth=5,
+    populations=20,
+    population_size=50,
+    elementwise_loss="L1DistLoss()",    # Robust to outliers
+    complexity_of_operators={           # Penalize complex operations
+        "+": 1, "-": 1, "*": 2, "/": 3,
+        "square": 1, "log": 3, "neg": 1,
+    },
+    verbosity=0,
+    random_state=10,
+    variable_names=["s0"],
+)
+
+# Extract training data for symbolic regression
+data, _, _ = simulated.to_jax_arrays(trained.species_order)
+corrections, _ = trained.corrective_term(simulated)
+
+# Fit symbolic regression model
+model_sr.fit(
+    data.ravel()[:, None],
+    corrections.ravel()[:, None],
+    variable_names=["s0"],
+)
+```
+
+#### Analyzing Discovered Expressions
+
+```python
+# Extract the best symbolic expression
+eq = model_sr.get_best()
+sympy_eq = eq.sympy_format
+
+# Process equation for interpretability
+free_numbers = sympy_eq.atoms() - sympy_eq.atoms(sp.Symbol) - sympy_eq.atoms(sp.Integer)
+number_map = {f"k{i+1}": abs(float(num)) for i, num in enumerate(free_numbers)}
+inv_number_map = {v: k for k, v in number_map.items()}
+
+# Create symbolic version with parameter names
+symbolic_term = sympy_eq.subs(inv_number_map)
+
+print(f"Discovered corrective term: {symbolic_term}")
+```
+
+#### Validation and Integration
+
+```python
+# Create enhanced mechanistic model with discovered term
+enhanced_model = fitted_model.model_copy(deep=True)
+enhanced_model.reset()
+
+# Set optimized mechanistic parameters
+for i, parameter in enumerate(enhanced_model.parameters.values()):
+    parameter.value = float(trained.parameters[i])
+
+# Add discovered symbolic correction to the original equation
+new_equation = fitted_model.odes["s0"].equation + symbolic_term
+enhanced_model.add_ode("s0", new_equation)
+
+# Initialize symbolic regression parameters
+for name, value in number_map.items():
+    enhanced_model.parameters[name].initial_value = value
+
+# Final optimization of the enhanced model
+result, final_model = ctx.optimize(
+    model=enhanced_model,
+    dataset=simulated,
+    objective_fun=optax.l2_loss,
+    method="leastsq",
+)
+```
+
+## Model Evaluation and Interpretation
+
+### Performance Assessment
+
+Compare model performance across the development pipeline:
+
+```python
+# Calculate metrics for each model stage
+incomplete_metrics = simulated.metrics(fitted_model)
+universal_metrics = simulated.metrics(trained)
+symbolic_metrics = simulated.metrics(final_model)
+
+print("Model Performance Comparison:")
+print(f"Incomplete mechanistic: RMSE = {incomplete_metrics['rmse']:.3f}")
+print(f"Universal ODE: RMSE = {universal_metrics['rmse']:.3f}")
+print(f"Symbolic enhanced: RMSE = {symbolic_metrics['rmse']:.3f}")
+```
+
+### Scientific Insights
+
+Universal ODEs provide unique insights into biochemical systems:
+
+1. **Mechanistic validation**: Confirm whether known mechanisms are sufficient to explain system behavior
+2. **Discovery of missing terms**: Identify systematic biases that suggest additional regulatory mechanisms
+3. **Quantitative relationships**: Extract functional forms for unknown regulatory effects
+4. **Experimental design**: Guide targeted experiments to validate discovered relationships
+
+### Gating Analysis
+
+Analyze the gating mechanism to understand when neural corrections are active:
+
+```python
+# Extract gating behavior across concentration range
+conc_range = jnp.linspace(0, 400, 100)
+gate_values = jnp.array([trained.gate_activation(jnp.array([c])) for c in conc_range])
+
+plt.figure(figsize=(8, 4))
+plt.plot(conc_range, gate_values)
+plt.xlabel("Substrate Concentration")
+plt.ylabel("Gate Activation")
+plt.title("Neural Network Gating Behavior")
+plt.grid(True, alpha=0.3)
+```
+
+## Research Best Practices
+
+### Data Requirements
+
+- **Diverse conditions**: Include wide range of initial conditions and parameter regimes
+- **Sufficient resolution**: Ensure temporal sampling captures both fast and slow dynamics
+- **Quality control**: Use high-quality experimental data for reliable neural network training
+
+### Architecture Guidelines
+
+- **Conservative sizing**: Start with small networks (3-10 neurons) to encourage simple corrections
+- **Mechanistic dominance**: Initialize with small neural weights to preserve mechanistic structure
+- **Activation functions**: Use linear or softplus activations for rate corrections
+
+### Training Strategies
+
+- **Progressive complexity**: Train neural components before joint optimization
+- **Regularization**: Use L1/L2 regularization to encourage sparse, interpretable corrections
+- **Multiple runs**: Train multiple models with different initializations to assess consistency
+
+### Validation Protocols
+
+- **Mechanistic plausibility**: Ensure discovered terms align with biochemical principles
+- **Cross-validation**: Test on independent datasets when available
+- **Symbolic validation**: Convert neural corrections to symbolic forms for interpretability
+
+## Research Applications and Future Directions
+
+### Current Applications
+
+Universal ODEs have proven effective for:
+
+- **Enzyme kinetics**: Discovering allosteric effects and regulatory mechanisms
+- **Metabolic modeling**: Refining pathway models with data-driven corrections
+- **Drug interactions**: Identifying unexpected pharmacokinetic effects
+- **Regulatory networks**: Uncovering hidden feedback loops and cross-regulation
+
+### Future Opportunities
+
+Emerging research directions include:
+
+- **Multi-scale integration**: Combining molecular and cellular-level mechanistic knowledge
+- **Uncertainty quantification**: Developing Bayesian approaches for Universal ODEs
+- **Automated discovery**: Integrating symbolic regression directly into training loops
+- **Experimental validation**: Designing targeted experiments to test discovered mechanisms
+
+## Conclusion
+
+Universal ODEs represent a powerful paradigm for biochemical modeling that bridges the gap between mechanistic understanding and data-driven discovery. By combining interpretable mechanistic models with flexible neural networks, researchers can:
+
+1. **Preserve scientific knowledge** while discovering new regulatory mechanisms
+2. **Generate testable hypotheses** through symbolic regression of neural corrections
+3. **Improve model accuracy** without sacrificing interpretability
+4. **Guide experimental design** based on discovered model inadequacies
+
+This hybrid approach enables a new form of scientific modeling where computational discovery complements experimental investigation, accelerating our understanding of complex biochemical systems while maintaining the interpretability essential for scientific progress.
+
+The methodology demonstrated here provides a foundation for applying Universal ODEs to diverse biochemical research challenges, from enzyme kinetics to systems biology, offering researchers a powerful tool for mechanistic discovery and model refinement.
