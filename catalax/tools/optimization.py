@@ -58,8 +58,9 @@ def optimize(
         ]
     )
 
-    assert set(dataset.species) == set(model.get_species_order()), (
-        "Species in dataset and model do not match."
+    assert set(model.get_species_order()).issubset(set(dataset.species)), (
+        "Dataset must contain at least all model species. These species are in the model but not in the dataset: "
+        + str(set(model.get_species_order()) - set(dataset.species))
     )
 
     # Extract data arrays for the residual computation

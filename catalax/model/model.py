@@ -13,7 +13,6 @@ import rich
 from dotted_dict import DottedDict
 from jax import Array
 from pydantic import ConfigDict, Field, PrivateAttr, field_validator
-from pyenzyme import EnzymeMLDocument
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 
 from catalax.dataset.dataset import Dataset
@@ -686,7 +685,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
             # When there are no ODEs, all species are observable
             return self.get_species_order()
 
-        return sorted([key for key in self.species.keys() if self.odes[key].observable])
+        return sorted([key for key in self.odes.keys() if self.odes[key].observable])
 
     def get_constants_order(self) -> List[str]:
         """Returns the order of the constants in the model"""
@@ -1113,7 +1112,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         """
         return from_enzymeml(cls, enzmldoc, name, from_reactions)
 
-    def update_enzymeml_parameters(self, enzmldoc: EnzymeMLDocument):
+    def update_enzymeml_parameters(self, enzmldoc: pe.EnzymeMLDocument):
         """Updates model parameters of enzymeml document with model parameters.
         Existing parameters will be updated, non-existing parameters will be added.
 
