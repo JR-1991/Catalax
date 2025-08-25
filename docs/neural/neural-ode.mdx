@@ -300,11 +300,12 @@ save_milestones=True  # Saves model at key training milestones
 ```
 
 **Research benefits of checkpointing:**
+
 - **Recovery from failures**: Resume training if computational resources are interrupted
 - **Parameter sensitivity analysis**: Compare models from different training stages to understand learning progression
 - **Publication materials**: Provide exact model states used in published results for full reproducibility
 
-**Validation dataset:**
+**Validation dataset (`validation_dataset`):**
 
 A validation dataset is used to monitor the model's performance during training. This is useful to detect overfitting and to evaluate the model's generalization ability. You can either use a separate dataset or split your training dataset into a training and validation set.
 
