@@ -30,6 +30,7 @@ def train_neural_ode(
     dataset: Dataset,
     strategy: Strategy,
     optimizer=optax.adabelief,
+    validation_dataset: Optional[Dataset] = None,
     print_every: int = 100,
     log: Optional[str] = None,
     save_milestones: bool = False,
@@ -94,6 +95,14 @@ def train_neural_ode(
             key=loader_key,
         )
 
+        if validation_dataset is not None:
+            val_data, val_times, val_inits = validation_dataset.to_jax_arrays(  # type: ignore
+                species_order=model.species_order,
+                inits_to_array=True,
+            )
+            val_data = val_data[:, :max_time, :]
+            val_times = val_times[:, :max_time]
+
         # Set up progress bar
         pbar = tqdm.tqdm(total=strat.steps, desc="╰── startup")
 
@@ -123,8 +132,21 @@ def train_neural_ode(
                     grad_loss,
                 )
 
-                pbar.update(print_every)
-                pbar.set_description(f"╰── loss: {loss:.4f} mae: {mae:.4f}")
+                if validation_dataset is not None:
+                    val_loss, val_mae = _calculate_metrics(
+                        strat,
+                        model,
+                        val_times,
+                        val_data,
+                        val_inits,  # type: ignore
+                        grad_loss,
+                    )
+                    pbar.update(print_every)
+                    pbar.set_description(
+                        f"╰── loss: [{loss:.4f}|{val_loss:.4f}] mae: [{mae:.4f}|{val_mae:.4f}]"
+                    )
+                else:
+                    pbar.set_description(f"╰── loss: {loss:.4f} mae: {mae:.4f}")
 
                 _log_progress(strat_index, step, loss, mae, log)
 
