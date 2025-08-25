@@ -267,6 +267,7 @@ Now we train the Neural ODE using our carefully configured multi-phase strategy.
 # Train the Neural ODE with comprehensive monitoring
 trained = neural_ode.train(
     dataset=dataset,
+    validation_dataset=validation_dataset,
     strategy=strategy,
     print_every=10,           # Monitor progress regularly
     weight_scale=1e-3,        # Initialize with small weights
@@ -303,6 +304,30 @@ save_milestones=True  # Saves model at key training milestones
 - **Parameter sensitivity analysis**: Compare models from different training stages to understand learning progression
 - **Publication materials**: Provide exact model states used in published results for full reproducibility
 
+**Validation dataset:**
+
+A validation dataset is used to monitor the model's performance during training. This is useful to detect overfitting and to evaluate the model's generalization ability. You can either use a separate dataset or split your training dataset into a training and validation set.
+
+```python
+validation_dataset = dataset.train_test_split(test_size=0.2)[1]
+```
+
+Catalax also provides a `leave_one_out` method to create multiple validation datasets from the training dataset. This method is very useful to evaluate the generalization ability of the model in low data regimes.
+
+```python
+for val, train in dataset.leave_one_out():
+    trained = neural_ode.train(
+        dataset=train,
+        validation_dataset=val,
+        strategy=strategy,
+        print_every=10,
+    )
+
+    # Check metrics on validation set
+    metrics = val.metrics(trained)
+    print(f"Validation metrics: {metrics}")
+```
+
 ### Training Diagnostics and Quality Assessment
 
 **Monitoring training health:**
@@ -322,6 +347,7 @@ Successful Neural ODE training exhibits several characteristic patterns that res
 - **Slow convergence**: May benefit from different activation functions, modified training strategies, or architecture adjustments
 
 **Research-grade training monitoring:**
+
 ```python
 # Enhanced training with detailed logging for research
 trained = neural_ode.train(
