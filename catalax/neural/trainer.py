@@ -141,12 +141,14 @@ def train_neural_ode(
                         val_inits,  # type: ignore
                         grad_loss,
                     )
-                    pbar.update(print_every)
                     pbar.set_description(
                         f"╰── loss: [{loss:.4f}|{val_loss:.4f}] mae: [{mae:.4f}|{val_mae:.4f}]"
                     )
                 else:
                     pbar.set_description(f"╰── loss: {loss:.4f} mae: {mae:.4f}")
+
+                # Update progress bar
+                pbar.update(print_every)
 
                 _log_progress(strat_index, step, loss, mae, log)
 
