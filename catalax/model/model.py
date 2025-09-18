@@ -368,6 +368,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         config: SimulationConfig | None = None,
         n_steps: int = 100,
         use_times: bool = False,
+        hdi: Optional[Literal["lower", "upper", "lower_50", "upper_50"]] = None,
     ) -> Dataset:
         """Predict model behavior using the given dataset.
 
@@ -395,7 +396,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         if config.nsteps != n_steps and not use_times:
             config.nsteps = n_steps
 
-        return self.simulate(dataset, config, saveat=times)
+        return self.simulate(dataset, config, saveat=times, use_hdi=hdi)
 
     def rates(
         self,

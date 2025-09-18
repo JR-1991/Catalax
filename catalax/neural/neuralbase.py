@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 import json
 import os
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Type
 
 
 try:
@@ -181,6 +181,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         rtol: Optional[float] = None,
         atol: Optional[float] = None,
         dt0: Optional[float] = None,
+        hdi: Optional[Literal["lower", "upper", "lower_50", "upper_50"]] = None,
     ):
         """Predict model behavior using the given dataset.
 
@@ -198,6 +199,11 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         Returns:
             A Dataset object containing the prediction results
         """
+
+        if hdi is not None:
+            raise NotImplementedError(
+                f"HDI is not available for {self.__class__.__name__}"
+            )
 
         if config is None and not use_times:
             config = dataset.to_config(nsteps=n_steps)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from catalax.dataset.measurement import Measurement
 from catalax.widget import create_interactive_prediction_widget
@@ -90,6 +90,7 @@ class Predictor(abc.ABC):
         config: Optional[SimulationConfig] = None,
         n_steps: int = 100,
         use_times: bool = False,
+        hdi: Optional[Literal["lower", "upper", "lower_50", "upper_50"]] = None,
     ) -> Dataset:
         """
         Make predictions using the predictor.
@@ -104,7 +105,6 @@ class Predictor(abc.ABC):
         Returns:
             Dataset containing the predictions
         """
-        pass
 
     @abc.abstractmethod
     def n_parameters(self) -> int:
