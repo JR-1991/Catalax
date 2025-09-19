@@ -424,7 +424,7 @@ def run_mcmc(
     """
     # Validate inputs
     hmc = HMC.from_config(config)
-    return hmc.run(model, dataset, yerrs, surrogate, pre_model, post_model, solver, dt0)
+    return hmc.run(model, dataset, yerrs, surrogate, pre_model, post_model)
 
 
 def _prepare_mcmc_data(
