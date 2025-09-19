@@ -112,6 +112,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         dataset: Dataset,
         strategy: Strategy,
         validation_dataset: Optional[Dataset] = None,
+        solver: Optional[Type[diffrax.AbstractSolver]] = None,
         optimizer=optax.adabelief,
         print_every: int = 10,
         weight_scale: float = 1e-8,
@@ -165,6 +166,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             validation_dataset=validation_dataset,
             print_every=print_every,
             weight_scale=weight_scale,
+            solver=solver,
             save_milestones=save_milestones,
             milestone_dir=milestone_dir,
             log=log,
@@ -462,7 +464,13 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
     ):
         """Create the appropriate stepsize controller"""
         if solver is None:
-            return diffrax.PIDController(1e-3, 1e-6)
+            if self.solver in NON_ADAPTIVE_SOLVERS:
+                return diffrax.ConstantStepSize()
+            else:
+                return diffrax.PIDController(
+                    rtol=rtol if rtol is not None else 1e-3,
+                    atol=atol if atol is not None else 1e-6,
+                )
 
         if solver in NON_ADAPTIVE_SOLVERS:
             return diffrax.ConstantStepSize()

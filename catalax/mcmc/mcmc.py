@@ -17,6 +17,7 @@ from typing import (
 
 import jax
 import jax.numpy as jnp
+import diffrax
 import numpyro
 import numpyro.distributions as dist
 from jax import Array
@@ -63,7 +64,7 @@ class MCMCConfig:
     seed: int = 420
     verbose: int = 1
     max_steps: int = 64**4
-    solver: str = "scipy"
+    solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5
 
 
 class Modes(Enum):
@@ -114,6 +115,7 @@ class HMC:
         seed: int = 420,
         verbose: int = 1,
         max_steps: int = 64**4,
+        solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5,
     ):
         """Initialize HMC sampler.
 
@@ -130,6 +132,7 @@ class HMC:
             seed: Random seed for reproducibility
             verbose: Verbosity level; 0 for silent, 1 for progress
             max_steps: Maximum number of integration steps
+            solver: Solver to use for simulation
         """
         self.config = MCMCConfig(
             num_warmup=num_warmup,
@@ -139,6 +142,7 @@ class HMC:
             thinning=thinning,
             max_tree_depth=max_tree_depth,
             dt0=dt0,
+            solver=solver,
             chain_method=chain_method,
             num_chains=num_chains,
             seed=seed,
@@ -170,7 +174,7 @@ class HMC:
             surrogate: Optional surrogate model for rate prediction
             pre_model: Optional function to transform inputs and parameters before simulation
             post_model: Optional function to transform outputs after simulation
-
+            solver: Solver to use for simulation
         Returns:
             Tuple of (MCMC object with results, Bayesian model function)
 
@@ -184,7 +188,13 @@ class HMC:
         _validate_model_functions(pre_model, post_model)
 
         # Setup model and prepare data
-        data_prep = _prepare_mcmc_data(dataset, model, surrogate)
+        data_prep = _prepare_mcmc_data(
+            dataset,
+            model,
+            surrogate,
+            self.config.solver,
+            self.config.dt0,
+        )
 
         if surrogate is not None:
             mode = Modes.SURROGATE
@@ -201,6 +211,8 @@ class HMC:
             post_model=post_model,
             shapes=data_prep.shapes,
             mode=mode,
+            solver=self.config.solver,
+            dt0=self.config.dt0,
         )
 
         # Initialize and run MCMC
@@ -244,6 +256,7 @@ class HMC:
             verbose=config.verbose,
             max_steps=config.max_steps,
             dt0=config.dt0,
+            solver=config.solver,
         )
 
 
@@ -263,8 +276,10 @@ class BayesianModel:
         sim_func: Callable,
         shapes: Shapes,
         mode: Modes,
+        solver: Type[diffrax.AbstractSolver],
         pre_model: Optional[PreModel] = None,
         post_model: Optional[PostModel] = None,
+        dt0: float = 0.1,
     ):
         """Initialize the Bayesian model.
 
@@ -286,6 +301,8 @@ class BayesianModel:
         self.post_model = post_model
         self.shapes = shapes
         self.mode = mode
+        self.solver = solver
+        self.dt0 = dt0
 
         # Pre-compute priors and observables
         self.priors = [
@@ -378,6 +395,8 @@ def run_mcmc(
     surrogate: Optional[Surrogate] = None,
     pre_model: Optional[PreModel] = None,
     post_model: Optional[PostModel] = None,
+    solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5,
+    dt0: float = 0.1,
 ) -> HMCResults:
     """Run MCMC simulation to infer posterior distribution of parameters.
 
@@ -412,6 +431,8 @@ def _prepare_mcmc_data(
     dataset: Dataset,
     model: "Model",
     surrogate: Optional[Surrogate],
+    solver: Type[diffrax.AbstractSolver],
+    dt0: float,
 ) -> DataPreparation:
     """Prepare all data components needed for MCMC simulation.
 
@@ -449,6 +470,8 @@ def _prepare_mcmc_data(
         y0s=y0s,
         times=times,
         constants=constants,
+        solver=solver,
+        dt0=dt0,
     )
 
     return DataPreparation(
@@ -665,6 +688,8 @@ def _configure_simulation_function(
     y0s: Array,
     times: Array,
     constants: Array,
+    dt0: float,
+    solver: Type[diffrax.AbstractSolver],
 ) -> Tuple[Callable, Array, Array, Array, Array]:
     """Configure the appropriate simulation function based on model type.
 
@@ -708,10 +733,11 @@ def _configure_simulation_function(
             parameters=model.get_parameter_order(),
             stoich_mat=model._get_stoich_mat(),
             constants=model.get_constants_order(),
-            dt0=0.1,  # Default dt0
+            dt0=dt0,
             rtol=1e-5,
             atol=1e-5,
             max_steps=64**4,
+            solver=solver,
         )
 
         # Set up simulation with correct in_axes for MCMC

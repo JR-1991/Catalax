@@ -83,8 +83,8 @@ class HMCResults:
             Model: New model instance with parameters updated from posterior samples.
                 The returned model can be used for predictions with fitted parameters.
         """
-        return self.model.from_samples(
-            self.mcmc.get_samples(),
+        return self.model.from_arviz(
+            az.from_numpyro(self.mcmc),
             hdi_prob=hdi_prob,
             set_bounds=set_bounds,
         )

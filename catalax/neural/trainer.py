@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Callable, Dict, Optional, Tuple, TypeVar
+from typing import Callable, Dict, Optional, Tuple, Type, TypeVar
 
 import equinox as eqx
 import jax
@@ -8,6 +8,7 @@ import jax.numpy as jnp
 import jax.random as jrandom
 import optax
 import tqdm
+import diffrax
 
 from catalax.dataset.dataset import Dataset
 from catalax.neural.neuralbase import NeuralBase
@@ -36,6 +37,7 @@ def train_neural_ode(
     save_milestones: bool = False,
     milestone_dir: str = "./milestones",
     weight_scale: float = 1e-2,
+    solver: Optional[Type[diffrax.AbstractSolver]] = None,
     seed: int = 420,
 ) -> T:
     # Extract data from dataset
@@ -56,6 +58,13 @@ def train_neural_ode(
         model,
         replace=times.max(),
     )
+
+    if solver is not None:
+        model = eqx.tree_at(
+            lambda tree: tree.solver,
+            model,
+            replace=solver,
+        )
 
     # Set up logger
     if log is not None:
@@ -203,6 +212,7 @@ def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
 
         model = eqx.combine(diff_model, static_model)
         y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
+
         loss_value = jnp.mean(loss(y_pred, yi))
 
         return jnp.mean(loss_value + penalties(model))
@@ -287,6 +297,7 @@ def _calculate_metrics(
     )
 
     preds = jax.vmap(model, in_axes=(0, 0))(times, inital_conditions)  # type: ignore
+
     mae = jnp.mean(jnp.abs(data - preds))
 
     return loss, mae
