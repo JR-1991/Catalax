@@ -1036,6 +1036,66 @@ class Model(CatalaxBase, Predictor, Surrogate):
 
         return new_model
 
+    def from_arviz(
+        self,
+        samples: az.InferenceData,
+        hdi_prob: float = 0.95,
+        set_bounds: bool = False,
+    ) -> "Model":
+        """Create a new model from samples drawn from the posterior distribution.
+
+        Args:
+            samples (az.InferenceData): The ArviZ InferenceData object containing posterior samples.
+            hdi_prob (float): Probability for the highest density interval. Default is 0.95.
+            set_bounds (bool): Whether to set parameter bounds based on HDI. Default is False.
+
+        Returns:
+            Model: A new model instance with parameters updated from the posterior samples.
+        """
+        new_model = copy.deepcopy(self)
+        hdi = az.hdi(samples, hdi_prob=hdi_prob, skipna=True)
+        hdi_50 = az.hdi(samples, hdi_prob=0.5, skipna=True)
+
+        median_posterior = samples.median().posterior
+
+        for name, parameter in new_model.parameters.items():
+            parameter.value = float(median_posterior[name])
+            parameter.initial_value = float(median_posterior[name])
+            parameter.hdi = HDI(
+                lower=hdi[name][0],
+                upper=hdi[name][1],
+                lower_50=hdi_50[name][0],
+                upper_50=hdi_50[name][1],
+                q=hdi_prob,
+            )
+
+            # If any of the HDI boundaries are nan, use the median value and
+            # add the opposite bound to the parameter value
+            lower_nan = jnp.isnan(parameter.hdi.lower)
+            upper_nan = jnp.isnan(parameter.hdi.upper)
+            has_nan_hdi = lower_nan and upper_nan
+
+            if has_nan_hdi:
+                rich.print(
+                    f"[bold yellow]Warning:[/bold yellow] Parameter {name} has nan HDI bounds. Using median value."
+                )
+            elif lower_nan:
+                rich.print(
+                    f"[bold yellow]Warning:[/bold yellow] Parameter {name} has nan lower bound. Mirroring from upper bound."
+                )
+                parameter.hdi.lower = parameter.value - parameter.hdi.upper
+            elif upper_nan:
+                rich.print(
+                    f"[bold yellow]Warning:[/bold yellow] Parameter {name} has nan upper bound. Mirroring from lower bound."
+                )
+                parameter.hdi.upper = parameter.value + parameter.hdi.lower
+
+            if set_bounds and not has_nan_hdi:
+                parameter.upper_bound = parameter.hdi.upper
+                parameter.lower_bound = parameter.hdi.lower
+
+        return new_model
+
     # ! Importers
     @classmethod
     def load(cls, path: str):
