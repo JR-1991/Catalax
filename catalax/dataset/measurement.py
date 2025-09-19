@@ -543,7 +543,7 @@ class Measurement(BaseModel):
                 **plt_kwargs,
             )
 
-            if model_data:
+            if model_data and species in sim_meas:
                 ax.plot(
                     sim_meas["time"],
                     sim_meas[species],
