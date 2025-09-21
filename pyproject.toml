@@ -5,7 +5,7 @@ description = "A JAX-based framework for (neural) ODE modelling in biocatalysis.
 authors = [{ name = "Jan Range", email = "jan.range@simtech.uni-stuttgart.de" }]
 requires-python = ">=3.10,<3.14"
 readme = "README.md"
-license = "MIT License"
+license = "MIT"
 dependencies = [
     "matplotlib>=3.8.0,<4",
     "dotted-dict>=1.1.3,<2",
