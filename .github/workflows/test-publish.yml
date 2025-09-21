@@ -8,9 +8,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: 'Build and publish to TestPyPi'
-        uses: JRubics/poetry-publish@v2.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          pypi_token: ${{ secrets.TEST_PYPI_TOKEN }}
-          repository_name: 'testpypi'
-          repository_url: 'https://test.pypi.org/legacy/'
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Publish Package
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+        run: |
+          uv build
+          uv publish --index testpypi
