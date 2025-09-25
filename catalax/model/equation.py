@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING, Dict, Optional, Union  # noqa: F401
 from dotted_dict import DottedDict
 from pydantic import Field, PrivateAttr
 from pydantic.config import ConfigDict
-from pydantic.functional_validators import field_validator
-from sympy import Expr, sympify
+from sympy import Expr
 
 from catalax.model.base import CatalaxBase
+from catalax.model.types import AnnotatedExpr
+
 from .parameter import Parameter
 from .utils import parameter_exists
 
@@ -21,19 +22,13 @@ class Equation(CatalaxBase):
         arbitrary_types_allowed=True,
     )
 
-    equation: Expr
+    equation: AnnotatedExpr
     parameters: Dict[Union[str, Expr], Parameter] = Field(
         default_factory=DottedDict,
         exclude=True,
     )
 
     _model: Optional[Model] = PrivateAttr(default=None)  # type: ignore
-
-    @field_validator("equation", mode="before")
-    def converts_assignment_to_sympy(cls, value):
-        """Convertes a string to a sympy expression"""
-
-        return sympify(value)
 
     def __setattr__(self, name, value):
         """Override of the __setattr__ method to add parameters to the model"""
@@ -54,15 +49,15 @@ class Equation(CatalaxBase):
 
         This step is necessary to ensure that the parameters are available
         model-wide and not just within the ODE. Also, this step can only be
-        done upon addition of the model due to no given knowledge of the species.
+        done upon addition of the model due to no given knowledge of the state.
         """
 
         if self._model is None:
             return None
 
         for symbol in self.equation.free_symbols:
-            if str(symbol) in self._model.species or str(symbol) == "t":
-                # Skip species and time symbol
+            if str(symbol) in self._model.states or str(symbol) == "t":
+                # Skip state and time symbol
                 continue
             elif str(symbol) in self._model.constants:
                 # Skip constants
