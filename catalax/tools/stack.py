@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Self, Sequence
+from typing import TYPE_CHECKING, List, Self
 
 import equinox as eqx
 import jax

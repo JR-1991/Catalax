@@ -16,7 +16,6 @@ from typing import (
 )
 
 import diffrax
-import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpyro

@@ -15,7 +15,6 @@ from typing import (
 )
 
 import arviz as az
-import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pyenzyme as pe
