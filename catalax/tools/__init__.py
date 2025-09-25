@@ -1,7 +1,7 @@
-from .simulation import Simulation
-from .simulation import Stack
+from .simulation import MixedStack, ODEStack, Simulation
 
 __all__ = [
     "Simulation",
-    "Stack",
+    "ODEStack",
+    "MixedStack",
 ]
