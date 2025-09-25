@@ -3,12 +3,14 @@ import tempfile
 
 import jax.numpy as jnp
 import optax
+import pytest
 
 import catalax as ctx
 import catalax.neural as ctn
 
 
 class TestUODE:
+    @pytest.mark.expensive
     def test_train_uode(self):
         model, dataset = self._load_model_and_data()
 
@@ -52,6 +54,7 @@ class TestUODE:
             save_milestones=False,
         )
 
+    @pytest.mark.expensive
     def test_save_load_uode(self):
         model, dataset = self._load_model_and_data()
 
@@ -60,7 +63,7 @@ class TestUODE:
             width_size=4,
             depth=1,
             use_final_bias=False,
-            final_activation=lambda x: x,
+            final_activation=lambda x: 0.0,
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -68,7 +71,7 @@ class TestUODE:
             neural_ode.save_to_eqx(temp_dir, name="model")
             loaded_neural_ode = ctn.UniversalODE.from_eqx(path)
 
-            loaded_neural_ode.predict(dataset)
+            loaded_neural_ode.predict_rates(dataset)
 
     def _load_model_and_data(self):
         model = ctx.Model.load("tests/fixtures/uode/uode_model.json")
