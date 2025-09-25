@@ -80,7 +80,7 @@ class TestMCMC:
     def test_initial_estimator(self):
         # Create a simple Michaelis-Menten model
         model = Model(name="test")
-        model.add_species(s0="Substrate")
+        model.add_state(s0="Substrate")
         model.add_ode("s0", "-v_max * s0 / (K_m + s0)")
 
         # Set parameter values and priors

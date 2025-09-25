@@ -1,10 +1,11 @@
 import os
 import tempfile
+
+import jax.numpy as jnp
+import optax
+
 import catalax as ctx
 import catalax.neural as ctn
-
-import optax
-import jax.numpy as jnp
 
 
 class TestUODE:
@@ -77,7 +78,7 @@ class TestUODE:
         y0 = jnp.load("tests/fixtures/uode/y0s.npy")
 
         dataset = ctx.Dataset.from_jax_arrays(
-            species_order=model.get_species_order(),
+            state_order=model.get_state_order(),
             data=data,
             time=times,
             y0s=y0,

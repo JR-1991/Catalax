@@ -7,7 +7,7 @@ import catalax.mcmc as cmm
 
 def menten_model():
     model = ctx.Model(name="Michaelis-Menten")
-    model.add_species(s1="Substrate")
+    model.add_state(s1="Substrate")
     model.add_constant(e="Enzyme")
     model.add_ode("s1", "kcat * e * s1 / (k_m + s1)")
 
@@ -61,7 +61,7 @@ def dataset():
     times = jnp.load("./tests/fixtures/times.npy")
     data = jnp.load("./tests/fixtures/data.npy")
 
-    dataset = ctx.Dataset(species=["s1"], id="test")
+    dataset = ctx.Dataset(states=["s1"], id="test")
 
     dataset.add_measurement(
         ctx.Measurement(

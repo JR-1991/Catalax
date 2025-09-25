@@ -1,5 +1,6 @@
-import catalax as ctx
 import jax.numpy as jnp
+
+import catalax as ctx
 
 TOLERANCE = 1e-3
 
@@ -15,7 +16,7 @@ class TestSimulation:
         """
         # Define a simple exponential growth model: ds1/dt = e * s1 * q
         model = ctx.Model(name="ExponentialGrowthModel")
-        model.add_species(s1="Substrate")
+        model.add_state(s1="Substrate")
         model.add_constant(e="Enzyme")
         model.add_ode("s1", "e * s1 * q")
         model.parameters["q"].value = 1.0

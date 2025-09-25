@@ -15,7 +15,7 @@ class TestDatasetFromEnzymeML:
     def dataset_from_enzymeml_basics(self):
         """Create a simple EnzymeML document for testing."""
         doc = pe.read_enzymeml(ENZYMEML_DOC_PATH)
-        ds = ctx.Dataset.from_enzymeml()
+        ds = ctx.Dataset.from_enzymeml(doc)
 
         protein_ids = [p.id for p in doc.proteins]
         small_molecules = [s.id for s in doc.small_molecules]
@@ -23,7 +23,7 @@ class TestDatasetFromEnzymeML:
         all_species = protein_ids + small_molecules
 
         assert doc.name == ds.name
-        assert set(all_species) == set(ds.species)
+        assert set(all_species) == set(ds.states)
         assert len(doc.measurements) == len(ds.measurements)
 
     def test_from_enzymeml_missing_initial_conditions(self):
@@ -53,4 +53,4 @@ class TestDatasetFromEnzymeML:
 
         # Act & Assert - should fail due to validation error (missing kinetic law)
         with pytest.raises(Exception):  # Could be ValidationError or similar
-            ctx.Model.from_enzymeml(doc, from_reactions=True)
+            ctx.Model.from_enzymeml(doc)
