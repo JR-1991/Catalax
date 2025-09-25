@@ -6,15 +6,9 @@
       "symbol": "s1"
     }
   ],
-  "constants": [
-    {
-      "name": "e1",
-      "symbol": "e1"
-    }
-  ],
   "odes": [
     {
-      "equation": "-e1*s1*v_max/(K_m + s1)",
+      "equation": "-s1*v_max/(K_m + s1)",
       "observable": true,
       "species": "s1"
     }
@@ -26,8 +20,8 @@
       "value": 7.0,
       "constant": false,
       "prior": {
-        "low": 1e-06,
-        "high": 200.0,
+        "low": 4.0,
+        "high": 13.0,
         "type": "Uniform"
       }
     },
@@ -37,8 +31,8 @@
       "value": 100.0,
       "constant": false,
       "prior": {
-        "low": 1e-06,
-        "high": 1000.0,
+        "low": 30.0,
+        "high": 500.0,
         "type": "Uniform"
       }
     }
