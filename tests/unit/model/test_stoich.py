@@ -12,7 +12,7 @@ class TestStoichMatrix:
         # Arrange: A -> B reaction
         reactions = [
             Reaction(
-                name="r1",
+                symbol="r1",
                 reactants=[ReactionElement(state="A", stoichiometry=1.0)],
                 products=[ReactionElement(state="B", stoichiometry=1.0)],
                 reversible=False,
@@ -46,7 +46,7 @@ class TestStoichMatrix:
         # Reaction r2: C -> D + E
         reactions = [
             Reaction(
-                name="r1",
+                symbol="r1",
                 reactants=[
                     ReactionElement(state="A", stoichiometry=2.0),
                     ReactionElement(state="B", stoichiometry=1.0),
@@ -56,7 +56,7 @@ class TestStoichMatrix:
                 equation="k1*A*A*B",  # type: ignore
             ),
             Reaction(
-                name="r2",
+                symbol="r2",
                 reactants=[ReactionElement(state="C", stoichiometry=1.0)],
                 products=[
                     ReactionElement(state="D", stoichiometry=1.0),
@@ -98,14 +98,14 @@ class TestStoichMatrix:
         # Arrange: Create reactions in non-alphabetical order
         reactions = [
             Reaction(
-                name="z_reaction",
+                symbol="z_reaction",
                 reactants=[ReactionElement(state="A", stoichiometry=1.0)],
                 products=[ReactionElement(state="B", stoichiometry=1.0)],
                 reversible=False,
                 equation="k1*A",  # type: ignore
             ),
             Reaction(
-                name="a_reaction",
+                symbol="a_reaction",
                 reactants=[ReactionElement(state="B", stoichiometry=1.0)],
                 products=[ReactionElement(state="C", stoichiometry=1.0)],
                 reversible=False,
@@ -137,7 +137,7 @@ class TestStoichMatrix:
         # Arrange: Only A -> B, but include species C in the order
         reactions = [
             Reaction(
-                name="r1",
+                symbol="r1",
                 reactants=[ReactionElement(state="A", stoichiometry=1.0)],
                 products=[ReactionElement(state="B", stoichiometry=1.0)],
                 reversible=False,

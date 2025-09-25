@@ -23,13 +23,13 @@ class TestStack:
             constants=[],
             reactions=[
                 Reaction.from_scheme(
-                    name="r1",
+                    symbol="r1",
                     schema="s1 -> s2",
                     equation="k1 * s1",
                     reversible=False,
                 ),
                 Reaction.from_scheme(
-                    name="r2",
+                    symbol="r2",
                     schema="s2 -> s1",
                     equation="k2 * s2",
                     reversible=False,
@@ -144,13 +144,13 @@ class TestStack:
             constants=[],
             reactions=[
                 Reaction.from_scheme(
-                    name="r1",
+                    symbol="r1",
                     schema="s1 -> s2",
                     equation="k1 * s1",
                     reversible=False,
                 ),
                 Reaction.from_scheme(
-                    name="r2",
+                    symbol="r2",
                     schema="s2 -> s1",
                     equation="k2 * s2",
                     reversible=False,

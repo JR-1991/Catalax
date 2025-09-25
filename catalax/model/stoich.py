@@ -56,7 +56,7 @@ def _get_reaction_order(reactions: List[Reaction]) -> List[Reaction]:
     Returns:
         List of reactions sorted alphabetically by name
     """
-    return sorted(reactions, key=lambda x: x.name)
+    return sorted(reactions, key=lambda x: x.symbol)
 
 
 def _create_state_mapping(state_order: List[str]) -> dict[str, int]:

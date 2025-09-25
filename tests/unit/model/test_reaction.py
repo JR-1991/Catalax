@@ -9,10 +9,13 @@ class TestReactionFromSchema:
     def test_basic_irreversible_reaction(self):
         """Test basic irreversible reaction with -> arrow."""
         reaction = Reaction.from_scheme(
-            name="r1", schema="A + B -> C", equation="k*A*B", reversible=False
+            symbol="r1",
+            schema="A + B -> C",
+            equation="k*A*B",
+            reversible=False,
         )
 
-        assert reaction.name == "r1"
+        assert reaction.symbol == "r1"
         assert reaction.reversible is False
         assert len(reaction.reactants) == 2
         assert len(reaction.products) == 1
@@ -23,10 +26,13 @@ class TestReactionFromSchema:
     def test_basic_reversible_reaction(self):
         """Test basic reversible reaction with <-> arrow."""
         reaction = Reaction.from_scheme(
-            name="r2", schema="A + B <-> C", equation="k*A*B", reversible=True
+            symbol="r2",
+            schema="A + B <-> C",
+            equation="k*A*B",
+            reversible=True,
         )
 
-        assert reaction.name == "r2"
+        assert reaction.symbol == "r2"
         assert reaction.reversible is True
         assert len(reaction.reactants) == 2
         assert len(reaction.products) == 1
@@ -45,7 +51,7 @@ class TestReactionFromSchema:
 
         for schema, expected_reversible in arrow_tests:
             reaction = Reaction.from_scheme(
-                name="test",
+                symbol="test",
                 schema=schema,
                 equation="k*A",
                 reversible=expected_reversible,
@@ -58,7 +64,10 @@ class TestReactionFromSchema:
     def test_stoichiometric_coefficients(self):
         """Test reactions with stoichiometric coefficients."""
         reaction = Reaction.from_scheme(
-            name="r3", schema="2 A + 3 B -> 4 C", equation="k*A*B", reversible=False
+            symbol="r3",
+            schema="2 A + 3 B -> 4 C",
+            equation="k*A*B",
+            reversible=False,
         )
 
         assert reaction.reactants[0] == ReactionElement(state="A", stoichiometry=2.0)
@@ -68,7 +77,7 @@ class TestReactionFromSchema:
     def test_decimal_coefficients(self):
         """Test reactions with decimal stoichiometric coefficients."""
         reaction = Reaction.from_scheme(
-            name="r4",
+            symbol="r4",
             schema="1.5 A + 2.5 B -> 3.0 C",
             equation="k*A*B",
             reversible=False,
@@ -81,7 +90,7 @@ class TestReactionFromSchema:
     def test_species_with_underscores(self):
         """Test species names with underscores."""
         reaction = Reaction.from_scheme(
-            name="r5",
+            symbol="r5",
             schema="reactant_1 + reactant_2 -> product_1",
             equation="k*reactant_1*reactant_2",
             reversible=False,
@@ -100,7 +109,10 @@ class TestReactionFromSchema:
     def test_species_with_numbers(self):
         """Test species names with numbers."""
         reaction = Reaction.from_scheme(
-            name="r6", schema="H2 + O2 -> H2O", equation="k*H2*O2", reversible=False
+            symbol="r6",
+            schema="H2 + O2 -> H2O",
+            equation="k*H2*O2",
+            reversible=False,
         )
 
         assert reaction.reactants[0] == ReactionElement(state="H2", stoichiometry=1.0)
@@ -110,7 +122,10 @@ class TestReactionFromSchema:
     def test_complex_reaction(self):
         """Test complex reaction with multiple reactants and products."""
         reaction = Reaction.from_scheme(
-            name="r7", schema="2 H2 + O2 -> 2 H2O", equation="k*H2*O2", reversible=False
+            symbol="r7",
+            schema="2 H2 + O2 -> 2 H2O",
+            equation="k*H2*O2",
+            reversible=False,
         )
 
         assert len(reaction.reactants) == 2
@@ -122,10 +137,13 @@ class TestReactionFromSchema:
     def test_empty_reactants(self):
         """Test reaction with empty reactants."""
         reaction = Reaction.from_scheme(
-            name="r8", schema="-> A", equation="k", reversible=False
+            symbol="r8",
+            schema="-> A",
+            equation="k",
+            reversible=False,
         )
 
-        assert reaction.name == "r8"
+        assert reaction.symbol == "r8"
         assert len(reaction.reactants) == 0
         assert len(reaction.products) == 1
         assert reaction.products[0] == ReactionElement(state="A", stoichiometry=1.0)
@@ -133,10 +151,13 @@ class TestReactionFromSchema:
     def test_empty_products(self):
         """Test reaction with empty products."""
         reaction = Reaction.from_scheme(
-            name="r9", schema="A ->", equation="k*A", reversible=False
+            symbol="r9",
+            schema="A ->",
+            equation="k*A",
+            reversible=False,
         )
 
-        assert reaction.name == "r9"
+        assert reaction.symbol == "r9"
         assert len(reaction.reactants) == 1
         assert len(reaction.products) == 0
         assert reaction.reactants[0] == ReactionElement(state="A", stoichiometry=1.0)
@@ -145,16 +166,22 @@ class TestReactionFromSchema:
         """Test schema without any arrow (should raise error)."""
         with pytest.raises(ValueError, match="No supported arrow pattern found"):
             Reaction.from_scheme(
-                name="r10", schema="A + B", equation="k*A*B", reversible=False
+                symbol="r10",
+                schema="A + B",
+                equation="k*A*B",
+                reversible=False,
             )
 
     def test_multiple_arrows(self):
         """Test schema with multiple arrows (uses first arrow found)."""
         reaction = Reaction.from_scheme(
-            name="r11", schema="A -> B -> C", equation="k*A", reversible=False
+            symbol="r11",
+            schema="A -> B -> C",
+            equation="k*A",
+            reversible=False,
         )
 
-        assert reaction.name == "r11"
+        assert reaction.symbol == "r11"
         assert len(reaction.reactants) == 1
         assert len(reaction.products) == 1
         assert reaction.reactants[0] == ReactionElement(state="A", stoichiometry=1.0)
@@ -164,13 +191,19 @@ class TestReactionFromSchema:
         """Test species name that doesn't match pattern."""
         with pytest.raises(ValueError, match="Could not parse term"):
             Reaction.from_scheme(
-                name="r12", schema="A + @invalid -> B", equation="k*A", reversible=False
+                symbol="r12",
+                schema="A + @invalid -> B",
+                equation="k*A",
+                reversible=False,
             )
 
     def test_whitespace_handling(self):
         """Test proper whitespace handling."""
         reaction = Reaction.from_scheme(
-            name="r13", schema="  A  +  B  ->  C  ", equation="k*A*B", reversible=False
+            symbol="r13",
+            schema="  A  +  B  ->  C  ",
+            equation="k*A*B",
+            reversible=False,
         )
 
         assert reaction.reactants[0] == ReactionElement(state="A", stoichiometry=1.0)
@@ -180,7 +213,10 @@ class TestReactionFromSchema:
     def test_single_reactant_single_product(self):
         """Test reaction with single reactant and single product."""
         reaction = Reaction.from_scheme(
-            name="r14", schema="A -> B", equation="k*A", reversible=False
+            symbol="r14",
+            schema="A -> B",
+            equation="k*A",
+            reversible=False,
         )
 
         assert len(reaction.reactants) == 1
@@ -191,7 +227,10 @@ class TestReactionFromSchema:
     def test_multiple_products(self):
         """Test reaction with multiple products."""
         reaction = Reaction.from_scheme(
-            name="r15", schema="A -> B + C + D", equation="k*A", reversible=False
+            symbol="r15",
+            schema="A -> B + C + D",
+            equation="k*A",
+            reversible=False,
         )
 
         assert len(reaction.reactants) == 1
@@ -203,7 +242,10 @@ class TestReactionFromSchema:
     def test_zero_coefficient_handling(self):
         """Test that zero coefficients are handled properly."""
         reaction = Reaction.from_scheme(
-            name="r16", schema="0 A + 1 B -> C", equation="k*B", reversible=False
+            symbol="r16",
+            schema="0 A + 1 B -> C",
+            equation="k*B",
+            reversible=False,
         )
 
         # Should still create the element with zero coefficient
@@ -213,7 +255,10 @@ class TestReactionFromSchema:
     def test_very_long_arrow(self):
         """Test the longest supported arrow pattern."""
         reaction = Reaction.from_scheme(
-            name="r17", schema="A <===> B", equation="k*A", reversible=True
+            symbol="r17",
+            schema="A <===> B",
+            equation="k*A",
+            reversible=True,
         )
 
         assert len(reaction.reactants) == 1
@@ -224,7 +269,7 @@ class TestReactionFromSchema:
     def test_mixed_coefficient_types(self):
         """Test mixing integer and decimal coefficients."""
         reaction = Reaction.from_scheme(
-            name="r18",
+            symbol="r18",
             schema="1 A + 2.5 B + 3 C -> 4.5 D",
             equation="k*A*B*C",
             reversible=False,
