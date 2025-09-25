@@ -1,17 +1,15 @@
 from enum import Enum
-from typing import Any, List
+from typing import Any, Callable, List, Optional, Tuple
 
-import optax
-import jax.tree_util as jtu
 import equinox as eqx
-
+import jax.tree_util as jtu
+import optax
 from pydantic import Field, PrivateAttr
-from typing import Tuple
 
 from catalax.model.base import CatalaxBase
 from catalax.neural.neuralbase import NeuralBase
-from catalax.neural.rateflow import RateFlowODE
 from catalax.neural.penalties.penalties import Penalties
+from catalax.neural.rateflow import RateFlowODE
 from catalax.neural.universalode import UniversalODE
 
 
@@ -118,18 +116,39 @@ class Step(CatalaxBase):
 
 class Strategy(CatalaxBase):
     steps: List[Step] = []
+    penalties: Penalties = Penalties()
+    batch_size: int = 5
+    loss: Optional[Callable] = optax.l2_loss
     _step: int = PrivateAttr(0)
 
     def add_step(
         self,
         lr: float,
         steps: int,
-        batch_size: int,
+        batch_size: Optional[int] = None,
         length: float = 1.0,
-        penalties: Penalties = Penalties(),
-        loss: Any = optax.l2_loss,
+        penalties: Optional[Penalties] = None,
+        loss: Optional[Callable] = None,
         train: Modes = Modes.MLP,
     ):
+        penalties = penalties or self.penalties or Penalties()
+        batch_size = batch_size or self.batch_size
+        loss = loss or self.loss
+
+        if batch_size is None:
+            raise ValueError(
+                "Batch size must be provided. Please provide a batch size or set the batch size in the strategy initialization."
+            )
+
+        if loss is None:
+            raise ValueError(
+                "No loss function provided. Please provide a loss function or set the loss function in the strategy initialization."
+            )
+
+        assert penalties is not None, (
+            "Penalties must be provided. Please provide penalties or set the penalties in the strategy initialization."
+        )
+
         self.steps.append(
             Step(
                 lr=lr,
