@@ -30,9 +30,9 @@ HDI_50_ALPHA = 0.35
 
 
 class Measurement(BaseModel):
-    """A class representing a measurement dataset with species concentrations over time.
+    """A class representing a measurement dataset with state concentrations over time.
 
-    The Measurement class stores time series data for chemical species, including their
+    The Measurement class stores time series data for chemical states, including their
     initial concentrations and concentration values at each time point. It provides
     methods for data manipulation, conversion, visualization, and integration with
     other data formats.
@@ -85,10 +85,10 @@ class Measurement(BaseModel):
         id (str): Unique identifier for this measurement.
         name (Optional[str]): Optional name for the measurement.
         description (Optional[str]): Optional description of the measurement.
-        initial_conditions (Dict[str, float]): Initial concentrations keyed by species name.
-        data (Dict[str, jax.Array]): Time series data keyed by species name.
+        initial_conditions (Dict[str, float]): Initial concentrations keyed by state name.
+        data (Dict[str, jax.Array]): Time series data keyed by state name.
         time (jax.Array): Time points for the measurement data.
-        species (List[str]): List of species names present in the data (computed field).
+        state (List[str]): List of state names present in the data (computed field).
     """
 
     model_config = ConfigDict(
@@ -112,12 +112,12 @@ class Measurement(BaseModel):
 
     initial_conditions: Dict[str, float] = Field(
         ...,
-        description="Initial concentrations mapping species names to their initial values.",
+        description="Initial concentrations mapping state names to their initial values.",
     )
 
     data: Dict[str, Union[List[float], jax.Array]] = Field(
         default_factory=dict,
-        description="Time series data mapping species names to their concentration arrays.",
+        description="Time series data mapping state names to their concentration arrays.",
     )
 
     time: Optional[Union[List[float], jax.Array]] = Field(
@@ -128,8 +128,8 @@ class Measurement(BaseModel):
     # Computed fields
     @computed_field(return_type=List[str])
     @property
-    def species(self) -> List[str]:
-        """Returns the list of species names present in the data."""
+    def state(self) -> List[str]:
+        """Returns the list of state names present in the data."""
         return list(self.data.keys())
 
     # Validators
@@ -144,10 +144,10 @@ class Measurement(BaseModel):
     @field_validator("data")
     @classmethod
     def _convert_data_into_jax_array(cls, data):
-        """Convert species data into JAX array format if needed."""
-        for species, array in data.items():
+        """Convert state data into JAX array format if needed."""
+        for state, array in data.items():
             if isinstance(array, (np.ndarray, list)):
-                data[species] = jnp.array(array)
+                data[state] = jnp.array(array)
         return data
 
     @model_validator(mode="after")
@@ -162,12 +162,14 @@ class Measurement(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _check_species_consistency(self):
-        """Validate that all species in data also have initial conditions."""
-        species_diff = [sp for sp in self.data if sp not in self.initial_conditions]
-        if species_diff:
+    def _check_state_consistency(self):
+        """Validate that all states in data also have initial conditions."""
+        state_diff = [
+            state for state in self.data if state not in self.initial_conditions
+        ]
+        if state_diff:
             raise ValueError(
-                f"Data and initial concentration species are inconsistent: {species_diff} not found in initial_conditions"
+                f"Data and initial concentration states are inconsistent: {state_diff} not found in initial_conditions"
             )
         return self
 
@@ -179,22 +181,22 @@ class Measurement(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, value):
-        """Convert JAX array species data to Python lists for serialization."""
+        """Convert JAX array state data to Python lists for serialization."""
         return {key: val.tolist() for key, val in value.items()}
 
     # Data Management Methods
     def add_data(
         self,
-        species: str,
+        state: str,
         data: Union[jax.Array, np.ndarray, List[float]],
         initial_concentration: float,
     ) -> None:
-        """Add or update data for a species in the measurement.
+        """Add or update data for a state in the measurement.
 
         Args:
-            species (str): The species name to add or update.
+            state (str): The state name to add or update.
             data (Union[jax.Array, np.ndarray, List[float]]): Concentration values over time.
-            initial_concentration (float): The initial concentration of the species.
+            initial_concentration (float): The initial concentration of the state.
 
         Raises:
             AssertionError: If the provided data length doesn't match the existing time points.
@@ -207,23 +209,23 @@ class Measurement(BaseModel):
                 "The data and time arrays must have the same length."
             )
 
-        self.data[species] = data
-        self.initial_conditions[species] = initial_concentration
+        self.data[state] = data
+        self.initial_conditions[state] = initial_concentration
 
-    def add_initial(self, species: str, initial_concentration: float) -> None:
-        """Add or update an initial condition for a species in the measurement.
+    def add_initial(self, state: str, initial_concentration: float) -> None:
+        """Add or update an initial condition for a state in the measurement.
 
         Args:
-            species (str): The species name to add or update.
-            initial_concentration (float): The initial concentration of the species.
+            state (str): The state name to add or update.
+            initial_concentration (float): The initial concentration of the state.
         """
-        self.initial_conditions[species] = initial_concentration
+        self.initial_conditions[state] = initial_concentration
 
     def has_data(self) -> bool:
         """Check if the measurement contains any non-empty data.
 
         Returns:
-            bool: True if any species has data points, False otherwise.
+            bool: True if any state has data points, False otherwise.
         """
         return any(len(data) > 0 for data in self.data.values())
 
@@ -231,7 +233,7 @@ class Measurement(BaseModel):
     def to_dataframe(self) -> pd.DataFrame:
         """Convert the measurement to a pandas DataFrame.
 
-        The resulting DataFrame contains columns for each species, time points,
+        The resulting DataFrame contains columns for each state, time points,
         and a measurementId column.
 
         Returns:
@@ -244,10 +246,10 @@ class Measurement(BaseModel):
         return pd.DataFrame(data)
 
     def to_dict(self) -> Dict[str, Union[List[float], jax.Array, np.ndarray]]:
-        """Convert the measurement to a dictionary with time and species data.
+        """Convert the measurement to a dictionary with time and state data.
 
         Returns:
-            Dict[str, Union[List[float], jax.Array, np.ndarray]]: Dictionary with time and species data.
+            Dict[str, Union[List[float], jax.Array, np.ndarray]]: Dictionary with time and state data.
         """
         return {
             "time": self.time,  # type: ignore
@@ -257,14 +259,14 @@ class Measurement(BaseModel):
     def to_jsonl(self) -> str:
         """Convert the measurement to JSON Lines format.
 
-        Each line contains a JSON object with time and all species values for that time point.
+        Each line contains a JSON object with time and all state values for that time point.
 
         Returns:
             str: JSON Lines formatted string.
         """
         lines = []
         for index in range(len(self.time)):  # type: ignore
-            data = {sp: float(self.data[sp][index]) for sp in self.species}
+            data = {state: float(self.data[state][index]) for state in self.state}
             data["time"] = float(self.time[index])  # type: ignore
             lines.append(json.dumps(data))
 
@@ -272,59 +274,63 @@ class Measurement(BaseModel):
 
     def to_jax_arrays(
         self,
-        species_order: List[str],
+        state_order: List[str],
         inits_to_array: bool = False,
     ) -> Tuple[jax.Array, jax.Array, Union[jax.Array, Dict[str, float]]]:
-        """Convert measurement data to JAX arrays in the specified species order.
+        """Convert measurement data to JAX arrays in the specified state order.
 
-        Arranges the data following the provided species order for use in models.
+        Arranges the data following the provided state order for use in models.
 
         Args:
-            species_order (List[str]): Order of species to arrange data.
+            state_order (List[str]): Order of state to arrange data.
             inits_to_array (bool): If True, convert initial conditions to a JAX array.
                                   If False, return initial conditions as a dictionary.
 
         Returns:
             Tuple containing:
-                - data array (shape: n_time_points × n_species)
+                - data array (shape: n_time_points × n_states)
                 - time array (shape: n_time_points)
                 - initial conditions (as array or dict)
 
         Raises:
-            ValueError: If any species in species_order is missing from the measurement data.
+            ValueError: If any state in state_order is missing from the measurement data.
         """
-        unused_species = [sp for sp in self.data.keys() if sp not in species_order]
-        missing_species = [sp for sp in species_order if sp not in self.data.keys()]
+        unused_states = [
+            state for state in self.data.keys() if state not in state_order
+        ]
+        missing_states = [
+            state for state in state_order if state not in self.data.keys()
+        ]
 
-        if unused_species:
-            warnings.warn(f"Species {unused_species} are not used in the model.")
+        if unused_states:
+            warnings.warn(f"States {unused_states} are not used in the model.")
 
-        if missing_species:
+        if missing_states:
             raise ValueError(
-                f"The measurement species are inconsistent with the dataset species. "
-                f"Missing {missing_species} in measurement {self.id}"
+                f"The measurement state are inconsistent with the dataset state. "
+                f"Missing {missing_states} in measurement {self.id}"
             )
 
-        data = jnp.array([self.data[sp] for sp in species_order]).swapaxes(0, 1)
+        data = jnp.array([self.data[state] for state in state_order]).swapaxes(0, 1)
         time = jnp.array(self.time)
 
         if inits_to_array:
-            inits = jnp.array([self.initial_conditions[sp] for sp in species_order])
+            inits = jnp.array([self.initial_conditions[state] for state in state_order])
         else:
             inits = self.initial_conditions
 
         return data, time, inits
 
-    def to_y0_array(self, species_order: List[str]) -> jax.Array:
-        """Convert initial conditions to a JAX array in the specified species order.
+    def to_y0_array(self, state_order: List[str]) -> jax.Array:
+        """Convert initial conditions to a JAX array in the specified state order.
 
         Args:
-            species_order (List[str]): Order of species to arrange initial conditions.
+            state_order (List[str]): Order of state to arrange initial conditions.
 
         Returns:
             jax.Array: Initial conditions array.
         """
-        return jnp.array([self.initial_conditions[sp] for sp in species_order])
+        return jnp.array([self.initial_conditions[sp] for sp in state_order])
 
     # Data Import Methods
     @classmethod
@@ -339,7 +345,7 @@ class Measurement(BaseModel):
         Args:
             df (pd.DataFrame): DataFrame containing time series data.
                               Must include a 'time' column.
-            initial_conditions (Dict[str, float]): Mapping of species names to initial concentrations.
+            initial_conditions (Dict[str, float]): Mapping of state names to initial concentrations.
             **kwargs: Additional arguments to pass to the Measurement constructor.
 
         Returns:
@@ -347,22 +353,22 @@ class Measurement(BaseModel):
 
         Raises:
             AssertionError: If the DataFrame doesn't have a 'time' column.
-            ValueError: If species in DataFrame don't match those in initial_conditions.
+            ValueError: If states in DataFrame don't match those in initial_conditions.
         """
         assert "time" in df.columns, "The DataFrame must have a 'time' column."
 
-        species_diff = [
-            sp
-            for sp in df.columns
-            if sp not in initial_conditions.keys()
-            and sp != "time"
-            and sp != "measurementId"
+        state_diff = [
+            state
+            for state in df.columns
+            if state not in initial_conditions.keys()
+            and state != "time"
+            and state != "measurementId"
         ]
 
-        if species_diff:
+        if state_diff:
             raise ValueError(
                 f"Initial concentrations are inconsistent with the given DataFrame. "
-                f"Missing {species_diff} in initial_conditions"
+                f"Missing {state_diff} in initial_conditions"
             )
 
         time = jnp.array(df["time"].values)

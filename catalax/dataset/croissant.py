@@ -203,18 +203,18 @@ def _create_measurement_record_set(
 
     fields = [
         mlc.Field(
-            id=f"{measurement.id}/{species}",
-            name=species,
-            description=f"The measurements of {species}.",
+            id=f"{measurement.id}/{state}",
+            name=state,
+            description=f"The measurements of {state}.",
             data_types=mlc.DataType.FLOAT,  # type: ignore
             source=mlc.Source(
                 file_object=file_object_id,
                 extract=mlc.Extract(
-                    column=species,
+                    column=state,
                 ),
             ),
         )
-        for species in measurement.data.keys()
+        for state in measurement.data.keys()
     ]
 
     fields.append(
@@ -253,21 +253,21 @@ def _create_initial_condition_record_set(measurement: Measurement) -> mlc.Record
     if measurement.name is None:
         measurement.name = measurement.id
 
-    # Create field objects for each species in initial conditions
+    # Create field objects for each state in initial conditions
     fields = [
         mlc.Field(
-            id=f"{measurement.id}/inits/{species}",
-            name=species,
-            description=f"The initial conditions of {species}.",
+            id=f"{measurement.id}/inits/{state}",
+            name=state,
+            description=f"The initial conditions of {state}.",
             data_types=mlc.DataType.FLOAT,  # type: ignore
         )
-        for species in measurement.initial_conditions.keys()
+        for state in measurement.initial_conditions.keys()
     ]
 
     # Prepare data with field IDs matching the expected structure
     data_with_prefixed_keys = {}
-    for species, value in measurement.initial_conditions.items():
-        data_with_prefixed_keys[f"{measurement.id}/inits/{species}"] = value
+    for state, value in measurement.initial_conditions.items():
+        data_with_prefixed_keys[f"{measurement.id}/inits/{state}"] = value
 
     return mlc.RecordSet(
         id=f"{measurement.id}/inits",
