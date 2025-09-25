@@ -75,9 +75,11 @@ class TestEnzymemlModel:
 
         dataset, model = ctx.from_enzymeml(enzmldoc)
 
-        assert dataset is None
+        assert dataset is not None
         assert model is not None
 
+        assert len(dataset.states) == 3
+        assert len(dataset.measurements) == 0
         assert len(model.reactions) == 1
         assert len(model.odes) == 0
 
@@ -89,9 +91,10 @@ class TestEnzymemlModel:
 
         dataset, model = ctx.from_enzymeml(enzmldoc)
 
-        assert dataset is None
+        assert dataset is not None
         assert model is not None
         assert len(model.reactions) == 0
         assert len(model.odes) == 0
         assert len(model.states) == 3
-        assert len(model.species) == 3
+        assert len(dataset.states) == 3
+        assert len(dataset.measurements) == 0
