@@ -15,9 +15,10 @@ from typing import (
     Union,
 )
 
+import diffrax
+import equinox as eqx
 import jax
 import jax.numpy as jnp
-import diffrax
 import numpyro
 import numpyro.distributions as dist
 from jax import Array
@@ -27,6 +28,7 @@ from numpyro.infer import MCMC, NUTS
 from catalax.dataset.dataset import Dataset
 from catalax.mcmc.protocols import PostModel, PreModel, Shapes
 from catalax.mcmc.results import HMCResults
+from catalax.model.simconfig import SimulationConfig
 from catalax.surrogate import Surrogate
 
 if TYPE_CHECKING:
@@ -65,6 +67,14 @@ class MCMCConfig:
     verbose: int = 1
     max_steps: int = 64**4
     solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5
+
+    def to_simulation_config(self) -> SimulationConfig:
+        return SimulationConfig(
+            t1=self.max_steps,
+            t0=0,
+            dt0=self.dt0,
+            solver=self.solver,
+        )
 
 
 class Modes(Enum):
@@ -188,12 +198,12 @@ class HMC:
         _validate_model_functions(pre_model, post_model)
 
         # Setup model and prepare data
+        config = self.config.to_simulation_config()
         data_prep = _prepare_mcmc_data(
             dataset,
             model,
             surrogate,
-            self.config.solver,
-            self.config.dt0,
+            config,
         )
 
         if surrogate is not None:
@@ -211,8 +221,7 @@ class HMC:
             post_model=post_model,
             shapes=data_prep.shapes,
             mode=mode,
-            solver=self.config.solver,
-            dt0=self.config.dt0,
+            config=config,
         )
 
         # Initialize and run MCMC
@@ -276,10 +285,9 @@ class BayesianModel:
         sim_func: Callable,
         shapes: Shapes,
         mode: Modes,
-        solver: Type[diffrax.AbstractSolver],
+        config: SimulationConfig,
         pre_model: Optional[PreModel] = None,
         post_model: Optional[PostModel] = None,
-        dt0: float = 0.1,
     ):
         """Initialize the Bayesian model.
 
@@ -289,11 +297,13 @@ class BayesianModel:
             likelihood: Likelihood distribution class
             sim_func: Function to simulate model with given parameters
             shapes: Shapes of the data, initial conditions, constants, and times
+            config: Simulation configuration
+            solver: Solver to use for simulation
             pre_model: Optional function to transform inputs and parameters before simulation
             post_model: Optional function to transform outputs after simulation
         """
         self.model = deepcopy(model)
-        self.model._setup_system()
+        self.model._setup_system(config)
         self.yerrs = yerrs
         self.likelihood = likelihood
         self.sim_func = sim_func
@@ -301,8 +311,8 @@ class BayesianModel:
         self.post_model = post_model
         self.shapes = shapes
         self.mode = mode
-        self.solver = solver
-        self.dt0 = dt0
+        self.solver = config.solver
+        self.dt0 = config.dt0
 
         # Pre-compute priors and observables
         self.priors = [
@@ -316,8 +326,8 @@ class BayesianModel:
         self.observables = jnp.array(
             [
                 i
-                for i, species in enumerate(model.get_species_order())
-                if model.odes[species].observable
+                for i, state in enumerate(model.get_state_order())
+                if model.odes[state].observable
             ]
         )
 
@@ -366,6 +376,12 @@ class BayesianModel:
         # Simulate model with sampled parameters
         states = self.sim_func(y0s, theta, constants, times)
 
+        # Boolean check: True if all entries finite
+        ok = jnp.isfinite(states).all()
+
+        # Add factor: 0.0 if ok, -inf if not
+        numpyro.factor("ode_ok", jnp.where(ok, 0.0, -jnp.inf))
+
         # Apply a post-model which can be used to modify
         # the states, data, and times
         if self.post_model is not None:
@@ -395,8 +411,6 @@ def run_mcmc(
     surrogate: Optional[Surrogate] = None,
     pre_model: Optional[PreModel] = None,
     post_model: Optional[PostModel] = None,
-    solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5,
-    dt0: float = 0.1,
 ) -> HMCResults:
     """Run MCMC simulation to infer posterior distribution of parameters.
 
@@ -424,15 +438,21 @@ def run_mcmc(
     """
     # Validate inputs
     hmc = HMC.from_config(config)
-    return hmc.run(model, dataset, yerrs, surrogate, pre_model, post_model)
+    return hmc.run(
+        model=model,
+        dataset=dataset,
+        yerrs=yerrs,
+        surrogate=surrogate,
+        pre_model=pre_model,
+        post_model=post_model,
+    )
 
 
 def _prepare_mcmc_data(
     dataset: Dataset,
     model: "Model",
     surrogate: Optional[Surrogate],
-    solver: Type[diffrax.AbstractSolver],
-    dt0: float,
+    config: SimulationConfig,
 ) -> DataPreparation:
     """Prepare all data components needed for MCMC simulation.
 
@@ -461,7 +481,7 @@ def _prepare_mcmc_data(
 
     # Setup simulation function
     model = deepcopy(model)
-    model._setup_system()
+    model._setup_system(config)
     sim_func, data, y0s, times, constants = _configure_simulation_function(
         model=model,
         surrogate=surrogate,
@@ -470,8 +490,7 @@ def _prepare_mcmc_data(
         y0s=y0s,
         times=times,
         constants=constants,
-        solver=solver,
-        dt0=dt0,
+        config=config,
     )
 
     return DataPreparation(
@@ -660,19 +679,19 @@ def _extract_dataset_components(
     """
     # Extract data, times, and initial conditions
     data, times, y0s = dataset.to_jax_arrays(
-        model.get_species_order(),
+        model.get_state_order(),
         inits_to_array=True,
     )
 
     # Get constants from dataset
-    constants = dataset.to_y0_matrix(species_order=model.get_constants_order())
+    constants = dataset.to_y0_matrix(state_order=model.get_constants_order())
 
-    # Create initial conditions for all species, including non-observable ones
-    all_species = model.get_species_order()
+    # Create initial conditions for all state, including non-observable ones
+    all_state = model.get_state_order()
     full_y0s = []
 
     for meas in dataset.measurements:
-        y0 = jnp.array([meas.initial_conditions[species] for species in all_species])
+        y0 = jnp.array([meas.initial_conditions[state] for state in all_state])
         full_y0s.append(y0)
 
     y0s = jnp.stack(full_y0s)
@@ -688,8 +707,7 @@ def _configure_simulation_function(
     y0s: Array,
     times: Array,
     constants: Array,
-    dt0: float,
-    solver: Type[diffrax.AbstractSolver],
+    config: SimulationConfig,
 ) -> Tuple[Callable, Array, Array, Array, Array]:
     """Configure the appropriate simulation function based on model type.
 
@@ -709,15 +727,15 @@ def _configure_simulation_function(
 
     if surrogate is not None:
         # Use surrogate model for rate prediction
-        data, times, _ = dataset.to_jax_arrays(model.get_species_order())
-        constants = dataset.to_y0_matrix(species_order=model.get_constants_order())
+        data, times, _ = dataset.to_jax_arrays(model.get_state_order())
+        constants = dataset.to_y0_matrix(state_order=model.get_constants_order())
         rate_fun = model._setup_rate_function(in_axes=None)
         y0s = data.reshape(-1, data.shape[-1])
 
         def sim_func(y0s, theta, constants, times):
             return rate_fun(times, y0s, (theta, constants))
 
-        sim_func = jax.jit(jax.vmap(sim_func, in_axes=(0, None, 0, 0)))
+        sim_func = eqx.filter_jit(jax.vmap(sim_func, in_axes=(0, None, 0, 0)))
         times = times.ravel()
         constants = jnp.repeat(constants, data.shape[1], axis=0)
         data = surrogate.predict_rates(dataset=dataset)
@@ -727,17 +745,9 @@ def _configure_simulation_function(
         # but not over theta (same parameters for all measurements)
         from catalax.tools.simulation import Simulation
 
-        odes = [model.odes[species] for species in model.get_species_order()]
         simulation_setup = Simulation(
-            odes=odes,
-            parameters=model.get_parameter_order(),
-            stoich_mat=model._get_stoich_mat(),
-            constants=model.get_constants_order(),
-            dt0=dt0,
-            rtol=1e-5,
-            atol=1e-5,
-            max_steps=64**4,
-            solver=solver,
+            sim_input=model.sim_input,
+            config=config,
         )
 
         # Set up simulation with correct in_axes for MCMC

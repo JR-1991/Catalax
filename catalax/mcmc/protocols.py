@@ -1,21 +1,23 @@
 from __future__ import annotations
+
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
     Protocol,
     Tuple,
-    Optional,
-    Callable,
     TypeVar,
     overload,
-    Any,
 )
-from dataclasses import dataclass
+
 from jax import Array
 
-
 if TYPE_CHECKING:
-    from catalax.mcmc.mcmc import Modes
     from typing_extensions import ParamSpec
+
+    from catalax.mcmc.mcmc import Modes
 
     P = ParamSpec("P")
 
@@ -44,14 +46,14 @@ class Shapes:
     @property
     def y0s_surrogate(self) -> Tuple[int, ...]:
         """Shapes of the initial conditions for the surrogate model."""
-        n_meas, n_time, n_species = self.data
-        return (n_meas * n_time, n_species)
+        n_meas, n_time, n_state = self.data
+        return (n_meas * n_time, n_state)
 
     @property
     def data_surrogate(self) -> Tuple[int, ...]:
         """Shapes of the data for the surrogate model."""
-        n_meas, n_time, n_species = self.data
-        return (n_meas * n_time, n_species)
+        n_meas, n_time, n_state = self.data
+        return (n_meas * n_time, n_state)
 
     @property
     def times_surrogate(self) -> Tuple[int, ...]:
@@ -132,7 +134,7 @@ class PreModel(Protocol):
         >>> import numpyro.distributions as dist
         >>> def infer_initial_concentrations(*, model, y0s, constants, times, data, theta):
         ...     '''Sample true initial concentrations when measured values are uncertain'''
-        ...     # Assume the first species has uncertain initial concentration
+        ...     # Assume the first state has uncertain initial concentration
         ...     # The measured value y0s[0] is treated as a noisy observation
         ...     measured_y0 = y0s[0]
         ...     measurement_error = 0.1 * measured_y0  # 10% measurement uncertainty
@@ -188,7 +190,7 @@ class PreModel(Protocol):
 
         Args:
             model: The model being fit
-            y0s: Initial conditions for each species
+            y0s: Initial conditions for each state
             constants: System constants
             times: Time points for simulation
             data: Observed data to fit against (may be None)
@@ -215,12 +217,12 @@ class PostModel(Protocol):
     - Data alignment or interpolation
 
     Examples:
-        Algebraic conversions when observable is the sum of multiple species:
+        Algebraic conversions when observable is the sum of multiple state:
 
         >>> import jax.numpy as jnp
         >>> import numpyro
-        >>> def sum_species_observable(*, model, states, data, times):
-        ...     '''Convert individual species concentrations to observable total'''
+        >>> def sum_state_observable(*, model, states, data, times):
+        ...     '''Convert individual state concentrations to observable total'''
         ...     # Example: Total protein concentration is sum of bound and unbound forms
         ...     # states[:, 0] = unbound protein, states[:, 1] = bound protein
         ...     unbound_protein = numpyro.deterministic("unbound_protein", states[:, 0])
@@ -236,10 +238,10 @@ class PostModel(Protocol):
         ...
         ...     return observable_states, data, times
 
-        Multiple algebraic observables from species combinations:
+        Multiple algebraic observables from state combinations:
 
         >>> def multiple_observables(*, model, states, data, times):
-        ...     '''Create multiple observables from species combinations'''
+        ...     '''Create multiple observables from state combinations'''
         ...     # Example: Enzyme kinetics with substrate (S), enzyme (E), complex (ES), product (P)
         ...     # states[:, 0] = S, states[:, 1] = E, states[:, 2] = ES, states[:, 3] = P
         ...
@@ -270,7 +272,7 @@ class PostModel(Protocol):
         ...     dataset=dataset,
         ...     yerrs=2.0,
         ...     config=config,
-        ...     post_model=sum_species_observable
+        ...     post_model=sum_state_observable
         ... )
 
         Combining PreModel and PostModel:
@@ -282,7 +284,7 @@ class PostModel(Protocol):
         ...     yerrs=2.0,
         ...     config=config,
         ...     pre_model=infer_initial_concentrations,  # Infer uncertain initial conditions
-        ...     post_model=sum_species_observable        # Observable is sum of species
+        ...     post_model=sum_state_observable        # Observable is sum of state
         ... )
     """
 
@@ -303,7 +305,7 @@ class PostModel(Protocol):
 
         Args:
             model: The model being fit
-            states: Simulated model states for all species and time points
+            states: Simulated model states for all state and time points
             data: Observed data to fit against (may be None)
             times: Time points for simulation
 
@@ -417,7 +419,7 @@ def post_model(func: Callable[[PostModelContext], Any]) -> PostModel:
         Simple state transformation:
 
         >>> @post_model
-        ... def sum_species(ctx: PostModelContext):
+        ... def sum_state(ctx: PostModelContext):
         ...     import jax.numpy as jnp
         ...     ctx.states = jnp.sum(ctx.states, axis=1, keepdims=True)
 
@@ -428,7 +430,7 @@ def post_model(func: Callable[[PostModelContext], Any]) -> PostModel:
         ...     import jax.numpy as jnp
         ...     import numpyro
         ...
-        ...     # ctx.states[:, 0] = species A, ctx.states[:, 1] = species B
+        ...     # ctx.states[:, 0] = state A, ctx.states[:, 1] = state B
         ...     total = numpyro.deterministic("total_AB", ctx.states[:, 0] + ctx.states[:, 1])
         ...     ratio = numpyro.deterministic("ratio_AB", ctx.states[:, 0] / ctx.states[:, 1])
         ...     ctx.states = jnp.stack([total, ratio], axis=1)
