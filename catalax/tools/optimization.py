@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Optional, Tuple, Callable
+from typing import Callable, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -58,12 +58,12 @@ def optimize(
         ]
     )
 
-    assert set(dataset.species) == set(model.get_species_order()), (
-        "Species in dataset and model do not match."
+    assert set(dataset.states) == set(model.get_state_order()), (
+        "States in dataset and model do not match."
     )
 
     # Extract data arrays for the residual computation
-    data, times, _ = dataset.to_jax_arrays(model.get_observable_species_order())
+    data, times, _ = dataset.to_jax_arrays(model.get_observable_state_order())
 
     # Create simulation config from dataset
     config = dataset.to_config()
@@ -190,7 +190,7 @@ def _residual(
         config (SimulationConfig): Simulation configuration.
         data (jax.Array): Data to fit.
         times (jax.Array): Time points of the data.
-        observables (jax.Array): Indices of observable species.
+        observables (jax.Array): Indices of observable states.
         objective_fun (Callable): Objective function for residual calculation.
 
     Returns:

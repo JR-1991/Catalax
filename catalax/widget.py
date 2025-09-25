@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import warnings
 from typing import TYPE_CHECKING, List, Optional
+
 import ipywidgets as widgets
-from IPython.display import display, clear_output
-import matplotlib.pyplot as plt
 import jax.numpy as jnp
+import matplotlib.pyplot as plt
+from IPython.display import clear_output, display
 
 from catalax.dataset.measurement import Measurement
 
 if TYPE_CHECKING:
     from catalax.dataset import Dataset
-    from catalax.predictor import Predictor
     from catalax.model.model import Model
+    from catalax.predictor import Predictor
 
 # Constants for widget styling and configuration
 DEFAULT_PLOT_STYLE = {
@@ -84,7 +85,7 @@ class PredictionWidget:
         Initialize the interactive prediction widget.
 
         Args:
-            model: The model containing species information
+            model: The model containing state information
             predictor: The predictor for generating predictions
             t0: Start time for predictions
             t1: End time for predictions
@@ -101,27 +102,27 @@ class PredictionWidget:
         warnings.filterwarnings("ignore", category=UserWarning)
 
         # Initialize widget components
-        self._setup_species_info()
+        self._setup_state_info()
         self._setup_default_values()
         self._create_controls()
         self._setup_output()
 
-    def _setup_species_info(self) -> None:
-        """Extract species information from the model."""
-        self.species_order = self.predictor.get_species_order()
-        self.species_names = self._get_species_display_names()
+    def _setup_state_info(self) -> None:
+        """Extract state information from the model."""
+        self.state_order = self.predictor.get_state_order()
+        self.state_names = self._get_state_display_names()
 
-    def _get_species_display_names(self) -> List[str]:
+    def _get_state_display_names(self) -> List[str]:
         """
-        Get display names for species, preferring name over symbol.
+        Get display names for state, preferring name over symbol.
 
         Returns:
-            List of species display names
+            List of state display names
         """
         names = []
-        for species_symbol in self.species_order:
-            species_obj = self.model.species[species_symbol]
-            name = species_obj.name if species_obj.name is not None else species_symbol
+        for state_symbol in self.state_order:
+            state_obj = self.model.states[state_symbol]
+            name = state_obj.name if state_obj.name is not None else state_symbol
             names.append(name)
         return names
 
@@ -130,34 +131,32 @@ class PredictionWidget:
         if self.ref_measurement is not None:
             self.default_values = self.ref_measurement
         else:
-            self.default_values = {
-                sp: DEFAULT_INITIAL_VALUE for sp in self.species_order
-            }
+            self.default_values = {sp: DEFAULT_INITIAL_VALUE for sp in self.state_order}
 
-    def _get_initial_value(self, species: str) -> float:
+    def _get_initial_value(self, state: str) -> float:
         """
-        Get initial value for a species from default values.
+        Get initial value for a state from default values.
 
         Args:
-            species: Species symbol
+            state: State symbol
 
         Returns:
             Initial concentration value
         """
         if isinstance(self.default_values, Measurement):
             return self.default_values.initial_conditions.get(
-                species, DEFAULT_INITIAL_VALUE
+                state, DEFAULT_INITIAL_VALUE
             )
         else:
-            return self.default_values.get(species, DEFAULT_INITIAL_VALUE)
+            return self.default_values.get(state, DEFAULT_INITIAL_VALUE)
 
     def _create_controls(self) -> None:
         """Create all widget controls."""
         self.controls = {}
 
-        # Create species controls
-        for species, name in zip(self.species_order, self.species_names):
-            initial_val = self._get_initial_value(species)
+        # Create state controls
+        for state_symbol, name in zip(self.state_order, self.state_names):
+            initial_val = self._get_initial_value(state_symbol)
 
             text_input = widgets.FloatText(
                 value=initial_val,
@@ -170,7 +169,7 @@ class PredictionWidget:
                 value=f"<b>{name}:</b>", layout=WIDGET_LAYOUTS["label"]
             )
 
-            self.controls[species] = {"text": text_input, "label": label}
+            self.controls[state_symbol] = {"text": text_input, "label": label}
 
         # Create time control
         self.t1_input = widgets.FloatText(
@@ -206,15 +205,14 @@ class PredictionWidget:
 
             # Build initial conditions from text input values
             initial_conditions = {
-                species: self.controls[species]["text"].value
-                for species in self.species_order
+                state: self.controls[state]["text"].value for state in self.state_order
             }
 
             # Validate initial conditions
-            for species, value in initial_conditions.items():
+            for state, value in initial_conditions.items():
                 if value < 0:
                     raise ValueError(
-                        f"Initial condition for {species} cannot be negative: {value}"
+                        f"Initial condition for {state} cannot be negative: {value}"
                     )
 
             prediction_dataset.add_initial(**initial_conditions)
@@ -260,16 +258,16 @@ class PredictionWidget:
         """
         fig, ax = plt.subplots(figsize=self.plot_style["figsize"])
 
-        # Plot predictions with species names as labels
-        for i, species_symbol in enumerate(self.species_order):
-            species_name = self.species_names[i]
+        # Plot predictions with state names as labels
+        for i, state_symbol in enumerate(self.state_order):
+            state_name = self.state_names[i]
             time_data = predictions.measurements[0].time
-            concentration_data = predictions.measurements[0].data[species_symbol]
+            concentration_data = predictions.measurements[0].data[state_symbol]
 
             ax.plot(
                 time_data,  # type: ignore
                 concentration_data,  # type: ignore
-                label=species_name,
+                label=state_name,
                 linewidth=self.plot_style["linewidth"],
                 alpha=self.plot_style["alpha"],
             )
@@ -333,11 +331,11 @@ class PredictionWidget:
         Returns:
             Controls area widget containing all controls in horizontal rows
         """
-        # Create control items for species
+        # Create control items for state
         control_items = []
-        for species in self.species_order:
+        for state in self.state_order:
             item = widgets.VBox(
-                [self.controls[species]["label"], self.controls[species]["text"]],
+                [self.controls[state]["label"], self.controls[state]["text"]],
                 layout=WIDGET_LAYOUTS["control_item"],
             )
             control_items.append(item)
@@ -369,9 +367,9 @@ class PredictionWidget:
 
     def _setup_observers(self) -> None:
         """Setup observers for all input widgets."""
-        # Set up species input observers
-        for species in self.species_order:
-            self.controls[species]["text"].observe(self._update_plot, names="value")
+        # Set up state input observers
+        for state in self.state_order:
+            self.controls[state]["text"].observe(self._update_plot, names="value")
 
         # Set up time input observer
         self.t1_input.observe(self._update_plot, names="value")
@@ -419,17 +417,17 @@ def create_interactive_prediction_widget(
     Create an interactive widget for exploring Neural ODE predictions with adjustable initial conditions.
 
     This function creates a comprehensive interactive interface that allows users to:
-    - Adjust initial conditions for each species in the model
+    - Adjust initial conditions for each state in the model
     - Modify the end time for predictions
     - View real-time updates of the prediction plot
 
     Args:
-        model: The model containing species information and structure
+        model: The model containing state information and structure
         predictor: The predictor object for generating predictions (e.g., trained Neural ODE)
         t0: Start time for predictions (default: 0.0)
         t1: End time for predictions (default: 100.0)
         ref_measurement: Reference measurement containing initial conditions to use as defaults.
-                        If None, uses default values of 10.0 for all species
+                        If None, uses default values of 10.0 for all states
         plot_style: Dictionary of matplotlib styling options. Merged with defaults:
                    - figsize: (12, 6)
                    - linewidth: 2.5
