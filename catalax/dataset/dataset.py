@@ -620,7 +620,7 @@ class Dataset(BaseModel):
         return cls(
             id=model.name,
             name=model.name,
-            states=model.get_state_order(),
+            states=model.get_state_order(modeled=False),
         )
 
     @classmethod
