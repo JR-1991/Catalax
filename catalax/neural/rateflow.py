@@ -1,11 +1,11 @@
 from typing import List, Optional, Tuple, Type
 
 import diffrax
-import jax
-import jax.tree_util as jtn
-import jax.random as jrandom
-from matplotlib.figure import Figure
 import equinox as eqx
+import jax
+import jax.random as jrandom
+import jax.tree_util as jtn
+from matplotlib.figure import Figure
 
 from catalax.dataset.dataset import Dataset
 from catalax.model.model import Model
@@ -32,7 +32,7 @@ class RateFlowODE(NeuralBase):
         reaction_size: int,
         width_size: int,
         depth: int,
-        species_order: List[str],
+        state_order: List[str],
         observable_indices: List[int],
         solver=diffrax.Tsit5,
         activation=jax.nn.softplus,
@@ -49,7 +49,7 @@ class RateFlowODE(NeuralBase):
             out_size=reaction_size,
             width_size=width_size,
             depth=depth,
-            species_order=species_order,
+            state_order=state_order,
             observable_indices=observable_indices,
             solver=solver,
             activation=activation,
@@ -62,13 +62,13 @@ class RateFlowODE(NeuralBase):
 
         if mass_constraint is not None:
             assert mass_constraint.ndim == 2, (
-                "Mass constraint must be a matrix of shape (n_constraints, n_species). Given shape: "
+                "Mass constraint must be a matrix of shape (n_constraints, n_state). Given shape: "
                 f"{mass_constraint.shape}"
             )
 
-            _, n_species = mass_constraint.shape
-            assert n_species == len(species_order), (
-                "Mass constraint must be a matrix of shape (n_constraints, n_species). Given shape: "
+            _, n_state = mass_constraint.shape
+            assert n_state == len(state_order), (
+                "Mass constraint must be a matrix of shape (n_constraints, n_state). Given shape: "
                 f"{mass_constraint.shape}"
             )
 
@@ -146,7 +146,7 @@ class RateFlowODE(NeuralBase):
         Returns:
             Reaction rates
         """
-        data, t, _ = dataset.to_jax_arrays(self.species_order)
+        data, t, _ = dataset.to_jax_arrays(self.state_order)
         data = data.reshape(-1, data.shape[-1])
         t = t.reshape(-1)
         return jax.vmap(self.func, in_axes=(0, 0, None))(t, data, ())
@@ -188,8 +188,8 @@ class RateFlowODE(NeuralBase):
         dataset: Dataset,
         model: Model,
         rate_indices: List[int] | None = None,
-        species_identifiers: List[str] | None = None,
-        species_pairs: List[Tuple[str | int, str | int]] | None = None,
+        state_identifiers: List[str] | None = None,
+        state_pairs: List[Tuple[str | int, str | int]] | None = None,
         representative_time: float = 0.0,
         grid_resolution: int = 30,
         figsize_per_subplot: Tuple[int, int] = (5, 4),
@@ -204,11 +204,11 @@ class RateFlowODE(NeuralBase):
             dataset: Dataset containing the measurements
             model: Model to use for the analysis
             rate_indices: List of rate indices to plot. If None, plots all rates.
-            species_identifiers: List of species to include (by name, symbol, or index).
-                            If None, uses all species.
-            species_pairs: List of tuples specifying which species pairs to compare.
-                          Each tuple should contain two species identifiers (name, symbol, or index).
-                          If None, compares all possible pairs from species_identifiers.
+            state_identifiers: List of state to include (by name, symbol, or index).
+                            If None, uses all state.
+            state_pairs: List of tuples specifying which state pairs to compare.
+                          Each tuple should contain two state identifiers (name, symbol, or index).
+                          If None, compares all possible pairs from state_identifiers.
             representative_time: Time point to use for the analysis
             grid_resolution: Number of points in each dimension of the concentration grid
             figsize_per_subplot: Size of each subplot (width, height)
@@ -223,8 +223,8 @@ class RateFlowODE(NeuralBase):
             dataset=dataset,
             model=model,
             rate_indices=rate_indices,
-            species_identifiers=species_identifiers,
-            species_pairs=species_pairs,
+            state_identifiers=state_identifiers,
+            state_pairs=state_pairs,
             representative_time=representative_time,
             grid_resolution=grid_resolution,
             figsize_per_subplot=figsize_per_subplot,

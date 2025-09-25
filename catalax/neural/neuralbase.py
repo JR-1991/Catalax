@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 import json
 import os
+from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Type
-
 
 try:
     from typing import Self  # Python 3.11+
@@ -12,6 +11,7 @@ except ImportError:
     from typing_extensions import Self
 
 import diffrax
+import diffrax as dfx
 import equinox as eqx
 import equinox.internal as eqxi
 import jax
@@ -19,16 +19,16 @@ import jax.numpy as jnp
 import jax.random as jrandom
 import jax.tree_util as jtn
 import optax
-import diffrax as dfx
+from deprecated import deprecated
 
 from catalax import Model
-from catalax.model.model import SimulationConfig
-from catalax.neural.rbf import RBFLayer
 from catalax.dataset import Dataset
+from catalax.model.model import SimulationConfig
+from catalax.neural.mlp import MLP
+from catalax.neural.rbf import RBFLayer
 from catalax.predictor import Predictor
 from catalax.surrogate import Surrogate
-from catalax.tools.simulation import Stack
-from catalax.neural.mlp import MLP
+from catalax.tools.simulation import ODEStack
 
 if TYPE_CHECKING:
     from catalax.dataset import Dataset
@@ -45,15 +45,21 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
     observable_indices: List[int]
     hyperparams: Dict
     solver: Type[diffrax.AbstractSolver]
-    vector_field: Optional[Stack]
-    species_order: List[str]
+    vector_field: Optional[ODEStack]
+    state_order: List[str]
+
+    @property
+    @deprecated("This property is deprecated. Use state_order instead.")
+    def species_order(self) -> List[str]:
+        """Get the species order of the predictor."""
+        return self.state_order
 
     def __init__(
         self,
         data_size: int,
         width_size: int,
         depth: int,
-        species_order: List[str],
+        state_order: List[str],
         observable_indices: List[int],
         activation=jax.nn.softplus,
         solver=diffrax.Tsit5,
@@ -68,7 +74,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         self.solver = solver
         self.observable_indices = observable_indices
         self.vector_field = None
-        self.species_order = species_order
+        self.state_order = state_order
 
         # Keep hyperparams for serialisation
         self.hyperparams = {
@@ -79,7 +85,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             "rbf": isinstance(activation, RBFLayer),
             "use_final_bias": use_final_bias,
             "observable_indices": observable_indices,
-            "species_order": self.species_order,
+            "state_order": self.state_order,
             **kwargs,
         }
 
@@ -217,11 +223,11 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
                 "Dataset consists of only initial conditions, therefore a simulation "
                 "configuration is required to generate predictions."
             )
-            y0s = dataset.to_y0_matrix(self.species_order)
+            y0s = dataset.to_y0_matrix(self.state_order)
             times = jnp.linspace(config.t0, config.t1, config.nsteps).T  # type: ignore
         else:
             _, times, y0s = dataset.to_jax_arrays(
-                self.species_order,
+                self.state_order,
                 inits_to_array=True,
             )
 
@@ -234,7 +240,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         )(times, y0s)
 
         return Dataset.from_jax_arrays(
-            species_order=self.species_order,
+            state_order=self.state_order,
             data=predictions,
             time=times,
             y0s=y0s,  # type: ignore
@@ -259,7 +265,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         Returns:
             A Dataset object containing the prediction results
         """
-        data, times, _ = dataset.to_jax_arrays(self.species_order)
+        data, times, _ = dataset.to_jax_arrays(self.state_order)
         dataset_size, time_size, _ = data.shape
         ins = data.reshape(dataset_size * time_size, -1)
         times = times.ravel()
@@ -279,9 +285,9 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         """
 
         y_pred, _, _ = self.predict(dataset, use_times=True).to_jax_arrays(
-            self.species_order
+            self.state_order
         )
-        y_true, _, _ = dataset.to_jax_arrays(self.species_order)
+        y_true, _, _ = dataset.to_jax_arrays(self.state_order)
 
         return loss(y_pred, y_true)
 
@@ -307,22 +313,18 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         key = jrandom.PRNGKey(seed)
 
         # Get observable indices
-        if model.odes:
-            observable_indices = [
-                index
-                for index, species in enumerate(model.get_species_order())
-                if model.odes[species].observable
-            ]
+        if model.odes or model.reactions:
+            observable_indices = model.get_observable_state_order(as_indices=True)
         else:
-            observable_indices = list(range(len(model.get_species_order())))
+            observable_indices = list(range(len(model.get_state_order())))
 
         return cls(
-            data_size=len(model.species),
+            data_size=len(model.states),
             width_size=width_size,
             depth=depth,
             solver=solver,
             observable_indices=observable_indices,
-            species_order=model.get_species_order(),
+            state_order=model.get_state_order(),
             key=key,
             model=model,
             use_final_bias=use_final_bias,
@@ -436,13 +438,22 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         """
         return {}
 
+    @deprecated("This method is deprecated. Use get_state_order instead.")
     def get_species_order(self) -> list[str]:
         """Get the species order of the predictor.
 
         Returns:
             List of species order
         """
-        return self.species_order
+        return self.get_state_order()
+
+    def get_state_order(self) -> list[str]:
+        """Get the state order of the predictor.
+
+        Returns:
+            List of state order
+        """
+        return self.state_order
 
     def n_parameters(self) -> int:
         """Get the number of parameters of the predictor.

@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib.figure import Figure
 
 from catalax.dataset.dataset import Dataset
 from catalax.model.model import Model
@@ -29,7 +29,7 @@ def plot_learned_rates(
     Args:
         trained: Trained RateFlowODE instance
         dataset: Dataset containing measurements
-        model: Model instance with species information
+        model: Model instance with state information
     """
     pred = rateflow_ode.predict(dataset)
     f, ax = plt.subplots(
@@ -39,7 +39,7 @@ def plot_learned_rates(
     )
 
     for i, measurement in enumerate(pred.measurements):
-        data, t, _ = measurement.to_jax_arrays(model.get_species_order())
+        data, t, _ = measurement.to_jax_arrays(model.get_state_order())
         sub_ax = ax[i]
 
         inner = jax.vmap(rateflow_ode.func, in_axes=(0, 0, None))

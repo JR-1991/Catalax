@@ -2,13 +2,13 @@ import os
 from datetime import datetime
 from typing import Callable, Dict, Optional, Tuple, Type, TypeVar
 
+import diffrax
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrandom
 import optax
 import tqdm
-import diffrax
 
 from catalax.dataset.dataset import Dataset
 from catalax.neural.neuralbase import NeuralBase
@@ -42,7 +42,7 @@ def train_neural_ode(
 ) -> T:
     # Extract data from dataset
     data, times, inital_conditions = dataset.to_jax_arrays(
-        species_order=model.species_order,
+        state_order=model.state_order,
         inits_to_array=True,
     )
 
@@ -106,7 +106,7 @@ def train_neural_ode(
 
         if validation_dataset is not None:
             val_data, val_times, val_inits = validation_dataset.to_jax_arrays(  # type: ignore
-                species_order=model.species_order,
+                state_order=model.state_order,
                 inits_to_array=True,
             )
             val_data = val_data[:, :max_time, :]

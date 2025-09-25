@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, List, Tuple
 
 import jax
 import jax.numpy as jnp
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 
 from catalax.dataset.dataset import Dataset
 from catalax.model.model import Model
@@ -20,8 +20,8 @@ def phase_plot(
     dataset: Dataset,
     model: Model,
     rate_indices: List[int] | None = None,
-    species_identifiers: List[str] | None = None,
-    species_pairs: List[Tuple[str | int, str | int]] | None = None,
+    state_identifiers: List[str] | None = None,
+    state_pairs: List[Tuple[str | int, str | int]] | None = None,
     representative_time: float = 0.0,
     grid_resolution: int = 30,
     figsize_per_subplot: Tuple[int, int] = (5, 4),
@@ -37,11 +37,11 @@ def phase_plot(
         dataset: Dataset containing the measurements
         model: Model to use for the analysis
         rate_indices: List of rate indices to plot. If None, plots all rates.
-        species_identifiers: List of species to include (by name, symbol, or index).
-                        If None, uses all species.
-        species_pairs: List of tuples specifying which species pairs to compare.
-                        Each tuple should contain two species identifiers (name, symbol, or index).
-                        If None, compares all possible pairs from species_identifiers.
+        state_identifiers: List of state to include (by name, symbol, or index).
+                        If None, uses all state.
+        state_pairs: List of tuples specifying which state pairs to compare.
+                        Each tuple should contain two state identifiers (name, symbol, or index).
+                        If None, compares all possible pairs from state_identifiers.
         representative_time: Time point to use for the analysis
         grid_resolution: Number of points in each dimension of the concentration grid
         figsize_per_subplot: Size of each subplot (width, height)
@@ -59,7 +59,7 @@ def phase_plot(
 
     # Prepare data and resolve indices
     plot_data = _prepare_plot_data(
-        rateflow_ode, dataset, model, species_identifiers, range_extension
+        rateflow_ode, dataset, model, state_identifiers, range_extension
     )
     rate_indices = _resolve_rate_indices(
         rate_indices,
@@ -67,19 +67,19 @@ def phase_plot(
         plot_data["mean_concentrations"],
         representative_time,
     )
-    species_pairs_resolved = _create_species_pairs(
-        plot_data["resolved_species_indices"],
-        species_pairs,
-        plot_data["species_order"],
-        plot_data["species_names"],
+    state_pairs_resolved = _create_state_pairs(
+        plot_data["resolved_state_indices"],
+        state_pairs,
+        plot_data["state_order"],
+        plot_data["state_names"],
     )
 
-    if not species_pairs_resolved:
-        raise ValueError("Need at least 2 species to create pairs")
+    if not state_pairs_resolved:
+        raise ValueError("Need at least 2 state to create pairs")
 
     # Create figure and axes - now with 2 rows per rate (heatmap + ratio plot)
     fig, axes_array = _create_figure_and_axes(
-        len(rate_indices) * 2, len(species_pairs_resolved), figsize_per_subplot
+        len(rate_indices) * 2, len(state_pairs_resolved), figsize_per_subplot
     )
 
     # Generate plots
@@ -89,17 +89,17 @@ def phase_plot(
         ratio_row = rate_idx_pos * 2 + 1
 
         _add_rate_label(
-            fig, axes_array, heatmap_row, rate_idx, len(species_pairs_resolved)
+            fig, axes_array, heatmap_row, rate_idx, len(state_pairs_resolved)
         )
 
-        for col_idx, (species1_idx, species2_idx) in enumerate(species_pairs_resolved):
+        for col_idx, (state1_idx, state2_idx) in enumerate(state_pairs_resolved):
             # Create heatmap
             heatmap_ax = _get_axis(axes_array, heatmap_row, col_idx)
             _create_single_heatmap(
                 heatmap_ax,
                 plot_data,
-                species1_idx,
-                species2_idx,
+                state1_idx,
+                state2_idx,
                 rate_idx,
                 grid_resolution,
                 representative_time,
@@ -111,8 +111,8 @@ def phase_plot(
             _create_ratio_plot(
                 ratio_ax,
                 plot_data,
-                species1_idx,
-                species2_idx,
+                state1_idx,
+                state2_idx,
                 rate_idx,
                 grid_resolution,
                 representative_time,
@@ -130,18 +130,18 @@ def _prepare_plot_data(
     rateflow_ode: RateFlowODE,
     dataset: Dataset,
     model: Model,
-    species_identifiers: List[str] | None,
+    state_identifiers: List[str] | None,
     range_extension: float,
 ):
     """Prepare all the data needed for plotting."""
     inner_func = jax.vmap(rateflow_ode.func, in_axes=(0, 0, None))
-    species_order = rateflow_ode.species_order
-    species_names = _get_species_names(model, species_order)
-    resolved_species_indices = _resolve_species_indices(
-        species_identifiers, species_order, species_names
+    state_order = rateflow_ode.state_order
+    state_names = _get_state_names(model, state_order)
+    resolved_state_indices = _resolve_state_indices(
+        state_identifiers, state_order, state_names
     )
-    min_concentrations, max_concentrations = _get_species_data_ranges(
-        dataset, species_order, range_extension
+    min_concentrations, max_concentrations = _get_state_data_ranges(
+        dataset, state_order, range_extension
     )
     mean_concentrations = [
         (min_c + max_c) / 2
@@ -150,9 +150,9 @@ def _prepare_plot_data(
 
     return {
         "inner_func": inner_func,
-        "species_order": species_order,
-        "species_names": species_names,
-        "resolved_species_indices": resolved_species_indices,
+        "state_order": state_order,
+        "state_names": state_names,
+        "resolved_state_indices": resolved_state_indices,
         "min_concentrations": min_concentrations,
         "max_concentrations": max_concentrations,
         "mean_concentrations": mean_concentrations,
@@ -258,8 +258,8 @@ def _add_rate_label(fig, axes_array, row_idx: int, rate_idx: int, n_cols: int):
 def _create_single_heatmap(
     ax,
     plot_data: dict,
-    species1_idx: int,
-    species2_idx: int,
+    state1_idx: int,
+    state2_idx: int,
     rate_idx: int,
     grid_resolution: int,
     representative_time: float,
@@ -269,13 +269,13 @@ def _create_single_heatmap(
 
     # Create concentration grids
     x_vals = jnp.linspace(
-        plot_data["min_concentrations"][species1_idx],
-        plot_data["max_concentrations"][species1_idx],
+        plot_data["min_concentrations"][state1_idx],
+        plot_data["max_concentrations"][state1_idx],
         grid_resolution,
     )
     y_vals = jnp.linspace(
-        plot_data["min_concentrations"][species2_idx],
-        plot_data["max_concentrations"][species2_idx],
+        plot_data["min_concentrations"][state2_idx],
+        plot_data["max_concentrations"][state2_idx],
         grid_resolution,
     )
     X, Y = jnp.meshgrid(x_vals, y_vals)
@@ -285,8 +285,8 @@ def _create_single_heatmap(
         plot_data["inner_func"],
         X,
         Y,
-        species1_idx,
-        species2_idx,
+        state1_idx,
+        state2_idx,
         plot_data["mean_concentrations"],
         representative_time,
         rate_idx,
@@ -333,20 +333,20 @@ def _create_single_heatmap(
     # Add colorbar and labels
     plt.colorbar(im, ax=ax, label="Rate Magnitude")
 
-    species1_name = plot_data["species_names"][species1_idx]
-    species2_name = plot_data["species_names"][species2_idx]
+    state1_name = plot_data["state_names"][state1_idx]
+    state2_name = plot_data["state_names"][state2_idx]
 
-    ax.set_xlabel(f"{species1_name} Concentration", fontsize=12)
-    ax.set_ylabel(f"{species2_name} Concentration", fontsize=12)
-    ax.set_title(f"{species1_name} vs {species2_name}", fontsize=12)
+    ax.set_xlabel(f"{state1_name} Concentration", fontsize=12)
+    ax.set_ylabel(f"{state2_name} Concentration", fontsize=12)
+    ax.set_title(f"{state1_name} vs {state2_name}", fontsize=12)
 
     # Add data points from actual measurements
     _add_data_points(
         ax,
         dataset,
-        plot_data["species_order"],
-        species1_idx,
-        species2_idx,
+        plot_data["state_order"],
+        state1_idx,
+        state2_idx,
         representative_time,
     )
 
@@ -354,22 +354,22 @@ def _create_single_heatmap(
 def _create_ratio_plot(
     ax,
     plot_data: dict,
-    species1_idx: int,
-    species2_idx: int,
+    state1_idx: int,
+    state2_idx: int,
     rate_idx: int,
     grid_resolution: int,
     representative_time: float,
 ):
-    """Create a ratio plot showing rate magnitude vs species concentration ratio."""
+    """Create a ratio plot showing rate magnitude vs state concentration ratio."""
 
     # Calculate ratio range
     min1, max1 = (
-        plot_data["min_concentrations"][species1_idx],
-        plot_data["max_concentrations"][species1_idx],
+        plot_data["min_concentrations"][state1_idx],
+        plot_data["max_concentrations"][state1_idx],
     )
     min2, max2 = (
-        plot_data["min_concentrations"][species2_idx],
-        plot_data["max_concentrations"][species2_idx],
+        plot_data["min_concentrations"][state2_idx],
+        plot_data["max_concentrations"][state2_idx],
     )
 
     # Create range of ratios, avoiding division by zero
@@ -386,8 +386,8 @@ def _create_ratio_plot(
 
     # Calculate corresponding concentrations and rate magnitudes using vectorized operations
     # For each ratio, we'll vary the absolute concentration levels to find min/max rate magnitudes
-    mean_conc1 = plot_data["mean_concentrations"][species1_idx]
-    mean_conc2 = plot_data["mean_concentrations"][species2_idx]
+    mean_conc1 = plot_data["mean_concentrations"][state1_idx]
+    mean_conc2 = plot_data["mean_concentrations"][state2_idx]
     base_ref_total = (mean_conc1 + mean_conc2) / 2
 
     # Create a range of reference totals to explore different absolute concentration levels
@@ -411,8 +411,8 @@ def _create_ratio_plot(
     mean_concentrations_array = jnp.array(plot_data["mean_concentrations"])
     n_combinations = len(ratios_flat)
     states_batch = jnp.tile(mean_concentrations_array, (n_combinations, 1))
-    states_batch = states_batch.at[:, species1_idx].set(conc1_batch)
-    states_batch = states_batch.at[:, species2_idx].set(conc2_batch)
+    states_batch = states_batch.at[:, state1_idx].set(conc1_batch)
+    states_batch = states_batch.at[:, state2_idx].set(conc2_batch)
 
     # Create time array for all combinations
     times_batch = jnp.full(n_combinations, representative_time)
@@ -448,10 +448,10 @@ def _create_ratio_plot(
     ax.legend(fontsize=8, loc="best")
 
     # Labels and formatting
-    species1_name = plot_data["species_names"][species1_idx]
-    species2_name = plot_data["species_names"][species2_idx]
+    state1_name = plot_data["state_names"][state1_idx]
+    state2_name = plot_data["state_names"][state2_idx]
 
-    ax.set_xlabel(f"{species1_name}/{species2_name} Ratio", fontsize=10)
+    ax.set_xlabel(f"{state1_name}/{state2_name} Ratio", fontsize=10)
     ax.set_ylabel("Rate Magnitude", fontsize=10)
     ax.grid(True, alpha=0.3)
 
@@ -464,8 +464,8 @@ def _add_ratio_data_points(
     ax,
     dataset: Dataset,
     plot_data: dict,
-    species1_idx: int,
-    species2_idx: int,
+    state1_idx: int,
+    state2_idx: int,
     rate_idx: int,
     representative_time: float,
 ):
@@ -477,8 +477,8 @@ def _add_ratio_data_points(
             jnp.abs(jnp.array(measurement.time) - representative_time)
         )
 
-        conc1 = measurement.data[plot_data["species_order"][species1_idx]][time_idx]
-        conc2 = measurement.data[plot_data["species_order"][species2_idx]][time_idx]
+        conc1 = measurement.data[plot_data["state_order"][state1_idx]][time_idx]
+        conc2 = measurement.data[plot_data["state_order"][state2_idx]][time_idx]
 
         # Calculate ratio, avoiding division by zero
         if conc2 > 0:
@@ -486,8 +486,8 @@ def _add_ratio_data_points(
 
             # Calculate rate magnitude for this measurement
             state = jnp.array(plot_data["mean_concentrations"])
-            state = state.at[species1_idx].set(conc1)
-            state = state.at[species2_idx].set(conc2)
+            state = state.at[state1_idx].set(conc1)
+            state = state.at[state2_idx].set(conc2)
 
             rates = plot_data["inner_func"](
                 jnp.array([representative_time]), state.reshape(1, -1), ()
@@ -506,22 +506,22 @@ def _add_ratio_data_points(
             )
 
 
-def _get_species_data_ranges(
+def _get_state_data_ranges(
     dataset: Dataset,
-    species_order,
+    state_order,
     range_extension: float,
 ):
-    """Get min and max concentrations for each species from the dataset with range extension."""
+    """Get min and max concentrations for each state from the dataset with range extension."""
     min_concentrations = []
     max_concentrations = []
 
-    for species in species_order:
-        species_data = []
+    for state in state_order:
+        state_data = []
         for measurement in dataset.measurements:
-            species_data.extend(measurement.data[species])
+            state_data.extend(measurement.data[state])
 
-        data_min = min(species_data)
-        data_max = max(species_data)
+        data_min = min(state_data)
+        data_max = max(state_data)
         data_range = data_max - data_min
 
         # Extend range by the specified factor
@@ -537,49 +537,49 @@ def _get_species_data_ranges(
     return min_concentrations, max_concentrations
 
 
-def _get_species_names(model, species_order):
-    """Get species names from the model in the correct order."""
-    return [species.name for species in model.species.values()]
+def _get_state_names(model, state_order):
+    """Get state names from the model in the correct order."""
+    return [state.name for state in model.state.values()]
 
 
-def _resolve_species_indices(species_identifiers, species_order, species_names):
-    """Resolve species identifiers (names or indices) to actual indices."""
-    if species_identifiers is None:
-        return list(range(len(species_order)))
+def _resolve_state_indices(state_identifiers, state_order, state_names):
+    """Resolve state identifiers (names or indices) to actual indices."""
+    if state_identifiers is None:
+        return list(range(len(state_order)))
 
     resolved_indices = []
-    for identifier in species_identifiers:
+    for identifier in state_identifiers:
         if isinstance(identifier, int):
-            if 0 <= identifier < len(species_order):
+            if 0 <= identifier < len(state_order):
                 resolved_indices.append(identifier)
             else:
                 raise ValueError(f"Species index {identifier} out of range")
         elif isinstance(identifier, str):
-            # Try to find by species name
-            if identifier in species_names:
-                resolved_indices.append(species_names.index(identifier))
-            # Try to find by species symbol
-            elif identifier in species_order:
-                resolved_indices.append(species_order.index(identifier))
+            # Try to find by state name
+            if identifier in state_names:
+                resolved_indices.append(state_names.index(identifier))
+            # Try to find by state symbol
+            elif identifier in state_order:
+                resolved_indices.append(state_order.index(identifier))
             else:
                 raise ValueError(f"Species '{identifier}' not found")
         else:
-            raise ValueError(f"Invalid species identifier: {identifier}")
+            raise ValueError(f"Invalid state identifier: {identifier}")
 
     return resolved_indices
 
 
-def _create_species_pairs(
-    species_indices, custom_pairs=None, species_order=None, species_names=None
+def _create_state_pairs(
+    state_indices, custom_pairs=None, state_order=None, state_names=None
 ):
-    """Create species pairs from given indices or custom pair specifications."""
+    """Create state pairs from given indices or custom pair specifications."""
     if custom_pairs is None:
         # Original behavior: create all combinations
-        species_pairs = []
-        for i in range(len(species_indices)):
-            for j in range(i + 1, len(species_indices)):
-                species_pairs.append((species_indices[i], species_indices[j]))
-        return species_pairs
+        state_pairs = []
+        for i in range(len(state_indices)):
+            for j in range(i + 1, len(state_indices)):
+                state_pairs.append((state_indices[i], state_indices[j]))
+        return state_pairs
 
     # New behavior: process custom pairs
     resolved_pairs = []
@@ -588,24 +588,18 @@ def _create_species_pairs(
     for pair in custom_pairs:
         if len(pair) != 2:
             raise ValueError(
-                f"Each species pair must contain exactly 2 elements, got {len(pair)}"
+                f"Each state pair must contain exactly 2 elements, got {len(pair)}"
             )
 
-        species1, species2 = pair
+        state1, state2 = pair
 
-        # Resolve species identifiers to indices
-        idx1 = _resolve_single_species_identifier(
-            species1, species_order, species_names
-        )
-        idx2 = _resolve_single_species_identifier(
-            species2, species_order, species_names
-        )
+        # Resolve state identifiers to indices
+        idx1 = _resolve_single_state_identifier(state1, state_order, state_names)
+        idx2 = _resolve_single_state_identifier(state2, state_order, state_names)
 
         # Check for self-comparison
         if idx1 == idx2:
-            raise ValueError(
-                f"Cannot compare species with itself: {species1} vs {species2}"
-            )
+            raise ValueError(f"Cannot compare state with itself: {state1} vs {state2}")
 
         # Create normalized pair (smaller index first) to check for duplicates
         normalized_pair = (min(idx1, idx2), max(idx1, idx2))
@@ -620,39 +614,39 @@ def _create_species_pairs(
     return resolved_pairs
 
 
-def _resolve_single_species_identifier(identifier, species_order, species_names):
-    """Resolve a single species identifier to its index."""
+def _resolve_single_state_identifier(identifier, state_order, state_names):
+    """Resolve a single state identifier to its index."""
     if isinstance(identifier, int):
-        if 0 <= identifier < len(species_order):
+        if 0 <= identifier < len(state_order):
             return identifier
         else:
             raise ValueError(
-                f"Species index {identifier} out of range (0-{len(species_order) - 1})"
+                f"Species index {identifier} out of range (0-{len(state_order) - 1})"
             )
     elif isinstance(identifier, str):
-        # Try to find by species name
-        if identifier in species_names:
-            return species_names.index(identifier)
-        # Try to find by species symbol
-        elif identifier in species_order:
-            return species_order.index(identifier)
+        # Try to find by state name
+        if identifier in state_names:
+            return state_names.index(identifier)
+        # Try to find by state symbol
+        elif identifier in state_order:
+            return state_order.index(identifier)
         else:
             raise ValueError(f"Species '{identifier}' not found")
     else:
-        raise ValueError(f"Invalid species identifier: {identifier}")
+        raise ValueError(f"Invalid state identifier: {identifier}")
 
 
 def _calculate_rate_magnitudes(
     inner_func,
     X,
     Y,
-    species1_idx,
-    species2_idx,
+    state1_idx,
+    state2_idx,
     mean_concentrations,
     representative_time,
     rate_idx,
 ):
-    """Calculate rate magnitudes for a given species pair and rate index using vectorized operations."""
+    """Calculate rate magnitudes for a given state pair and rate index using vectorized operations."""
     # Flatten the grids to create batch inputs
     X_flat = X.flatten()
     Y_flat = Y.flatten()
@@ -661,10 +655,10 @@ def _calculate_rate_magnitudes(
     # Create base state array for all points
     mean_concentrations_array = jnp.array(mean_concentrations)
 
-    # Create batch of states by broadcasting and updating specific species
+    # Create batch of states by broadcasting and updating specific state
     states_batch = jnp.tile(mean_concentrations_array, (n_points, 1))
-    states_batch = states_batch.at[:, species1_idx].set(X_flat)
-    states_batch = states_batch.at[:, species2_idx].set(Y_flat)
+    states_batch = states_batch.at[:, state1_idx].set(X_flat)
+    states_batch = states_batch.at[:, state2_idx].set(Y_flat)
 
     # Create time array for all points
     times_batch = jnp.full(n_points, representative_time)
@@ -684,9 +678,9 @@ def _calculate_rate_magnitudes(
 def _add_data_points(
     ax,
     dataset,
-    species_order,
-    species1_idx,
-    species2_idx,
+    state_order,
+    state1_idx,
+    state2_idx,
     representative_time,
 ):
     """Add scatter points from actual measurements for reference."""
@@ -696,8 +690,8 @@ def _add_data_points(
             jnp.abs(jnp.array(measurement.time) - representative_time)
         )
 
-        conc1 = measurement.data[species_order[species1_idx]][time_idx]
-        conc2 = measurement.data[species_order[species2_idx]][time_idx]
+        conc1 = measurement.data[state_order[state1_idx]][time_idx]
+        conc2 = measurement.data[state_order[state2_idx]][time_idx]
 
         ax.scatter(
             conc1, conc2, c="red", s=30, alpha=0.8, edgecolors="white", linewidth=1

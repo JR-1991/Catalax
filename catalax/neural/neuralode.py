@@ -1,7 +1,7 @@
 from typing import List, Optional, Type
 
-import jax
 import diffrax
+import jax
 
 from .neuralbase import NeuralBase
 
@@ -12,7 +12,7 @@ class NeuralODE(NeuralBase):
         data_size: int,
         width_size: int,
         depth: int,
-        species_order: List[str],
+        state_order: List[str],
         observable_indices: List[int],
         solver=diffrax.Tsit5,
         activation=jax.nn.softplus,
@@ -26,7 +26,7 @@ class NeuralODE(NeuralBase):
             data_size=data_size,
             width_size=width_size,
             depth=depth,
-            species_order=species_order,
+            state_order=state_order,
             observable_indices=observable_indices,
             solver=solver,
             activation=activation,
