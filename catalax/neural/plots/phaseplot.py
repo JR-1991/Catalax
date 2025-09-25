@@ -77,24 +77,20 @@ def phase_plot(
     if not state_pairs_resolved:
         raise ValueError("Need at least 2 state to create pairs")
 
-    # Create figure and axes - now with 2 rows per rate (heatmap + ratio plot)
+    # Create figure and axes
     fig, axes_array = _create_figure_and_axes(
-        len(rate_indices) * 2, len(state_pairs_resolved), figsize_per_subplot
+        len(rate_indices), len(state_pairs_resolved), figsize_per_subplot
     )
 
     # Generate plots
     for rate_idx_pos, rate_idx in enumerate(rate_indices):
-        # Calculate row indices for heatmap and ratio plot
-        heatmap_row = rate_idx_pos * 2
-        ratio_row = rate_idx_pos * 2 + 1
-
         _add_rate_label(
-            fig, axes_array, heatmap_row, rate_idx, len(state_pairs_resolved)
+            fig, axes_array, rate_idx_pos, rate_idx, len(state_pairs_resolved)
         )
 
         for col_idx, (state1_idx, state2_idx) in enumerate(state_pairs_resolved):
             # Create heatmap
-            heatmap_ax = _get_axis(axes_array, heatmap_row, col_idx)
+            heatmap_ax = _get_axis(axes_array, rate_idx_pos, col_idx)
             _create_single_heatmap(
                 heatmap_ax,
                 plot_data,
@@ -104,18 +100,6 @@ def phase_plot(
                 grid_resolution,
                 representative_time,
                 dataset,
-            )
-
-            # Create ratio plot
-            ratio_ax = _get_axis(axes_array, ratio_row, col_idx)
-            _create_ratio_plot(
-                ratio_ax,
-                plot_data,
-                state1_idx,
-                state2_idx,
-                rate_idx,
-                grid_resolution,
-                representative_time,
             )
 
     if save_path:
@@ -190,26 +174,17 @@ def _create_figure_and_axes(
 ):
     """Create matplotlib figure and properly handle axes array."""
 
-    # Adjust figure size to account for ratio plots (half height)
-    # Each rate now takes 1.5x the height (1x for heatmap + 0.5x for ratio plot)
-    adjusted_height = figsize_per_subplot[1] * (n_rows // 2) * 1.5
     figsize = (
         figsize_per_subplot[0] * n_cols + 2.5,
-        adjusted_height,
+        figsize_per_subplot[1] * n_rows,
     )
-
-    # Create subplots with height ratios (2:1 for heatmap:ratio)
-    height_ratios = []
-    for i in range(n_rows // 2):
-        height_ratios.extend([2, 1])  # heatmap height : ratio plot height
 
     fig, axes = plt.subplots(
         n_rows,
         n_cols,
         figsize=figsize,
-        gridspec_kw={"height_ratios": height_ratios},
     )
-    fig.suptitle("Rate Magnitude Heatmaps with Ratio Analysis", fontsize=16)
+    fig.suptitle("Rate Magnitude Heatmaps", fontsize=16)
 
     # Ensure axes is always a 2D array for consistent access
     if n_rows == 1 and n_cols == 1:
@@ -351,161 +326,6 @@ def _create_single_heatmap(
     )
 
 
-def _create_ratio_plot(
-    ax,
-    plot_data: dict,
-    state1_idx: int,
-    state2_idx: int,
-    rate_idx: int,
-    grid_resolution: int,
-    representative_time: float,
-):
-    """Create a ratio plot showing rate magnitude vs state concentration ratio."""
-
-    # Calculate ratio range
-    min1, max1 = (
-        plot_data["min_concentrations"][state1_idx],
-        plot_data["max_concentrations"][state1_idx],
-    )
-    min2, max2 = (
-        plot_data["min_concentrations"][state2_idx],
-        plot_data["max_concentrations"][state2_idx],
-    )
-
-    # Create range of ratios, avoiding division by zero
-    min_ratio = min1 / max2 if max2 > 0 else 0.01
-    max_ratio = max1 / min2 if min2 > 0 else max1 / 0.01
-
-    # Use log scale for better visualization if ratios span multiple orders of magnitude
-    if max_ratio / min_ratio > 100:
-        ratios = jnp.logspace(
-            jnp.log10(max(min_ratio, 1e-6)), jnp.log10(max_ratio), grid_resolution
-        )
-    else:
-        ratios = jnp.linspace(max(min_ratio, 1e-6), max_ratio, grid_resolution)
-
-    # Calculate corresponding concentrations and rate magnitudes using vectorized operations
-    # For each ratio, we'll vary the absolute concentration levels to find min/max rate magnitudes
-    mean_conc1 = plot_data["mean_concentrations"][state1_idx]
-    mean_conc2 = plot_data["mean_concentrations"][state2_idx]
-    base_ref_total = (mean_conc1 + mean_conc2) / 2
-
-    # Create a range of reference totals to explore different absolute concentration levels
-    min_total = base_ref_total * 0.1  # 10% of base
-    max_total = base_ref_total * 10.0  # 10x base
-    n_total_samples = 20  # Number of different total concentrations to sample
-    ref_totals = jnp.linspace(min_total, max_total, n_total_samples)
-
-    # Create meshgrid of ratios and reference totals
-    ratios_mesh, ref_totals_mesh = jnp.meshgrid(ratios, ref_totals, indexing="ij")
-    ratios_flat = ratios_mesh.flatten()
-    ref_totals_flat = ref_totals_mesh.flatten()
-
-    # Vectorized calculation of concentrations for all combinations
-    # Solve: conc1/conc2 = ratio and conc1 + conc2 = ref_total
-    # This gives: conc2 = ref_total/(1 + ratio), conc1 = ratio * conc2
-    conc2_batch = ref_totals_flat / (1 + ratios_flat)
-    conc1_batch = ratios_flat * conc2_batch
-
-    # Create batch of states for all combinations
-    mean_concentrations_array = jnp.array(plot_data["mean_concentrations"])
-    n_combinations = len(ratios_flat)
-    states_batch = jnp.tile(mean_concentrations_array, (n_combinations, 1))
-    states_batch = states_batch.at[:, state1_idx].set(conc1_batch)
-    states_batch = states_batch.at[:, state2_idx].set(conc2_batch)
-
-    # Create time array for all combinations
-    times_batch = jnp.full(n_combinations, representative_time)
-
-    # Compute all rates at once using the already vmapped inner_func
-    all_rates = plot_data["inner_func"](times_batch, states_batch, ())
-
-    # Extract the specific rate index and take absolute value
-    rate_magnitudes_flat = jnp.abs(all_rates[:, rate_idx])
-
-    # Reshape to (n_ratios, n_total_samples) to find min/max for each ratio
-    rate_magnitudes_matrix = rate_magnitudes_flat.reshape(len(ratios), n_total_samples)
-
-    # Find min and max rate magnitudes for each ratio
-    min_rate_magnitudes = jnp.min(rate_magnitudes_matrix, axis=1)
-    max_rate_magnitudes = jnp.max(rate_magnitudes_matrix, axis=1)
-    mean_rate_magnitudes = jnp.mean(rate_magnitudes_matrix, axis=1)
-
-    # Create the plot with filled area between min and max
-    ax.fill_between(
-        ratios,
-        min_rate_magnitudes,
-        max_rate_magnitudes,
-        alpha=0.3,
-        color="lightblue",
-        label="Min-Max Range",
-    )
-    ax.plot(ratios, mean_rate_magnitudes, "b-", linewidth=2, alpha=0.8, label="Mean")
-    ax.plot(ratios, min_rate_magnitudes, "g--", linewidth=1, alpha=0.6, label="Minimum")
-    ax.plot(ratios, max_rate_magnitudes, "r--", linewidth=1, alpha=0.6, label="Maximum")
-
-    # Add legend
-    ax.legend(fontsize=8, loc="best")
-
-    # Labels and formatting
-    state1_name = plot_data["state_names"][state1_idx]
-    state2_name = plot_data["state_names"][state2_idx]
-
-    ax.set_xlabel(f"{state1_name}/{state2_name} Ratio", fontsize=10)
-    ax.set_ylabel("Rate Magnitude", fontsize=10)
-    ax.grid(True, alpha=0.3)
-
-    # Use log scale if ratios span multiple orders of magnitude
-    if max_ratio / min_ratio > 100:
-        ax.set_xscale("log")
-
-
-def _add_ratio_data_points(
-    ax,
-    dataset: Dataset,
-    plot_data: dict,
-    state1_idx: int,
-    state2_idx: int,
-    rate_idx: int,
-    representative_time: float,
-):
-    """Add scatter points from actual measurements for the ratio plot."""
-
-    for measurement in dataset.measurements:
-        # Get concentrations at the representative time (or closest)
-        time_idx = jnp.argmin(
-            jnp.abs(jnp.array(measurement.time) - representative_time)
-        )
-
-        conc1 = measurement.data[plot_data["state_order"][state1_idx]][time_idx]
-        conc2 = measurement.data[plot_data["state_order"][state2_idx]][time_idx]
-
-        # Calculate ratio, avoiding division by zero
-        if conc2 > 0:
-            ratio = conc1 / conc2
-
-            # Calculate rate magnitude for this measurement
-            state = jnp.array(plot_data["mean_concentrations"])
-            state = state.at[state1_idx].set(conc1)
-            state = state.at[state2_idx].set(conc2)
-
-            rates = plot_data["inner_func"](
-                jnp.array([representative_time]), state.reshape(1, -1), ()
-            )[0]
-            rate_magnitude = jnp.abs(rates[rate_idx])
-
-            ax.scatter(
-                ratio,
-                rate_magnitude,
-                c="red",
-                s=20,
-                alpha=0.8,
-                edgecolors="white",
-                linewidth=0.5,
-                zorder=5,
-            )
-
-
 def _get_state_data_ranges(
     dataset: Dataset,
     state_order,
@@ -537,12 +357,16 @@ def _get_state_data_ranges(
     return min_concentrations, max_concentrations
 
 
-def _get_state_names(model, state_order):
+def _get_state_names(model: Model, state_order: List[str]):
     """Get state names from the model in the correct order."""
-    return [state.name for state in model.state.values()]
+    return [state.name for state in model.states.values()]
 
 
-def _resolve_state_indices(state_identifiers, state_order, state_names):
+def _resolve_state_indices(
+    state_identifiers: List[str] | None,
+    state_order: List[str],
+    state_names: List[str],
+):
     """Resolve state identifiers (names or indices) to actual indices."""
     if state_identifiers is None:
         return list(range(len(state_order)))
