@@ -1,4 +1,5 @@
 from typing import Callable, Optional
+
 import equinox as eqx
 import jax
 import jax.nn as jnn
@@ -9,6 +10,17 @@ from .rbf import RBFLayer
 
 
 class MLP(eqx.Module):
+    """Multi-layer perceptron for neural ODE modeling.
+
+    A neural network that takes time and state variables as input and outputs
+    the time derivatives. The time input is normalized by max_time to improve
+    training stability.
+
+    Attributes:
+        mlp: The underlying equinox MLP module
+        max_time: Maximum time value for normalization
+    """
+
     mlp: eqx.nn.MLP
     max_time: float
 
@@ -26,6 +38,20 @@ class MLP(eqx.Module):
         key,
         **kwargs,
     ):
+        """Initialize the MLP.
+
+        Args:
+            data_size: Dimension of the state variables
+            width_size: Width of hidden layers
+            depth: Number of hidden layers
+            use_final_bias: Whether to use bias in the final layer
+            activation: Activation function for hidden layers
+            final_activation: Activation function for output layer
+            max_time: Maximum time value for normalization
+            out_size: Output dimension (defaults to data_size)
+            key: JAX random key for initialization
+            **kwargs: Additional keyword arguments
+        """
         super().__init__(**kwargs)
         self.max_time = max_time
         self.mlp = eqx.nn.MLP(
@@ -43,13 +69,33 @@ class MLP(eqx.Module):
             self.mlp = self._mutate_to_rbf(key, activation)
 
     def __call__(self, t, y, args) -> jax.Array:
+        """Evaluate the neural network.
+
+        Args:
+            t: Time value
+            y: State variables
+            args: Additional arguments (unused)
+
+        Returns:
+            Time derivatives of the state variables
+        """
         t = t / self.max_time
         y = jnp.concatenate((y, jnp.array([t])), axis=-1)
         return self.mlp(y)
 
     def _mutate_to_rbf(self, key, rbf):
-        """Constructs an RBF layer and replaces the last layer of the MLP with it."""
+        """Replace hidden layers with RBF layers.
 
+        Constructs RBF layers and replaces all but the last layer of the MLP
+        with RBF layers for radial basis function networks.
+
+        Args:
+            key: JAX random key for RBF layer initialization
+            rbf: RBF layer configuration
+
+        Returns:
+            Modified MLP with RBF layers
+        """
         new_layers = []
         keys = list(jrandom.split(key, len(self.mlp.layers)))
 
