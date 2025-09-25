@@ -28,7 +28,7 @@ class BaseStack(eqx.Module):
         modules: Sequence of SymbolicModule instances, one for each equation
     """
 
-    modules: Sequence[eqx.Module]
+    modules: List[eqx.Module]
 
     def _assemble_modules(
         self,
