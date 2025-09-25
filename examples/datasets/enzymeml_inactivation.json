@@ -291,8 +291,8 @@
       "@type": [
         "enzml:Reaction"
       ],
-      "id": "RHEA:19909",
-      "name": "RHEA:19909",
+      "id": "r1",
+      "name": "r1",
       "reversible": true,
       "kinetic_law": {
         "@context": {

@@ -16,7 +16,7 @@ if COMPOSE:
         id="vessel",
         name="vessel",
         volume=1,
-        unit="mL",
+        unit="mL",  # type: ignore
     )
 
     # create EnzymeML document
@@ -103,12 +103,12 @@ doc.add_to_equations(
 ################
 
 # create model from EnzymeML
-model = ctx.model.Model.from_enzymeml(doc, from_reactions=False)
+model = ctx.model.Model.from_enzymeml(doc)
 
 # Set parameters
-model.parameters.k_cat.value = 1
-model.parameters.K_M.value = 180
-model.parameters.k_inact.value = 0.0042
+model.parameters["k_cat"].value = 1
+model.parameters["K_M"].value = 180
+model.parameters["k_inact"].value = 0.0042
 
 # Create dataset and add initial conditions
 dataset = ctx.Dataset.from_model(model)
@@ -136,11 +136,11 @@ for meas_id, meas in enumerate(results.measurements):
         value = value + noise
         enzml_meas.add_to_species_data(
             species_id=sid,
-            initial=value[0],
-            time=meas.time.tolist(),
+            initial=value[0],  # type: ignore
+            time=meas.time.tolist(),  # type: ignore
             data=value.tolist(),
-            data_unit=data_unit,
-            time_unit=time_unit,
+            data_unit=data_unit,  # type: ignore
+            time_unit=time_unit,  # type: ignore
             data_type=pe.DataTypes.CONCENTRATION,
         )
 
@@ -151,7 +151,7 @@ for meas_id, meas in enumerate(results.measurements):
             enzml_meas.add_to_species_data(
                 species_id=small_molecule.id,
                 initial=5,
-                data_unit=data_unit,
+                data_unit=data_unit,  # type: ignore
                 data_type=pe.DataTypes.CONCENTRATION,
             )
 
