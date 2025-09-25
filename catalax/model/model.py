@@ -108,7 +108,9 @@ class Model(CatalaxBase, Predictor, Surrogate):
     @property
     def sim_input(self) -> SimulationInput:
         """Get the simulation input of the model."""
-        odes = [self.odes[state] for state in self.get_state_order()]
+        odes = [
+            self.odes[state] for state in self.get_state_order() if state in self.odes
+        ]
         reactions = [self.reactions[reaction] for reaction in self.get_reaction_order()]
         return SimulationInput(
             odes=odes,
@@ -178,11 +180,13 @@ class Model(CatalaxBase, Predictor, Surrogate):
 
     def add_reaction(
         self,
+        scheme: Optional[str] = None,
+        *,
         symbol: str,
-        reactants: List[Tuple[float, str]],
-        products: List[Tuple[float, str]],
+        reactants: List[Tuple[float, str]] = [],
+        products: List[Tuple[float, str]] = [],
         equation: str,
-        reversible: bool,
+        reversible: bool = False,
     ):
         """Adds a reaction to the model and converts the equation to a SymPy expression.
 
@@ -215,6 +219,21 @@ class Model(CatalaxBase, Predictor, Surrogate):
             ValueError: If the reaction has no reactants or products, or if any referenced
                        state is not found in the model.
         """
+
+        if scheme and (reactants or products):
+            raise ValueError("Cannot specify both scheme and reactants/products")
+
+        if scheme is not None:
+            self.reactions[symbol] = Reaction.from_scheme(
+                symbol=symbol,
+                schema=scheme,
+                equation=equation,
+                reversible=reversible,
+                states=self.get_state_order(modeled=False),
+            )
+            self.reactions[symbol]._model = self
+            return
+
         if len(reactants) == 0 or len(products) == 0:
             raise ValueError("Reaction must have at least one reactant and one product")
 
@@ -230,7 +249,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
             raise ValueError(f"States {undefined_states} not found in model")
 
         self.reactions[symbol] = Reaction(
-            name=symbol,
+            symbol=symbol,
             reactants=list(map(ReactionElement.from_tuple, reactants)),
             products=list(map(ReactionElement.from_tuple, products)),
             equation=equation,  # type: ignore[arg-type]

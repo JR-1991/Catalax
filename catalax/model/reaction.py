@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from catalax.model.base import CatalaxBase
 from catalax.model.equation import Equation
@@ -21,7 +21,7 @@ class Reaction(Equation):
         reversible: Whether the reaction can proceed in both directions
     """
 
-    name: str
+    symbol: str
     reactants: List[ReactionElement]
     products: List[ReactionElement]
     reversible: bool
@@ -29,10 +29,11 @@ class Reaction(Equation):
     @classmethod
     def from_scheme(
         cls,
-        name: str,
+        symbol: str,
         schema: str,
         equation: str,
         reversible: bool,
+        states: Optional[List[str]] = None,
     ) -> Reaction:
         """Create a Reaction from a schema string.
 
@@ -73,8 +74,24 @@ class Reaction(Equation):
         reactants = cls._parse_side(reactants_str)
         products = cls._parse_side(products_str)
 
+        # Validate that reaction has at least one reactant and one product
+        if len(reactants) == 0 or len(products) == 0:
+            raise ValueError("Reaction must have at least one reactant and one product")
+
+        # Check if all the stoichiometries are positive and not zero
+        if any(element.stoichiometry <= 0 for element in reactants + products):
+            raise ValueError("Stoichiometries must be positive and not zero")
+
+        if states is not None:
+            undefined_states = []
+            for element in reactants + products:
+                if element.state not in states:
+                    undefined_states.append(element.state)
+            if undefined_states:
+                raise ValueError(f"States {undefined_states} not found in states")
+
         return cls(
-            name=name,
+            symbol=symbol,
             reactants=reactants,
             products=products,
             reversible=reversible,
