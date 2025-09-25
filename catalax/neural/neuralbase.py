@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import warnings
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Type
 
@@ -26,6 +27,11 @@ from catalax.dataset import Dataset
 from catalax.model.model import SimulationConfig
 from catalax.neural.mlp import MLP
 from catalax.neural.rbf import RBFLayer
+from catalax.neural.utils import (
+    ACTIVATION_MAP,
+    SERIALISATION_WARNING,
+    _get_activation_name,
+)
 from catalax.predictor import Predictor
 from catalax.surrogate import Surrogate
 from catalax.tools.simulation import ODEStack
@@ -61,10 +67,10 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         depth: int,
         state_order: List[str],
         observable_indices: List[int],
-        activation=jax.nn.softplus,
+        activation=jax.nn.tanh,
         solver=diffrax.Tsit5,
         use_final_bias: bool = False,
-        final_activation: Optional[Callable] = None,
+        final_activation: Callable = jax.nn.identity,
         out_size: Optional[int] = None,
         *,
         key,
@@ -88,6 +94,19 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             "state_order": self.state_order,
             **kwargs,
         }
+
+        # Try to get activation names, warn if not found
+        try:
+            self.hyperparams["activation"] = _get_activation_name(activation)
+        except KeyError:
+            warnings.warn(SERIALISATION_WARNING)
+
+        try:
+            self.hyperparams["final_activation"] = _get_activation_name(
+                final_activation
+            )
+        except KeyError:
+            warnings.warn(SERIALISATION_WARNING)
 
         # Save solver and MLP
         self.func = MLP(
@@ -299,9 +318,9 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         depth: int,
         seed: int = 0,
         use_final_bias: bool = False,
-        final_activation: Optional[Callable] = None,
+        final_activation: Callable = jax.nn.identity,
         solver=diffrax.Tsit5,
-        activation=jax.nn.softplus,
+        activation=jax.nn.tanh,
         **kwargs,
     ):
         """Intializes a NeuralODE from a catalax.Model
@@ -313,10 +332,12 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         key = jrandom.PRNGKey(seed)
 
         # Get observable indices
-        if model.odes or model.reactions:
-            observable_indices = model.get_observable_state_order(as_indices=True)
+        if len(model.odes) > 0 or len(model.reactions) > 0:
+            observable_indices = model.get_state_order(as_indices=True)
+            state_order = model.get_state_order()
         else:
-            observable_indices = list(range(len(model.get_state_order())))
+            observable_indices = model.get_state_order(as_indices=True, modeled=False)
+            state_order = model.get_state_order(modeled=False)
 
         return cls(
             data_size=len(model.states),
@@ -324,7 +345,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             depth=depth,
             solver=solver,
             observable_indices=observable_indices,
-            state_order=model.get_state_order(),
+            state_order=state_order,
             key=key,
             model=model,
             use_final_bias=use_final_bias,
@@ -367,6 +388,17 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             **kwargs,
         )
 
+    def weights_from_eqx(self, path: str) -> Self:
+        """Loads the weights and biases from an eqx file.
+
+        Please note that this method requires the same neural network architecture as the one used to train the model. It is recommended to use this path of persistence only for models that use custom activation functions. If you want to persist a model that uses a supported activation function, which you can find in 'https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py'.
+
+        Args:
+            path (str): Path to the eqx file
+        """
+        with open(path, "rb") as f:
+            return eqx.tree_deserialise_leaves(f, self)
+
     @classmethod
     def from_eqx(cls, path) -> Self:
         """Loads a NeuralODE from an eqx file
@@ -386,6 +418,18 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             if hyperparams["rbf"] is True:
                 hyperparams["activation"] = RBFLayer(0.4)
 
+            if "final_activation" in hyperparams:
+                hyperparams["final_activation"] = ACTIVATION_MAP[
+                    hyperparams["final_activation"]
+                ]
+            else:
+                warnings.warn("No final activation function found. Using identity.")
+
+            if "activation" in hyperparams:
+                hyperparams["activation"] = ACTIVATION_MAP[hyperparams["activation"]]
+            else:
+                warnings.warn("No activation function found. Using tanh.")
+
             # Remove rbf from hyperparams
             del hyperparams["rbf"]
 
@@ -404,6 +448,23 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
 
         if name.endswith(".eqx"):
             name = name.rstrip(".eqx")
+
+        if "activation" not in self.hyperparams:
+            try:
+                self.hyperparams["activation"] = _get_activation_name(
+                    self.func.mlp.activation
+                )
+            except KeyError:
+                # Custom activation function - skip storing in hyperparams
+                pass
+        if "final_activation" not in self.hyperparams:
+            try:
+                self.hyperparams["final_activation"] = _get_activation_name(
+                    self.func.mlp.final_activation
+                )
+            except KeyError:
+                # Custom activation function - skip storing in hyperparams
+                pass
 
         filename = os.path.join(path, name + ".eqx")
         with open(filename, "wb") as f:
