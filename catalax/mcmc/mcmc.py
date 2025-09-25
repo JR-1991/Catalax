@@ -169,6 +169,7 @@ class HMC:
         surrogate: Optional[Surrogate] = None,
         pre_model: Optional[PreModel] = None,
         post_model: Optional[PostModel] = None,
+        abort_on_error: bool = False,
     ) -> HMCResults:
         """Run MCMC simulation to infer posterior distribution of parameters.
 
@@ -205,6 +206,11 @@ class HMC:
             surrogate,
             config,
         )
+
+        if abort_on_error:
+            config.throw = True
+        else:
+            config.throw = False
 
         if surrogate is not None:
             mode = Modes.SURROGATE
@@ -375,12 +381,6 @@ class BayesianModel:
 
         # Simulate model with sampled parameters
         states = self.sim_func(y0s, theta, constants, times)
-
-        # Boolean check: True if all entries finite
-        ok = jnp.isfinite(states).all()
-
-        # Add factor: 0.0 if ok, -inf if not
-        numpyro.factor("ode_ok", jnp.where(ok, 0.0, -jnp.inf))
 
         # Apply a post-model which can be used to modify
         # the states, data, and times
@@ -726,6 +726,7 @@ def _configure_simulation_function(
     model = model._replace_assignments()
 
     if surrogate is not None:
+        print("Using surrogate model for rate prediction")
         # Use surrogate model for rate prediction
         data, times, _ = dataset.to_jax_arrays(model.get_state_order())
         constants = dataset.to_y0_matrix(state_order=model.get_constants_order())
@@ -735,7 +736,7 @@ def _configure_simulation_function(
         def sim_func(y0s, theta, constants, times):
             return rate_fun(times, y0s, (theta, constants))
 
-        sim_func = eqx.filter_jit(jax.vmap(sim_func, in_axes=(0, None, 0, 0)))
+        sim_func = jax.jit(jax.vmap(sim_func, in_axes=(0, None, 0, 0)))
         times = times.ravel()
         constants = jnp.repeat(constants, data.shape[1], axis=0)
         data = surrogate.predict_rates(dataset=dataset)

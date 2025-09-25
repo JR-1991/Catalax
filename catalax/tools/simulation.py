@@ -3,7 +3,6 @@ from typing import Any, Callable, List, Literal, Optional, Sequence, Tuple
 import diffrax as dfx
 import equinox as eqx
 import jax
-import jax.numpy as jnp
 from diffrax import (
     ConstantStepSize,
     PIDController,
@@ -271,16 +270,7 @@ class Simulation(BaseModel):
                 throw=self.config.throw,
             )
 
-            if self.config.throw is False:
-                is_ok = sol.result == dfx.RESULTS.successful
-
-                if is_ok:
-                    return sol.ys
-
-                # Return a solution with infs, which is mainly used for MCMC
-                return jnp.inf * jnp.ones((time.shape[0], y0.shape[0]))
-            else:
-                return sol.ys
+            return sol.ys
 
         return _simulate_system
 
