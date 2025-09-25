@@ -136,31 +136,27 @@ class TestReactionFromSchema:
 
     def test_empty_reactants(self):
         """Test reaction with empty reactants."""
-        reaction = Reaction.from_scheme(
-            symbol="r8",
-            schema="-> A",
-            equation="k",
-            reversible=False,
-        )
-
-        assert reaction.symbol == "r8"
-        assert len(reaction.reactants) == 0
-        assert len(reaction.products) == 1
-        assert reaction.products[0] == ReactionElement(state="A", stoichiometry=1.0)
+        with pytest.raises(
+            ValueError, match="Reaction must have at least one reactant and one product"
+        ):
+            Reaction.from_scheme(
+                symbol="r8",
+                schema="-> A",
+                equation="k",
+                reversible=False,
+            )
 
     def test_empty_products(self):
         """Test reaction with empty products."""
-        reaction = Reaction.from_scheme(
-            symbol="r9",
-            schema="A ->",
-            equation="k*A",
-            reversible=False,
-        )
-
-        assert reaction.symbol == "r9"
-        assert len(reaction.reactants) == 1
-        assert len(reaction.products) == 0
-        assert reaction.reactants[0] == ReactionElement(state="A", stoichiometry=1.0)
+        with pytest.raises(
+            ValueError, match="Reaction must have at least one reactant and one product"
+        ):
+            Reaction.from_scheme(
+                symbol="r9",
+                schema="A ->",
+                equation="k*A",
+                reversible=False,
+            )
 
     def test_no_arrow(self):
         """Test schema without any arrow (should raise error)."""
@@ -241,16 +237,15 @@ class TestReactionFromSchema:
 
     def test_zero_coefficient_handling(self):
         """Test that zero coefficients are handled properly."""
-        reaction = Reaction.from_scheme(
-            symbol="r16",
-            schema="0 A + 1 B -> C",
-            equation="k*B",
-            reversible=False,
-        )
-
-        # Should still create the element with zero coefficient
-        assert reaction.reactants[0] == ReactionElement(state="A", stoichiometry=0.0)
-        assert reaction.reactants[1] == ReactionElement(state="B", stoichiometry=1.0)
+        with pytest.raises(
+            ValueError, match="Stoichiometries must be positive and not zero"
+        ):
+            Reaction.from_scheme(
+                symbol="r16",
+                schema="0 A + 1 B -> C",
+                equation="k*B",
+                reversible=False,
+            )
 
     def test_very_long_arrow(self):
         """Test the longest supported arrow pattern."""
