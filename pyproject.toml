@@ -29,6 +29,7 @@ dependencies = [
     "pyenzyme>=2.0.0,<3",
     "seaborn>=0.13.2,<0.14",
     "typing-extensions>=4.14.1,<5",
+    "deprecated>=1.2.18",
 ]
 
 [dependency-groups]
