@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Self
 
 
 class InAxes(Enum):
@@ -8,10 +9,10 @@ class InAxes(Enum):
     TIME = (None, None, None, 0)  # Index 3
 
     # Override add function to combine axes
-    def __add__(self, other):
+    def __add__(self, other: Self) -> tuple[int | None, int | None, int | None, int | None]:
         assert isinstance(other, InAxes), "Other spec must be an instance of InAxes"
 
-        def merge(i):
+        def merge(i: int) -> int | None:
             return (
                 0 if any(spec.value[i] is not None for spec in [self, other]) else None
             )
