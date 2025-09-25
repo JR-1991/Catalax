@@ -3,7 +3,16 @@ from __future__ import annotations
 import copy
 import json
 import os
-from typing import Callable, Dict, List, Literal, Optional, Tuple, Union, overload
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    overload,
+)
 
 import arviz as az
 import equinox as eqx
@@ -781,16 +790,47 @@ class Model(CatalaxBase, Predictor, Surrogate):
         """Returns the order of the parameters in the model"""
         return sorted(self.parameters.keys())
 
-    def get_state_order(self, modeled: bool = True) -> List[str]:
+    @overload
+    def get_state_order(
+        self,
+        modeled: bool = True,
+        *,
+        as_indices: Literal[True],
+    ) -> List[int]:
+        """Returns the order of the states in the model as indices"""
+        ...
+
+    @overload
+    def get_state_order(
+        self,
+        modeled: bool = True,
+        *,
+        as_indices: Literal[False] = False,
+    ) -> List[str]:
+        """Returns the order of the states in the model as strings"""
+        ...
+
+    def get_state_order(
+        self,
+        modeled: bool = True,
+        as_indices: bool = False,
+    ) -> List[str] | List[int]:
         """Returns the order of the states and constants in the model"""
         if not modeled:
-            return sorted(list(self.states.keys()))
+            if as_indices:
+                return list(range(len(self.states)))
+            else:
+                return sorted(list(self.states.keys()))
 
         ode_species = {str(ode.state.symbol) for ode in self.odes.values()}
         reaction_species = set(self.get_reacting_state_order())
         modeled_species = list(ode_species | reaction_species)
+        modeled_species = sorted(modeled_species)
 
-        return sorted(modeled_species)
+        if as_indices:
+            return [i for i, state in enumerate(modeled_species)]
+        else:
+            return modeled_species
 
     @deprecated("This method is deprecated. Use get_state_order instead.")
     def get_species_order(self) -> List[str]:
@@ -900,9 +940,9 @@ class Model(CatalaxBase, Predictor, Surrogate):
         model = self._replace_assignments()
 
         if in_axes is None:
-            return eqx.filter_jit(model.stack)
+            return model.stack
 
-        return eqx.filter_jit(jax.vmap(model.stack, in_axes=in_axes))
+        return jax.jit(jax.vmap(model.stack, in_axes=in_axes))
 
     def reset(self):
         """Resets the model"""
