@@ -35,7 +35,7 @@ class RateFlowODE(NeuralBase):
         state_order: List[str],
         observable_indices: List[int],
         solver=diffrax.Tsit5,
-        activation=jax.nn.softplus,
+        activation=jax.nn.celu,
         use_final_bias: bool = False,
         learn_stoich: bool = True,
         stoich_matrix: jax.Array | None = None,
