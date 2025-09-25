@@ -7,7 +7,7 @@ sidebarTitle: predictor
 
 ## Classes
 
-### `Predictor` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L14" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `Predictor` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L16" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Abstract base class for predictors in the catalax framework.
@@ -18,7 +18,7 @@ and returns predictions based on the model.
 
 **Methods:**
 
-#### `widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L22" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L24" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 widget(self, model: Model, t0: float = 0.0, t1: float = 100.0, ref_measurement: Optional[Measurement] = None)
@@ -55,7 +55,7 @@ This function creates a comprehensive interactive interface that allows users to
 - `RuntimeError`: If widget creation fails
 
 
-#### `get_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L80" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L83" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_species_order(self) -> list[str]
@@ -64,10 +64,19 @@ get_species_order(self) -> list[str]
 Get the species order of the predictor.
 
 
-#### `predict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L87" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L90" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-predict(self, dataset: Dataset, config: Optional[SimulationConfig] = None, n_steps: int = 100, use_times: bool = False) -> Dataset
+get_state_order(self) -> list[str]
+```
+
+Get the state order of the predictor.
+
+
+#### `predict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L97" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+predict(self, dataset: Dataset, config: Optional[SimulationConfig] = None, n_steps: int = 100, use_times: bool = False, hdi: Optional[Literal['lower', 'upper', 'lower_50', 'upper_50']] = None) -> Dataset
 ```
 
 Make predictions using the predictor.
@@ -83,7 +92,7 @@ Make predictions using the predictor.
 - Dataset containing the predictions
 
 
-#### `n_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L110" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `n_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/predictor.py#L120" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 n_parameters(self) -> int

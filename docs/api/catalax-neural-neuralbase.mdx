@@ -11,10 +11,19 @@ sidebarTitle: neuralbase
 
 **Methods:**
 
-#### `train` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L110" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L53" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-train(self, dataset: Dataset, strategy: Strategy, optimizer = optax.adabelief, print_every: int = 10, weight_scale: float = 1e-08, save_milestones: bool = False, milestone_dir: str = './milestones', log: Optional[str] = None, seed: int = 420) -> Self
+species_order(self) -> List[str]
+```
+
+Get the species order of the predictor.
+
+
+#### `train` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L116" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+train(self, dataset: Dataset, strategy: Strategy, validation_dataset: Optional[Dataset] = None, solver: Optional[Type[diffrax.AbstractSolver]] = None, optimizer = optax.adabelief, print_every: int = 10, weight_scale: float = 1e-08, save_milestones: bool = False, milestone_dir: str = './milestones', log: Optional[str] = None, seed: int = 420) -> Self
 ```
 
 Train the model on the given dataset.
@@ -52,10 +61,10 @@ The model will have learned to approximate the dynamics from the provided
 dataset using the specified training strategy and hyperparameters.
 
 
-#### `predict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L172" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `predict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L182" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-predict(self, dataset: Dataset, config: Optional[SimulationConfig] = None, n_steps: int = 100, use_times: bool = False, solver: Optional[Type[diffrax.AbstractSolver]] = None, rtol: Optional[float] = None, atol: Optional[float] = None, dt0: Optional[float] = None)
+predict(self, dataset: Dataset, config: Optional[SimulationConfig] = None, n_steps: int = 100, use_times: bool = False, solver: Optional[Type[diffrax.AbstractSolver]] = None, rtol: Optional[float] = None, atol: Optional[float] = None, dt0: Optional[float] = None, hdi: Optional[Literal['lower', 'upper', 'lower_50', 'upper_50']] = None)
 ```
 
 Predict model behavior using the given dataset.
@@ -75,7 +84,7 @@ creates a simulation configuration if one is not provided.
 - A Dataset object containing the prediction results
 
 
-#### `rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L233" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L249" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 rates(self, t: jax.Array, y: jax.Array, constants: Optional[jax.Array] = None) -> jax.Array
@@ -84,7 +93,7 @@ rates(self, t: jax.Array, y: jax.Array, constants: Optional[jax.Array] = None) -
 Get the rates of the predictor.
 
 
-#### `predict_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L243" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `predict_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L259" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 predict_rates(self, dataset: Dataset) -> jax.Array
@@ -99,7 +108,7 @@ Predict rates using the given dataset.
 - A Dataset object containing the prediction results
 
 
-#### `loss` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L260" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `loss` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L276" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 loss(self, dataset: Dataset, loss: Callable = optax.log_cosh) -> jax.Array
@@ -115,7 +124,7 @@ Calculate the loss of the model on the given dataset.
 - Loss value
 
 
-#### `from_model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L279" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L295" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 from_model(cls, model: Model, width_size: int, depth: int, seed: int = 0, use_final_bias: bool = False, final_activation: Optional[Callable] = None, solver = diffrax.Tsit5, activation = jax.nn.softplus, **kwargs)
@@ -127,7 +136,7 @@ Intializes a NeuralODE from a catalax.Model
 - `model`: Model to initialize NeuralODE from
 
 
-#### `from_dataset` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L325" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_dataset` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L337" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 from_dataset(cls, dataset: Dataset, width_size: int, depth: int, seed: int = 0, use_final_bias: bool = True, solver = diffrax.Tsit5, activation = jax.nn.softplus, **kwargs)
@@ -139,7 +148,7 @@ Intializes a NeuralODE from a catalax.Model
 - `model`: Model to initialize NeuralODE from
 
 
-#### `from_eqx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L359" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_eqx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L371" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 from_eqx(cls, path) -> Self
@@ -154,7 +163,7 @@ Loads a NeuralODE from an eqx file
 - Trained NeuralODE model.
 
 
-#### `save_to_eqx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L385" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `save_to_eqx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L397" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 save_to_eqx(self, path: str, name: str, **kwargs)
@@ -167,13 +176,13 @@ Saves a NeuralODE to an eqx file
 - `name`: Name of the eqx file
 
 
-#### `save_to_onnx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L408" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `save_to_onnx` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L420" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 save_to_onnx(self)
 ```
 
-#### `get_weights_and_biases` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L411" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_weights_and_biases` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L423" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_weights_and_biases(self) -> List[jax.Array]
@@ -185,7 +194,7 @@ Get all weights and biases from the model.
 - List of weights and biases
 
 
-#### `get_extra_hyperparams` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L421" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_extra_hyperparams` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L433" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_extra_hyperparams(self) -> Dict[str, Any]
@@ -197,7 +206,7 @@ Get extra hyperparameters from the model.
 - Dict of extra hyperparameters
 
 
-#### `get_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L429" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L442" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_species_order(self) -> list[str]
@@ -209,7 +218,19 @@ Get the species order of the predictor.
 - List of species order
 
 
-#### `n_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L437" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L450" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_state_order(self) -> list[str]
+```
+
+Get the state order of the predictor.
+
+**Returns:**
+- List of state order
+
+
+#### `n_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/neuralbase.py#L458" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 n_parameters(self) -> int

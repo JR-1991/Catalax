@@ -12,7 +12,7 @@ The `Dataset` class serves as the central data container in Catalax, designed to
 
 A `Dataset` contains several key components that work together to organize and manage your data:
 
-- **`species`**: A list of chemical species names that defines what molecules are tracked in this dataset. This serves as the schema that ensures consistency across all measurements.
+- **`states`**: A list of state names that defines what states, such as molecules, proteins or process variables, are tracked in this dataset. This serves as the schema that ensures consistency across all measurements.
 - **`measurements`**: A list of `Measurement` objects, where each measurement represents one experimental condition, simulation run, or data point in your study.
 - **`name`, `description`**: Metadata fields that help organize and document your datasets for reproducibility, sharing, and long-term data management.
 - **`id`**: A unique identifier that distinguishes this dataset from others, automatically generated to ensure uniqueness.
@@ -22,32 +22,32 @@ A `Dataset` contains several key components that work together to organize and m
 
 Each individual `Measurement` within a dataset contains the detailed information for one experimental condition or simulation run:
 
-- **`initial_conditions`**: A dictionary mapping species names to their initial concentrations, which serves as the starting point for simulation or represents the experimental setup conditions.
+- **`initial_conditions`**: A dictionary mapping state names to their initial concentrations, which serves as the starting point for simulation or represents the experimental setup conditions.
 - **`time`**: An array of time points at which measurements were taken. This can be `None` for datasets that only contain initial conditions (such as when setting up simulations).
-- **`data`**: A dictionary that maps each species name to its complete concentration time series, providing the full temporal evolution of the system under the given conditions.
+- **`data`**: A dictionary that maps each state name to its complete concentration time series, providing the full temporal evolution of the system under the given conditions.
 - **`id`**: A unique identifier for the individual measurement, allowing precise referencing and data retrieval.
 
 ## Creating Datasets
 
 ### From Models
 
-The most common way to create a new dataset is from an existing model, which automatically sets up the correct species structure:
+The most common way to create a new dataset is from an existing model, which automatically sets up the correct states structure:
 
 ```python
 import catalax as ctx
 
 # Create a model
 model = ctx.Model(name="Enzyme Kinetics")
-model.add_species("S", "P", "E")  # Substrate, Product, Enzyme
+model.add_state("S", "P", "E")  # Substrate, Product, Enzyme
 
 # Create an empty dataset from the model
 dataset = ctx.Dataset.from_model(model)
 
-print(f"Dataset species: {dataset.species}")
+print(f"Dataset states: {dataset.states}")
 print(f"Dataset name: {dataset.name}")
 ```
 
-This approach ensures that your dataset is properly configured with the correct species names and maintains consistency between your model definition and data structure.
+This approach ensures that your dataset is properly configured with the correct states names and maintains consistency between your model definition and data structure.
 
 ### Adding Initial Conditions
 
@@ -114,10 +114,10 @@ enzmldoc = pe.read_enzymeml("experiment.omex")
 dataset = ctx.Dataset.from_enzymeml(enzmldoc)
 
 print(f"Imported {len(dataset.measurements)} measurements")
-print(f"Species: {dataset.species}")
+print(f"States: {dataset.states}")
 ```
 
-The EnzymeML import automatically extracts species information, experimental conditions, and time-series data while preserving important metadata about the experimental setup and measurement protocols.
+The EnzymeML import automatically extracts states information, experimental conditions, and time-series data while preserving important metadata about the experimental setup and measurement protocols.
 
 ### From Pandas DataFrames
 
@@ -130,8 +130,8 @@ import pandas as pd
 data_df = pd.read_csv("timecourse_data.csv")
 inits_df = pd.read_csv("initial_conditions.csv")
 
-# Data DataFrame should have columns: measurementId, time, species1, species2, ...
-# Inits DataFrame should have columns: measurementId, species1, species2, ...
+# Data DataFrame should have columns: measurementId, time, state1, state2, ...
+# Inits DataFrame should have columns: measurementId, state1, state2, ...
 
 dataset = ctx.Dataset.from_dataframe(
     name="Experimental Dataset",
@@ -166,14 +166,14 @@ For computational workflows that work directly with numerical arrays, Catalax ca
 import jax.numpy as jnp
 
 # Define array structures
-species_order = ["S", "P", "E"]
-data = jnp.array([...])  # Shape: (n_measurements, n_timepoints, n_species)
+state_order = ["S", "P", "E"]
+data = jnp.array([...])  # Shape: (n_measurements, n_timepoints, n_states)
 time = jnp.array([...])  # Shape: (n_measurements, n_timepoints)
-y0s = jnp.array([...])   # Shape: (n_measurements, n_species)
+y0s = jnp.array([...])   # Shape: (n_measurements, n_states)
 
 # Create dataset
 dataset = ctx.Dataset.from_jax_arrays(
-    species_order=species_order,
+    state_order=state_order,
     data=data,
     time=time,
     y0s=y0s
@@ -229,15 +229,15 @@ For computational workflows, you can extract data as JAX arrays with proper stru
 
 ```python
 # Convert to arrays for computation
-species_order = dataset.get_observable_species_order()
+state_order = dataset.get_observable_state_order()
 data, time, initial_conditions = dataset.to_jax_arrays(
-    species_order=species_order,
+    state_order=state_order,
     inits_to_array=True
 )
 
-print(f"Data shape: {data.shape}")      # (n_measurements, n_timepoints, n_species)
+print(f"Data shape: {data.shape}")      # (n_measurements, n_timepoints, n_states)
 print(f"Time shape: {time.shape}")      # (n_measurements, n_timepoints)
-print(f"Inits shape: {initial_conditions.shape}")  # (n_measurements, n_species)
+print(f"Inits shape: {initial_conditions.shape}")  # (n_measurements, n_states)
 ```
 
 This provides direct access to the numerical data in a format suitable for mathematical operations and machine learning workflows.
@@ -253,9 +253,9 @@ Catalax provides methods to validate data integrity and identify potential issue
 has_data = dataset.has_data()
 print(f"Dataset contains time-series data: {has_data}")
 
-# Get observable species (those with actual measurements)
-observable_species = dataset.get_observable_species_order()
-print(f"Observable species: {observable_species}")
+# Get observable states (those with actual measurements)
+observable_states = dataset.get_observable_state_order()
+print(f"Observable states: {observable_states}")
 
 # Get measurement by ID
 measurement_id = dataset.measurements[0].id
@@ -375,26 +375,26 @@ This approach provides comprehensive validation by testing the model's ability t
 
 ## Advanced Data Operations
 
-### Working with Observable Species
+### Working with Observable States
 
-In many experiments, not all species in your model are directly observable. Catalax provides methods to work specifically with measured species:
+In many experiments, not all states in your model are directly observable. Catalax provides methods to work specifically with measured states:
 
 ```python
-# Get indices of observable species
+# Get indices of observable states
 observable_indices = dataset.get_observable_indices()
-print(f"Observable species indices: {observable_indices}")
+print(f"Observable states indices: {observable_indices}")
 
-# Get only observable species data
-species_order = dataset.species
-observable_species = dataset.get_observable_species_order()
+# Get only observable states data
+state_order = dataset.states
+observable_states = dataset.get_observable_state_order()
 
-data, time, inits = dataset.to_jax_arrays(species_order=observable_species)
+data, time, inits = dataset.to_jax_arrays(state_order=observable_states)
 print(f"Full dataset shape: {data.shape}")
 
-# This automatically filters to include only species with actual measurements
+# This automatically filters to include only states with actual measurements
 ```
 
-This functionality is essential when working with complex models where some species are intermediates or unmeasured components.
+This functionality is essential when working with complex models where some states are intermediates or unmeasured components.
 
 ### Creating Configuration Objects
 
@@ -418,7 +418,7 @@ For large datasets, Catalax provides utilities to determine appropriate vectoriz
 
 ```python
 # Get vectorization dimensions for batch processing
-data, time, y0s = dataset.to_jax_arrays(species_order=dataset.species, inits_to_array=True)
+data, time, y0s = dataset.to_jax_arrays(state_order=dataset.states, inits_to_array=True)
 vmap_dims = dataset.get_vmap_dims(data, time, y0s)
 
 print(f"Vectorization dimensions: {vmap_dims}")

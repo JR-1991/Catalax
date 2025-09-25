@@ -1,0 +1,84 @@
+---
+title: reaction
+sidebarTitle: reaction
+---
+
+# `catalax.model.reaction`
+
+## Classes
+
+### `Reaction` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/reaction.py#L10" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A chemical reaction with reactants, products, and kinetic properties.
+
+This class represents a chemical reaction that can be reversible or irreversible,
+with specified reactants and products. It inherits from Equation to provide
+kinetic modeling capabilities.
+
+
+**Methods:**
+
+#### `from_scheme` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/reaction.py#L30" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_scheme(cls, name: str, schema: str, equation: str, reversible: bool) -> Reaction
+```
+
+Create a Reaction from a schema string.
+
+The schema should follow the format: "reactants -> products" where:
+- Reactants and products are separated by arrows
+- Each side contains species separated by '+'
+- Species can contain letters, numbers, and underscores
+- Stoichiometric coefficients are optional (defaults to 1.0)
+
+Supported arrow variants:
+- -> (irreversible)
+- &lt;-&gt; (reversible)
+- => (irreversible)
+- &lt;=&gt; (reversible)
+- &lt;==&gt; (reversible)
+- &lt;===&gt; (reversible)
+- > (irreversible)
+
+**Examples:**
+
+>>> Reaction.from_schema("r1", "1 s1 + 1 s2 -> 1 s3", "k*s1*s2", False)
+>>> Reaction.from_schema("r2", "A + B &lt;-&gt; C", "k*A*B", True)
+>>> Reaction.from_schema("r3", "2 H2 + O2 &lt;=&gt; 2 H2O", "k*H2*O2", True)
+
+**Args:**
+- `name`: The name or identifier of the reaction
+- `schema`: The reaction schema string
+- `equation`: The kinetic equation as a string
+- `reversible`: Whether the reaction is reversible
+
+**Returns:**
+- A Reaction object with parsed reactants and products
+
+**Raises:**
+- `ValueError`: If no supported arrow pattern is found in schema
+- `ValueError`: If a term cannot be parsed
+
+
+### `ReactionElement` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/reaction.py#L165" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A state participating in a reaction with its stoichiometric coefficient.
+
+This class represents a single state in a chemical reaction along with
+its stoichiometric coefficient, which determines how many molecules of
+the state participate in the reaction.
+
+
+**Methods:**
+
+#### `from_tuple` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/reaction.py#L181" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_tuple(cls, tuple: Tuple[float, str]) -> ReactionElement
+```
+
+Create a ReactionElement from a tuple of stoichiometry and state name.
+

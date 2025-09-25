@@ -27,7 +27,7 @@ This formulation provides several research advantages:
 
 ### The Gate function
 
-The gate function is a sigmoid-activated linear transformation that controls neural network activation based on species concentrations. Its primary purpose is to prevent unphysical dynamics by suppressing corrections when species are absent (avoiding creation from nothing) while allowing the corrective network to focus on meaningful rate adjustments when species are present.
+The gate function is a sigmoid-activated linear transformation that controls neural network activation based on states concentrations. Its primary purpose is to prevent unphysical dynamics by suppressing corrections when states are absent (avoiding creation from nothing) while allowing the corrective network to focus on meaningful rate adjustments when states are present.
 
 $$
 \text{Gate}(y) = \sigma(W_g \cdot y + b_g)
@@ -66,7 +66,7 @@ For this tutorial, we'll use competitive substrate inhibition as our test system
 ```python
 # Create true system with substrate inhibition
 model = ctx.Model(name="Universal ODE Example")
-model.add_species(s0="Substrate")
+model.add_state(s0="Substrate")
 
 # True equation includes inhibition term (Ki)
 model.add_ode("s0", "-v_max * s0 / ( K_m + s0 * ( 1 + s0 / K_i ) )")
@@ -99,7 +99,7 @@ Next, fit a simplified Michaelis-Menten model that intentionally omits the inhib
 ```python
 # Create incomplete mechanistic model (missing inhibition)
 incomplete_model = ctx.Model(name="Michaelis Menten Example")
-incomplete_model.add_species(s0="Substrate")
+incomplete_model.add_state(s0="Substrate")
 incomplete_model.add_ode("s0", "-v_max * s0 / ( K_m + s0 )")
 
 # Set initial parameter estimates
@@ -261,7 +261,7 @@ model_sr = PySRRegressor(
 )
 
 # Extract training data for symbolic regression
-data, _, _ = simulated.to_jax_arrays(trained.species_order)
+data, _, _ = simulated.to_jax_arrays(trained.state_order)
 corrections, _ = trained.corrective_term(simulated)
 
 # Fit symbolic regression model

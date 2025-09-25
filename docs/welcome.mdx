@@ -27,8 +27,8 @@ import jax.numpy as jnp
 # Create and define the biochemical system
 model = ctx.Model(name="Michaelis-Menten Kinetics")
 
-# Add species and their dynamics
-model.add_species(S="Substrate", E="Enzyme", ES="Complex", P="Product")
+# Add states and their dynamics
+model.add_state(S="Substrate", E="Enzyme", ES="Complex", P="Product")
 model.add_ode("S", "-k1*E*S + k2*ES")
 model.add_ode("E", "-k1*E*S + k2*ES + kcat*ES") 
 model.add_ode("ES", "k1*E*S - k2*ES - kcat*ES")

@@ -2,7 +2,7 @@
 title: "Model Definition"
 ---
 
-The `Model` class serves as the foundational component for describing biochemical systems in Catalax. It provides a unified framework for defining species, reactions, parameters, and constraints that govern system dynamics. Whether you're modeling simple enzyme kinetics or complex metabolic networks, the Model class offers the flexibility and mathematical rigor needed for advanced computational analysis including simulation, optimization, and Bayesian inference.
+The `Model` class serves as the foundational component for describing biochemical systems in Catalax. It provides a unified framework for defining states, such as molecules, proteins or process variables, as well as reactions, parameters, and constraints that govern system dynamics. Whether you're modeling simple enzyme kinetics or complex metabolic networks, the Model class offers the flexibility and mathematical rigor needed for advanced computational analysis including simulation, optimization, and Bayesian inference.
 
 ## Understanding the Model Architecture
 
@@ -11,7 +11,7 @@ The `Model` class serves as the foundational component for describing biochemica
 The Model class organizes biochemical systems into five main components, each serving a specific purpose in mathematical modeling:
 
  - **Species**: Chemical entities whose concentrations change over time (substrates, products, enzymes, inhibitors)
- - **ODEs**: Differential equations governing the rate of change for each species
+ - **ODEs**: Differential equations governing the rate of change for each state
  - **Parameters**: Kinetic constants and other model coefficients that characterize system behavior
  - **Constants**: Time-invariant quantities that influence dynamics but don't change during simulation
  - **Assignments**: Derived quantities calculated from other model components
@@ -26,7 +26,7 @@ $$
 \frac{dy_i}{dt} = f_i(y, \theta, c, t)
 $$
 
-where $y_i$ represents species concentrations, $\theta$ contains parameters, $c$ represents constants, and $t$ is time. This mathematical framework supports a wide range of biochemical phenomena from simple mass action kinetics to complex regulatory mechanisms.
+where $y_i$ represents the state, $\theta$ contains parameters, $c$ represents constants, and $t$ is time. This mathematical framework supports a wide range of biochemical phenomena from simple mass action kinetics to complex regulatory mechanisms.
 
 ## Basic Model Construction Workflow
 
@@ -45,14 +45,14 @@ The model name serves important documentation purposes and appears in output fil
 
 ### Step 2: Species Definition
 
-Add chemical species that participate in your system using flexible syntax options:
+Add states that participate in your system using flexible syntax options:
 
 ```python
 # Method 1: Comma-separated string (simplest for basic models)
-model.add_species("S, E, P, ES")
+model.add_state("S, E, P, ES")
 
 # Method 2: Keyword arguments with descriptive names
-model.add_species(
+model.add_state(
     S="Substrate",
     E="Enzyme", 
     P="Product",
@@ -60,11 +60,11 @@ model.add_species(
 )
 
 # Method 3: Dictionary unpacking for programmatic construction
-species_dict = {"I": "Inhibitor", "EI": "Enzyme-Inhibitor Complex"}
-model.add_species(**species_dict)
+state_dict = {"I": "Inhibitor", "EI": "Enzyme-Inhibitor Complex"}
+model.add_state(**state_dict)
 ```
 
-**Species naming considerations:**
+**States naming considerations:**
 
 - **Symbols**: Short identifiers used in equations (S, E, P)
 - **Names**: Descriptive labels for documentation and visualization
@@ -73,7 +73,7 @@ model.add_species(**species_dict)
 
 ### Step 3: ODE Definition
 
-Define the differential equations that govern species dynamics:
+Define the differential equations that govern states dynamics:
 
 ```python
 # Basic Michaelis-Menten kinetics
@@ -87,8 +87,8 @@ model.add_ode("ES", "0")  # Assuming rapid equilibrium
 
 - **Automatic parameter inference**: Parameters (k_cat, K_m) are automatically detected and added to the model
 - **Symbolic processing**: Equations are converted to SymPy expressions for mathematical manipulation
-- **Observable species**: By default, all species are observable; use `observable=False` for hidden states
-- **Validation**: The system prevents duplicate ODEs for the same species
+- **Observable states**: By default, all states are observable; use `observable=False` for hidden states
+- **Validation**: The system prevents duplicate ODEs for the same state
 
 ### Step 4: Parameter Configuration
 
@@ -225,7 +225,7 @@ states = jnp.array([[100.0, 1.0, 0.0, 0.0]])  # [S, E, P, ES]
 
 # Calculate rates at specific points
 rates = model.rates(times, states)
-print(f"Rate dimensions: {rates.shape}")  # [n_times, n_species]
+print(f"Rate dimensions: {rates.shape}")  # [n_times, n_states]
 ```
 
 Rate evaluation enables:

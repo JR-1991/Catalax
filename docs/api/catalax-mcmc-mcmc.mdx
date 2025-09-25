@@ -7,7 +7,7 @@ sidebarTitle: mcmc
 
 ## Functions
 
-### `run_mcmc` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L373" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `run_mcmc` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L406" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 run_mcmc(model: 'Model', dataset: Dataset, yerrs: Union[float, Array], config: MCMCConfig, surrogate: Optional[Surrogate] = None, pre_model: Optional[PreModel] = None, post_model: Optional[PostModel] = None) -> HMCResults
@@ -41,7 +41,7 @@ distribution of parameters.
 
 ## Classes
 
-### `MCMCConfig` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L36" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `MCMCConfig` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L39" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Configuration parameters for MCMC simulation.
@@ -61,25 +61,33 @@ Configuration parameters for MCMC simulation.
 - `max_steps`: Maximum number of integration steps (default\: 64^4)
 
 
-### `Modes` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L69" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+**Methods:**
+
+#### `to_simulation_config` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L71" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+to_simulation_config(self) -> SimulationConfig
+```
+
+### `Modes` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L80" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Modes of the model.
 
 
-### `ModelSetup` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L77" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `ModelSetup` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L88" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Container for model setup results.
 
 
-### `DataPreparation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L84" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `DataPreparation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L95" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Container for prepared MCMC data.
 
 
-### `HMC` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L96" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `HMC` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L107" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Hamiltonian Monte Carlo sampler wrapper.
@@ -90,7 +98,7 @@ with integrated configuration and result handling.
 
 **Methods:**
 
-#### `run` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L150" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `run` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L164" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 run(self, model: 'Model', dataset: Dataset, yerrs: Union[float, Array], surrogate: Optional[Surrogate] = None, pre_model: Optional[PreModel] = None, post_model: Optional[PostModel] = None) -> HMCResults
@@ -110,9 +118,10 @@ distribution of parameters.
 - `surrogate`: Optional surrogate model for rate prediction
 - `pre_model`: Optional function to transform inputs and parameters before simulation
 - `post_model`: Optional function to transform outputs after simulation
+- `solver`: Solver to use for simulation
 
-**Returns:**
-- Tuple of (MCMC object with results, Bayesian model function)
+Returns:
+    Tuple of (MCMC object with results, Bayesian model function)
 
 **Raises:**
 - `AssertionError`: If any parameters lack prior distributions
@@ -120,7 +129,7 @@ distribution of parameters.
 - `ValueError`: If pre_model or post_model signatures don't match Protocol requirements
 
 
-#### `from_config` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L228" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_config` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L249" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 from_config(cls, config: MCMCConfig) -> HMC
@@ -132,7 +141,7 @@ Create HMC instance from configuration.
 - `config`: MCMC configuration parameters
 
 
-### `BayesianModel` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L250" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `BayesianModel` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/mcmc/mcmc.py#L272" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Bayesian model for MCMC parameter inference.

@@ -7,11 +7,11 @@ sidebarTitle: universalode
 
 ## Classes
 
-### `UniversalODE` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L19" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `UniversalODE` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L20" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 **Methods:**
 
-#### `corrective_term` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L125" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `corrective_term` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L128" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 corrective_term(self, dataset: Dataset) -> tuple[jax.Array, jax.Array]
@@ -22,19 +22,19 @@ Get the corrective term of the model at the given states.
 The corrective term is the neural network contribution to the rates.
 
 
-#### `plot_corrections_over_time` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L138" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `plot_corrections_over_time` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L141" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 plot_corrections_over_time(self, dataset: Dataset, show: bool = True, path: Optional[str] = None, n_steps: int = 100, figsize: tuple[float, float] = (10, 3.5)) -> Optional[Figure]
 ```
 
-#### `plot_corrections_over_input` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L215" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `plot_corrections_over_input` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L218" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 plot_corrections_over_input(self, dataset: Dataset, show: bool = True, path: Optional[str] = None, figsize: tuple[float, float] = (10, 3.5)) -> Optional[Figure]
 ```
 
-#### `gate_activation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L270" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `gate_activation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L273" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 gate_activation(self, y: jax.Array) -> jax.Array
@@ -49,13 +49,13 @@ the sensitivity of the gate to each state. weights can cancel out each other and
 thus cross-talk between states can be controlled.
 
 **Args:**
-- `y`: jax.Array of shape (n_species,) or (n_time, n_species)
+- `y`: jax.Array of shape (n_state,) or (n_time, n_state)
 
 **Returns:**
 - Gate
 
 
-#### `get_alpha_residual` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L296" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_alpha_residual` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L299" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_alpha_residual(self) -> jax.Array
@@ -72,7 +72,7 @@ regression to recover corrective terms.
 - Alpha residual
 
 
-#### `get_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L309" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/universalode.py#L312" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_rates(self, t: jax.Array, y: jax.Array) -> jax.Array

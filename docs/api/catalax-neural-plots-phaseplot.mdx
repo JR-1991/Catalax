@@ -10,7 +10,7 @@ sidebarTitle: phaseplot
 ### `phase_plot` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/plots/phaseplot.py#L18" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-phase_plot(rateflow_ode: RateFlowODE, dataset: Dataset, model: Model, rate_indices: List[int] | None = None, species_identifiers: List[str] | None = None, species_pairs: List[Tuple[str | int, str | int]] | None = None, representative_time: float = 0.0, grid_resolution: int = 30, figsize_per_subplot: Tuple[int, int] = (5, 4), save_path: str | None = None, range_extension: float = 0.2, show: bool = True) -> Figure
+phase_plot(rateflow_ode: RateFlowODE, dataset: Dataset, model: Model, rate_indices: List[int] | None = None, state_identifiers: List[str] | None = None, state_pairs: List[Tuple[str | int, str | int]] | None = None, representative_time: float = 0.0, grid_resolution: int = 30, figsize_per_subplot: Tuple[int, int] = (5, 4), save_path: str | None = None, range_extension: float = 0.2, show: bool = True) -> Figure
 ```
 
 
@@ -21,11 +21,11 @@ Create static visualizations showing how dynamics depend on concentration inputs
 - `dataset`: Dataset containing the measurements
 - `model`: Model to use for the analysis
 - `rate_indices`: List of rate indices to plot. If None, plots all rates.
-- `species_identifiers`: List of species to include (by name, symbol, or index).
-            If None, uses all species.
-- `species_pairs`: List of tuples specifying which species pairs to compare.
-            Each tuple should contain two species identifiers (name, symbol, or index).
-            If None, compares all possible pairs from species_identifiers.
+- `state_identifiers`: List of state to include (by name, symbol, or index).
+            If None, uses all state.
+- `state_pairs`: List of tuples specifying which state pairs to compare.
+            Each tuple should contain two state identifiers (name, symbol, or index).
+            If None, compares all possible pairs from state_identifiers.
 - `representative_time`: Time point to use for the analysis
 - `grid_resolution`: Number of points in each dimension of the concentration grid
 - `figsize_per_subplot`: Size of each subplot (width, height)

@@ -7,10 +7,10 @@ sidebarTitle: enzymeml
 
 ## Functions
 
-### `from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/enzymeml.py#L12" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/enzymeml.py#L14" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-from_enzymeml(cls: Type[Model], enzmldoc: pe.EnzymeMLDocument, name: str | None = None, from_reactions: bool = False) -> Model
+from_enzymeml(cls: Type[Model], enzmldoc: pe.EnzymeMLDocument, name: str | None = None) -> Model
 ```
 
 
@@ -20,12 +20,18 @@ This function creates a Catalax model from an EnzymeML document, supporting both
 direct ODE conversion and reaction-based conversion. The resulting model includes
 all species, parameters, and equations from the original document.
 
+The conversion process:
+1. Extracts all species from the document (small molecules, proteins, complexes)
+2. Determines which species are observable based on measurement data
+3. Imports reactions and converts them to ODEs if present
+4. Imports direct ODE specifications if present
+5. Transfers parameter values and bounds from the document
+6. Cleans up unused species to maintain a minimal model
+
 **Args:**
 - `cls`: The Model class to instantiate (catalax.model.Model)
 - `enzmldoc`: The EnzymeML document to convert
 - `name`: Optional name for the model. If None, uses the document's name
-- `from_reactions`: If True, converts from reaction networks to ODEs.
-           If False, uses ODEs directly from the document.
 
 **Returns:**
 - A Catalax Model instance containing all species, parameters, and equations

@@ -7,13 +7,13 @@ sidebarTitle: trainer
 
 ## Functions
 
-### `train_neural_ode` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/trainer.py#L28" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `train_neural_ode` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/trainer.py#L29" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-train_neural_ode(model: T, dataset: Dataset, strategy: Strategy, optimizer = optax.adabelief, print_every: int = 100, log: Optional[str] = None, save_milestones: bool = False, milestone_dir: str = './milestones', weight_scale: float = 0.01, seed: int = 420) -> T
+train_neural_ode(model: T, dataset: Dataset, strategy: Strategy, optimizer = optax.adabelief, validation_dataset: Optional[Dataset] = None, print_every: int = 100, log: Optional[str] = None, save_milestones: bool = False, milestone_dir: str = './milestones', weight_scale: float = 0.01, solver: Optional[Type[diffrax.AbstractSolver]] = None, seed: int = 420) -> T
 ```
 
-### `dataloader` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/trainer.py#L271" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `dataloader` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/neural/trainer.py#L306" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 dataloader(arrays, batch_size)
