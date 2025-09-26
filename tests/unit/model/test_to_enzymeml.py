@@ -81,28 +81,28 @@ class TestToEnzymeML:
                 match state.type:
                     case "small_molecule":
                         small_molecule = doc.filter_small_molecules(name=state.name)[0]
-                        assert small_molecule.id == str(state.symbol), (
-                            f"Small molecule ID should match state symbol for {state.name}"
-                        )
-                        assert small_molecule.name == state.name, (
-                            f"Small molecule name should match state name for {state.name}"
-                        )
+                        assert (
+                            small_molecule.id == str(state.symbol)
+                        ), f"Small molecule ID should match state symbol for {state.name}"
+                        assert (
+                            small_molecule.name == state.name
+                        ), f"Small molecule name should match state name for {state.name}"
                     case "protein":
                         protein = doc.filter_proteins(name=state.name)[0]
-                        assert protein.id == str(state.symbol), (
-                            f"Protein ID should match state symbol for {state.name}"
-                        )
-                        assert protein.name == state.name, (
-                            f"Protein name should match state name for {state.name}"
-                        )
+                        assert protein.id == str(
+                            state.symbol
+                        ), f"Protein ID should match state symbol for {state.name}"
+                        assert (
+                            protein.name == state.name
+                        ), f"Protein name should match state name for {state.name}"
                     case "complex":
                         complex = doc.filter_complexes(name=state.name)[0]
-                        assert complex.id == str(state.symbol), (
-                            f"Complex ID should match state symbol for {state.name}"
-                        )
-                        assert complex.name == state.name, (
-                            f"Complex name should match state name for {state.name}"
-                        )
+                        assert complex.id == str(
+                            state.symbol
+                        ), f"Complex ID should match state symbol for {state.name}"
+                        assert (
+                            complex.name == state.name
+                        ), f"Complex name should match state name for {state.name}"
             except ValueError:
                 assert False, f"State {state.name} not found in EnzymeML document"
 
@@ -111,26 +111,24 @@ class TestToEnzymeML:
             try:
                 reaction_enzymeml = doc.filter_reactions(id=str(reaction.symbol))[0]
 
-                assert reaction_enzymeml.id == str(reaction.symbol), (
-                    f"Reaction ID should match reaction symbol for {reaction.symbol}"
-                )
-                assert reaction_enzymeml.name == reaction.symbol, (
-                    f"Reaction name should match reaction symbol for {reaction.symbol}"
-                )
+                assert reaction_enzymeml.id == str(
+                    reaction.symbol
+                ), f"Reaction ID should match reaction symbol for {reaction.symbol}"
+                assert (
+                    reaction_enzymeml.name == reaction.symbol
+                ), f"Reaction name should match reaction symbol for {reaction.symbol}"
 
                 # Verify kinetic law properties
-                assert reaction_enzymeml.kinetic_law is not None, (
-                    f"Reaction {reaction.symbol} should have a kinetic law"
-                )
+                assert (
+                    reaction_enzymeml.kinetic_law is not None
+                ), f"Reaction {reaction.symbol} should have a kinetic law"
                 assert reaction_enzymeml.kinetic_law.equation == str(
                     reaction.equation
                 ), f"Kinetic law equation should match for reaction {reaction.symbol}"
                 assert (
                     reaction_enzymeml.kinetic_law.equation_type
                     == pe.EquationType.RATE_LAW
-                ), (
-                    f"Kinetic law should be of type RATE_LAW for reaction {reaction.symbol}"
-                )
+                ), f"Kinetic law should be of type RATE_LAW for reaction {reaction.symbol}"
 
                 # Verify reactants are correctly converted
                 for reactant in reaction.reactants:
@@ -139,17 +137,17 @@ class TestToEnzymeML:
                             species_id=str(reactant.state)
                         )[0]
 
-                        assert reactant_enzymeml.species_id == str(reactant.state), (
-                            f"Reactant species ID should match state for {reactant.state}"
-                        )
+                        assert (
+                            reactant_enzymeml.species_id == str(reactant.state)
+                        ), f"Reactant species ID should match state for {reactant.state}"
                     except ValueError:
-                        assert False, (
-                            f"Reactant {reactant.state} not found in EnzymeML document"
-                        )
+                        assert (
+                            False
+                        ), f"Reactant {reactant.state} not found in EnzymeML document"
 
-                    assert reactant_enzymeml.stoichiometry == reactant.stoichiometry, (
-                        f"Reactant stoichiometry should match for {reactant.state}"
-                    )
+                    assert (
+                        reactant_enzymeml.stoichiometry == reactant.stoichiometry
+                    ), f"Reactant stoichiometry should match for {reactant.state}"
 
                 # Verify products are correctly converted
                 for product in reaction.products:
@@ -158,21 +156,21 @@ class TestToEnzymeML:
                             species_id=str(product.state)
                         )[0]
 
-                        assert product_enzymeml.species_id == str(product.state), (
-                            f"Product species ID should match state for {product.state}"
-                        )
+                        assert product_enzymeml.species_id == str(
+                            product.state
+                        ), f"Product species ID should match state for {product.state}"
                     except ValueError:
-                        assert False, (
-                            f"Product {product.state} not found in EnzymeML document"
-                        )
+                        assert (
+                            False
+                        ), f"Product {product.state} not found in EnzymeML document"
 
-                    assert product_enzymeml.stoichiometry == product.stoichiometry, (
-                        f"Product stoichiometry should match for {product.state}"
-                    )
+                    assert (
+                        product_enzymeml.stoichiometry == product.stoichiometry
+                    ), f"Product stoichiometry should match for {product.state}"
             except ValueError:
-                assert False, (
-                    f"Reaction {reaction.symbol} not found in EnzymeML document"
-                )
+                assert (
+                    False
+                ), f"Reaction {reaction.symbol} not found in EnzymeML document"
 
         # Verify ODEs are correctly converted to equations
         for ode in model.odes.values():
@@ -180,39 +178,39 @@ class TestToEnzymeML:
                 equation_enzymeml = doc.filter_equations(
                     species_id=str(ode.state.symbol)
                 )[0]
-                assert equation_enzymeml.species_id == str(ode.state.symbol), (
-                    f"Equation species ID should match ODE state symbol for {ode.state.symbol}"
-                )
-                assert equation_enzymeml.equation == str(ode.equation), (
-                    f"Equation should match ODE equation for {ode.state.symbol}"
-                )
-                assert equation_enzymeml.equation_type == pe.EquationType.ODE, (
-                    f"Equation type should be ODE for {ode.state.symbol}"
-                )
+                assert (
+                    equation_enzymeml.species_id == str(ode.state.symbol)
+                ), f"Equation species ID should match ODE state symbol for {ode.state.symbol}"
+                assert equation_enzymeml.equation == str(
+                    ode.equation
+                ), f"Equation should match ODE equation for {ode.state.symbol}"
+                assert (
+                    equation_enzymeml.equation_type == pe.EquationType.ODE
+                ), f"Equation type should be ODE for {ode.state.symbol}"
             except (ValueError, IndexError):
-                assert False, (
-                    f"Equation {ode.state.symbol} not found in EnzymeML document"
-                )
+                assert (
+                    False
+                ), f"Equation {ode.state.symbol} not found in EnzymeML document"
 
         # Verify parameters are correctly converted with proper bounds
         for param in model.parameters.values():
             try:
                 param_enzymeml = doc.filter_parameters(symbol=str(param.symbol))[0]
-                assert param_enzymeml.id == str(param.symbol), (
-                    f"Parameter ID should match parameter symbol for {param.symbol}"
-                )
-                assert param_enzymeml.value == param.value, (
-                    f"Parameter value should match for {param.symbol}"
-                )
-                assert param.hdi is not None, (
-                    f"Parameter HDI should not be None for {param.symbol}"
-                )
-                assert param_enzymeml.lower_bound == param.hdi.lower_50, (
-                    f"Parameter lower bound should match HDI lower_50 for {param.symbol}"
-                )
-                assert param_enzymeml.upper_bound == param.hdi.upper_50, (
-                    f"Parameter upper bound should match HDI upper_50 for {param.symbol}"
-                )
+                assert param_enzymeml.id == str(
+                    param.symbol
+                ), f"Parameter ID should match parameter symbol for {param.symbol}"
+                assert (
+                    param_enzymeml.value == param.value
+                ), f"Parameter value should match for {param.symbol}"
+                assert (
+                    param.hdi is not None
+                ), f"Parameter HDI should not be None for {param.symbol}"
+                assert (
+                    param_enzymeml.lower_bound == param.hdi.lower_50
+                ), f"Parameter lower bound should match HDI lower_50 for {param.symbol}"
+                assert (
+                    param_enzymeml.upper_bound == param.hdi.upper_50
+                ), f"Parameter upper bound should match HDI upper_50 for {param.symbol}"
             except ValueError:
                 assert False, f"Parameter {param.symbol} not found in EnzymeML document"
 
@@ -310,50 +308,50 @@ class TestToEnzymeML:
 
         # Verify that custom names are preserved for species
         substrate = updated_doc.filter_small_molecules(id="S")[0]
-        assert substrate.name == "Custom Substrate Name", (
-            "Substrate custom name should be preserved"
-        )
+        assert (
+            substrate.name == "Custom Substrate Name"
+        ), "Substrate custom name should be preserved"
 
         product = updated_doc.filter_small_molecules(id="P")[0]
-        assert product.name == "Custom Product Name", (
-            "Product custom name should be preserved"
-        )
+        assert (
+            product.name == "Custom Product Name"
+        ), "Product custom name should be preserved"
 
         enzyme = updated_doc.filter_proteins(id="E")[0]
-        assert enzyme.name == "Custom Enzyme Name", (
-            "Enzyme custom name should be preserved"
-        )
+        assert (
+            enzyme.name == "Custom Enzyme Name"
+        ), "Enzyme custom name should be preserved"
 
         complex_species = updated_doc.filter_complexes(id="ES")[0]
-        assert complex_species.name == "Custom Complex Name", (
-            "Complex custom name should be preserved"
-        )
+        assert (
+            complex_species.name == "Custom Complex Name"
+        ), "Complex custom name should be preserved"
 
         # Verify that custom reaction names are preserved
         reaction = updated_doc.filter_reactions(id="v_cat")[0]
-        assert reaction.name == "Custom Catalytic Reaction", (
-            "Reaction custom name should be preserved"
-        )
+        assert (
+            reaction.name == "Custom Catalytic Reaction"
+        ), "Reaction custom name should be preserved"
 
         # Verify that kinetic laws are added/updated (equations should always be updated)
-        assert reaction.kinetic_law is not None, (
-            "Kinetic law should be added to existing reaction"
-        )
+        assert (
+            reaction.kinetic_law is not None
+        ), "Kinetic law should be added to existing reaction"
         # The equation may be formatted differently due to symbolic math normalization
         expected_equation = str(model.reactions["v_cat"].equation)
-        assert reaction.kinetic_law.equation == expected_equation, (
-            f"Kinetic law equation should be updated. Expected: {expected_equation}, Got: {reaction.kinetic_law.equation}"
-        )
+        assert (
+            reaction.kinetic_law.equation == expected_equation
+        ), f"Kinetic law equation should be updated. Expected: {expected_equation}, Got: {reaction.kinetic_law.equation}"
 
         # Verify that parameter names are preserved but numerical values are updated
         param = updated_doc.filter_parameters(id="k_cat")[0]
         assert param.value == 1.0, "Parameter value should be updated from model"
-        assert param.lower_bound == 0.0, (
-            "Parameter lower bound should be updated from model HDI"
-        )
-        assert param.upper_bound == 10.0, (
-            "Parameter upper bound should be updated from model HDI"
-        )
+        assert (
+            param.lower_bound == 0.0
+        ), "Parameter lower bound should be updated from model HDI"
+        assert (
+            param.upper_bound == 10.0
+        ), "Parameter upper bound should be updated from model HDI"
 
         # Verify equations are always updated
         ode_equations = updated_doc.filter_equations(equation_type=pe.EquationType.ODE)
@@ -361,9 +359,9 @@ class TestToEnzymeML:
 
         s_equation = updated_doc.filter_equations(species_id="S")[0]
         expected_s_equation = str(model.odes["S"].equation)
-        assert s_equation.equation == expected_s_equation, (
-            f"ODE equation should be updated. Expected: {expected_s_equation}, Got: {s_equation.equation}"
-        )
+        assert (
+            s_equation.equation == expected_s_equation
+        ), f"ODE equation should be updated. Expected: {expected_s_equation}, Got: {s_equation.equation}"
 
         # Verify assignment equations are also updated
         assignment_equations = updated_doc.filter_equations(
@@ -373,6 +371,6 @@ class TestToEnzymeML:
 
         e_tot_equation = updated_doc.filter_equations(species_id="E_tot")[0]
         expected_assignment_equation = str(model.assignments["E_tot"].equation)
-        assert e_tot_equation.equation == expected_assignment_equation, (
-            f"Assignment equation should be updated. Expected: {expected_assignment_equation}, Got: {e_tot_equation.equation}"
-        )
+        assert (
+            e_tot_equation.equation == expected_assignment_equation
+        ), f"Assignment equation should be updated. Expected: {expected_assignment_equation}, Got: {e_tot_equation.equation}"

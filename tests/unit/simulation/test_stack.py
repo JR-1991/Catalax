@@ -45,15 +45,15 @@ class TestStack:
 
         stack = sim_input.stack
 
-        assert isinstance(stack, MixedStack), (
-            "Stack should be MixedStack for mixed ODE/reaction system"
-        )
-        assert len(stack.ode_stack.modules) == 2, (
-            "ODE stack should have two modules when only constant ODEs present"
-        )
-        assert len(stack.reac_stack.modules) == 2, (
-            "Reaction stack should have two modules for the two reactions"
-        )
+        assert isinstance(
+            stack, MixedStack
+        ), "Stack should be MixedStack for mixed ODE/reaction system"
+        assert (
+            len(stack.ode_stack.modules) == 2
+        ), "ODE stack should have two modules when only constant ODEs present"
+        assert (
+            len(stack.reac_stack.modules) == 2
+        ), "Reaction stack should have two modules for the two reactions"
 
         expected_stoich_mat = jnp.array(
             [
@@ -62,9 +62,9 @@ class TestStack:
             ]
         )
         actual_stoich_mat = jnp.array(sim_input.stack.reac_stack.stoich_mat.tolist())
-        assert jnp.allclose(actual_stoich_mat, expected_stoich_mat), (
-            "Stoichiometric matrix should match expected bidirectional reaction pattern"
-        )
+        assert jnp.allclose(
+            actual_stoich_mat, expected_stoich_mat
+        ), "Stoichiometric matrix should match expected bidirectional reaction pattern"
 
         k1 = 1.0
         k2 = 2.0
@@ -83,9 +83,9 @@ class TestStack:
             y=state,
             args=(jnp.array([k1, k2, k3]), jnp.array([])),
         )
-        assert jnp.allclose(result, expected_result), (
-            "Mixed stack evaluation should correctly combine ODE and reaction contributions"
-        )
+        assert jnp.allclose(
+            result, expected_result
+        ), "Mixed stack evaluation should correctly combine ODE and reaction contributions"
 
     def test_ode_stack(self):
         """Test ODEStack creation and evaluation with simple ODE equations.
@@ -104,9 +104,9 @@ class TestStack:
         )
         stack = sim_input.stack
 
-        assert isinstance(stack, ODEStack), (
-            "Stack should be ODEStack for pure ODE system"
-        )
+        assert isinstance(
+            stack, ODEStack
+        ), "Stack should be ODEStack for pure ODE system"
         assert len(stack.modules) == 2, "ODE stack should have two modules for two ODEs"
 
         k1 = 1.0
@@ -128,9 +128,9 @@ class TestStack:
                 jnp.array([]),
             ),
         )
-        assert jnp.allclose(result, expected_result), (
-            "ODE stack should correctly evaluate derivative expressions"
-        )
+        assert jnp.allclose(
+            result, expected_result
+        ), "ODE stack should correctly evaluate derivative expressions"
 
     def test_reaction_stack(self):
         """Test ReactionStack creation and evaluation with bidirectional reactions.
@@ -159,15 +159,16 @@ class TestStack:
         )
         stack = sim_input.stack
 
-        assert isinstance(stack, ReactionStack), (
-            "Stack should be ReactionStack for pure reaction system"
-        )
-        assert len(stack.modules) == 2, (
-            "Reaction stack should have two modules for two reactions"
-        )
-        assert stack.stoich_mat.shape == (2, 2), (
-            "Stoichiometric matrix should be 2x2 for 2 reactions and 2 species"
-        )
+        assert isinstance(
+            stack, ReactionStack
+        ), "Stack should be ReactionStack for pure reaction system"
+        assert (
+            len(stack.modules) == 2
+        ), "Reaction stack should have two modules for two reactions"
+        assert stack.stoich_mat.shape == (
+            2,
+            2,
+        ), "Stoichiometric matrix should be 2x2 for 2 reactions and 2 species"
         assert jnp.allclose(
             stack.stoich_mat,
             jnp.array(
@@ -176,9 +177,7 @@ class TestStack:
                     [1.0, -1.0],
                 ]
             ),
-        ), (
-            "Stoichiometric matrix should correctly represent bidirectional s1 <-> s2 conversion"
-        )
+        ), "Stoichiometric matrix should correctly represent bidirectional s1 <-> s2 conversion"
 
         k1 = 1.0
         k2 = 2.0
@@ -199,6 +198,6 @@ class TestStack:
             args=(jnp.array([k1, k2]), jnp.array([])),
         )
 
-        assert jnp.allclose(result, expected_result), (
-            "Reaction stack should correctly compute net rates from stoichiometry and kinetics"
-        )
+        assert jnp.allclose(
+            result, expected_result
+        ), "Reaction stack should correctly compute net rates from stoichiometry and kinetics"

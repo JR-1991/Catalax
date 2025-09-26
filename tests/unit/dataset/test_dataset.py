@@ -48,12 +48,12 @@ class TestDataset:
             "Data shape should be (100,)"
         )  # type: ignore
 
-        assert dataset.measurements[0].initial_conditions == {"s1": 100.0}, (
-            "Initial conditions should be {'s1': 100.0}"
-        )
-        assert dataset.measurements[1].initial_conditions == {"s1": 200.0}, (
-            "Initial conditions should be {'s1': 200.0}"
-        )
+        assert dataset.measurements[0].initial_conditions == {
+            "s1": 100.0
+        }, "Initial conditions should be {'s1': 100.0}"
+        assert dataset.measurements[1].initial_conditions == {
+            "s1": 200.0
+        }, "Initial conditions should be {'s1': 200.0}"
 
 
 class TestDatasetPad:
