@@ -48,20 +48,17 @@ The model name serves important documentation purposes and appears in output fil
 Add states that participate in your system using flexible syntax options:
 
 ```python
-# Method 1: Comma-separated string (simplest for basic models)
-model.add_state("S, E, P, ES")
-
-# Method 2: Keyword arguments with descriptive names
-model.add_state(
+# Method 1: Keyword arguments with descriptive names
+model.add_states(
     S="Substrate",
     E="Enzyme", 
     P="Product",
     ES="Enzyme-Substrate Complex"
 )
 
-# Method 3: Dictionary unpacking for programmatic construction
+# Method 2: Dictionary unpacking for programmatic construction
 state_dict = {"I": "Inhibitor", "EI": "Enzyme-Inhibitor Complex"}
-model.add_state(**state_dict)
+model.add_states(**state_dict)
 ```
 
 **States naming considerations:**
@@ -71,16 +68,62 @@ model.add_state(**state_dict)
 - **Consistency**: Maintain consistent naming conventions across related models
 - **Biological meaning**: Choose symbols that reflect chemical reality and facilitate interpretation
 
-### Step 3: ODE Definition
+### Step 3a: Reaction Definition
 
-Define the differential equations that govern states dynamics:
+Define the reactions that govern states dynamics by either by providing a reaction scheme or by defining the reactants, products individually:
 
 ```python
-# Basic Michaelis-Menten kinetics
+# Method 1: By providing a reaction scheme
+model.add_reaction(
+    "S -> P",
+    symbol="r1",
+    equation="k_cat * E * S / (K_m + S)",
+)
+
+# Method 2: By defining the reactants and products individually
+model.add_reaction(
+    "S -> P",
+    symbol="r1",
+    reactants=[("E", 1), ("S", 1)],
+    products=[("P", 1)],
+)
+```
+
+**Key features of reaction definition:**
+
+- **Automatic parameter inference**: Parameters (k_cat, K_m) are automatically detected and added to the model
+- **Symbolic processing**: Equations are converted to SymPy expressions for mathematical manipulation
+- **Observable states**: By default, all states are observable; use `observable=False` for hidden states. In the case of using the scheme method, simply change the arrow to a double arrow to imply reversibility. For instance, `S -> P` becomes `S <-> P`.
+- **Validation**: The system checks for invalid states not yet added to the model.
+
+**Reaction scheme supported arrows:**
+
+- `->` (irreversible)
+- `<->` (reversible)
+- `=>` (irreversible)
+- `<=>` (reversible)
+- `<==>` (reversible)
+- `<===>` (reversible)
+- `>` (irreversible)
+
+### Step 3b: ODE Definition
+
+Define the differential equations that govern states dynamics by either using the `add_ode` method or the `add_odes` method:
+
+```python
+# Method 1: Individual ODEs
 model.add_ode("S", "-(k_cat * E * S) / (K_m + S)")
 model.add_ode("E", "0")  # Enzyme conservation
 model.add_ode("P", "(k_cat * E * S) / (K_m + S)")
 model.add_ode("ES", "0")  # Assuming rapid equilibrium
+
+# Method 2: Multiple ODEs at once
+model.add_odes(
+    S="-(k_cat * E * S) / (K_m + S)",
+    E="0",
+    P="(k_cat * E * S) / (K_m + S)",
+    ES="0"
+)
 ```
 
 **Key features of ODE definition:**
@@ -88,7 +131,7 @@ model.add_ode("ES", "0")  # Assuming rapid equilibrium
 - **Automatic parameter inference**: Parameters (k_cat, K_m) are automatically detected and added to the model
 - **Symbolic processing**: Equations are converted to SymPy expressions for mathematical manipulation
 - **Observable states**: By default, all states are observable; use `observable=False` for hidden states
-- **Validation**: The system prevents duplicate ODEs for the same state
+- **Validation**: The system checks for invalid states not yet added to the model.
 
 ### Step 4: Parameter Configuration
 
@@ -112,15 +155,21 @@ model.parameters["K_m"].name = "Michaelis constant"
 
 ### Constants and External Parameters
 
-Define time-invariant quantities that influence system behavior:
+Define time-invariant quantities that influence system behavior by either using the `add_constant` method or the `add_constants` method:
 
 ```python
 # Add constants that remain fixed during simulation
 model.add_constant("pH", "solution_pH")
 model.add_constant("temperature", "reaction_temperature") 
 
+# Add constants that remain fixed during simulation
+model.add_constants(
+    pH="solution_pH",
+    temperature="reaction_temperature"
+)
+
 # Constants can be accessed and used in ODEs
-model.add_ode("S", "-(k_cat * E * S * pH_factor) / (K_m + S)")
+model.add_ode("S", "-(k_cat * E * S * pH) / (K_m + S)")
 ```
 
 Constants are particularly useful for:
@@ -130,17 +179,20 @@ Constants are particularly useful for:
 
 ### Assignment Equations
 
-Create derived quantities that depend on other model components:
+Create derived quantities that depend on other model components by either using the `add_assignment` method or the `add_assignments` method:
 
 ```python
-# Define total enzyme concentration
+# Method 1: Individual assignments
 model.add_assignment("E_total", "E + ES + EI")
-
-# Calculate reaction velocity
 model.add_assignment("velocity", "(k_cat * ES)")
-
-# Define equilibrium constants
 model.add_assignment("K_eq", "k_forward / k_reverse")
+
+# Method 2: Multiple assignments at once
+model.add_assignments(
+    E_total="E + ES + EI",
+    velocity="(k_cat * ES)",
+    K_eq="k_forward / k_reverse"
+)
 ```
 
 Assignments enable:
@@ -253,17 +305,28 @@ assert len(loaded_model.parameters) == len(model.parameters)
 
 ### EnzymeML Integration
 
-Exchange models with the broader biochemical modeling community:
+Exchange models with the broader biochemical modeling community by using the [EnzymeML](https://enzymeml.org/) format. You can either create a new EnzymeML document from the model or update an existing EnzymeML document with the model's parameters:
+
+**Method 1: Create a new EnzymeML document from the model**
 
 ```python
 import pyenzyme as pe
 
 # Create EnzymeML document from model
-enzmldoc = pe.EnzymeMLDocument(name="Enzyme Study")
-model.update_enzymeml_parameters(enzmldoc)
+enzmldoc = model.to_enzymeml()
 
 # Load model from existing EnzymeML document
 enzymeml_model = ctx.Model.from_enzymeml(enzmldoc)
+```
+
+**Method 2: Update an existing EnzymeML document with the model's parameters**
+
+```python
+# Assume we have an existing EnzymeML document
+enzmldoc = pe.EnzymeMLDocument(name="Enzyme Study")
+
+# Update the existing EnzymeML document with the model's contents
+model.update_enzymeml_parameters(enzmldoc)
 ```
 
 The EnzymeML integration supports:
