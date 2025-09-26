@@ -126,6 +126,28 @@ class Model(CatalaxBase, Predictor, Surrogate):
         """Get the states of the model."""
         return self.states
 
+    def __call__(
+        self,
+        t: jax.Array,
+        y: jax.Array,
+        constants: Optional[jax.Array] = None,
+    ) -> jax.Array:
+        """Call the model to evaluate the system dynamics.
+
+        This method makes the model callable, allowing it to be used directly
+        as a function in ODE solvers. It evaluates the rates of change for
+        all states at a given time point.
+
+        Args:
+            t: Time point at which to evaluate the dynamics
+            y: Current state values as a JAX array
+            constants: Optional constant values as a JAX array
+
+        Returns:
+            JAX array containing the rates of change for all states
+        """
+        return self.rates(t, y, constants)
+
     def add_ode(
         self,
         state: str,
@@ -969,10 +991,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         self._in_axes = None
 
     # ! Helper methods
-    def reparametrize(
-        self,
-        **replacements: Dict[str, Expr | str | float | int | None],
-    ) -> "Model":
+    def reparametrize(self, **replacements) -> "Model":
         """Reparametrizes the model by substituting symbols in all equations with new expressions or values.
 
         This method performs symbolic substitution across all ODEs and assignments in the model.
