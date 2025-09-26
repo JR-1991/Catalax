@@ -25,11 +25,8 @@ from catalax.laws.enzymatic import michaelis_menten
 
 # Create model and add states
 model = ctx.Model(name="Enzyme Kinetics")
-model.add_states(
-    S="Substrate",
-    E="Enzyme", 
-    P="Product"
-)
+model.add_states(S="Substrate", P="Product")
+model.add_constants(E="Enzyme")
 ```
 
 ### Step 2: Generate the Kinetic Equation
@@ -75,26 +72,23 @@ from catalax.laws.enzymatic import michaelis_menten
 
 # 1. Create model and states
 model = ctx.Model(name="Michaelis-Menten Kinetics")
-model.add_states(S="Substrate", E="Enzyme", P="Product")
+model.add_states(S="Substrate", P="Product")
+model.add_constants(E="Enzyme")
 
 # 2. Generate kinetic equation with matching names
 equation = michaelis_menten(
-    e_t="E",     # Must match enzyme state name
-    s="S",       # Must match substrate state name  
+    e_t="E",  # Must match enzyme state name
+    s="S",  # Must match substrate state name
     k_cat="k_cat",
-    K_m="K_m"
+    K_m="K_m",
 )
 
 # 3. Add reaction
-model.add_reaction(
-    "S -> P", 
-    symbol="r1",
-    equation=equation
-)
+model.add_reaction("S -> P", symbol="r1", equation=equation)
 
 # 4. Set parameter values
-model.parameters.k_cat.value = 10.0
-model.parameters.K_m.value = 5.0
+model.parameters["k_cat"].value = 10.0
+model.parameters["K_m"].value = 5.0
 
 # 5. Create dataset and simulate
 dataset = ctx.Dataset.from_model(model)
