@@ -1,14 +1,293 @@
 from __future__ import annotations
 
-import re
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 import pyenzyme as pe
-
-from catalax.model.ode import ODE
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from catalax.model import Model
+
+
+def to_enzymeml(
+    model: Model,
+    enzmldoc: Optional[pe.EnzymeMLDocument] = None,
+) -> pe.EnzymeMLDocument:
+    """Convert a Catalax Model to a PyEnzyme EnzymeMLDocument.
+
+    This function transforms a Catalax model into an EnzymeML document format,
+    preserving all model components including states, parameters, reactions,
+    ODEs, and assignments. If an existing document is provided, it will be
+    updated with the model's information.
+
+    Args:
+        model: The Catalax model to convert
+        enzmldoc: Optional existing EnzymeML document to update. If None,
+                 creates a new document with the model's name
+
+    Returns:
+        An EnzymeMLDocument containing all the model's components
+
+    Example:
+        >>> import catalax as ctx
+        >>> import pyenzyme as pe
+        >>>
+        >>> model = ctx.Model(name="Michaelis-Menten")
+        >>> doc = to_enzymeml(model)
+        >>> # Or update existing document
+        >>> existing_doc = pe.EnzymeMLDocument(name="existing")
+        >>> updated_doc = to_enzymeml(model, existing_doc)
+    """
+    if enzmldoc is None:
+        enzmldoc = pe.EnzymeMLDocument(name=model.name)
+    else:
+        enzmldoc = enzmldoc.model_copy(deep=True)
+
+    _add_states_to_document(model, enzmldoc)
+    _add_parameters_to_document(model, enzmldoc)
+    _add_reactions_to_document(model, enzmldoc)
+    _add_odes_to_document(model, enzmldoc)
+    _add_assignments_to_document(model, enzmldoc)
+
+    return enzmldoc
+
+
+def _add_states_to_document(model: Model, enzmldoc: pe.EnzymeMLDocument) -> None:
+    """Add model states to the EnzymeML document as appropriate species types.
+
+    This function categorizes model states by their type and adds them to the
+    appropriate species collections in the EnzymeML document. States are added
+    as small molecules, proteins, or complexes based on their type attribute.
+
+    Args:
+        model: The Catalax model containing states to add
+        enzmldoc: The EnzymeML document to add states to
+
+    Note:
+        For existing species, preserve their names if already defined and only update
+        if the existing name is None, empty, or same as the ID.
+    """
+    for state in model.states.values():
+        state_id = str(state.symbol)
+
+        if state.type in ("small_molecule", "other", None):
+            existing = next(iter(enzmldoc.filter_small_molecules(id=state_id)), None)
+            if not existing:
+                enzmldoc.add_to_small_molecules(id=state_id, name=state.name)
+
+        elif state.type == "protein":
+            existing = next(iter(enzmldoc.filter_proteins(id=state_id)), None)
+            if not existing:
+                enzmldoc.add_to_proteins(id=state_id, name=state.name)
+
+        elif state.type == "complex":
+            existing = next(iter(enzmldoc.filter_complexes(id=state_id)), None)
+            if not existing:
+                enzmldoc.add_to_complexes(id=state_id, name=state.name)
+
+
+def _add_parameters_to_document(model: Model, enzmldoc: pe.EnzymeMLDocument) -> None:
+    """Add model parameters to the EnzymeML document with bounds and values.
+
+    This function transfers all parameters from the Catalax model to the EnzymeML
+    document, including their values, bounds, and uncertainty information. If HDI
+    (Highest Density Interval) data is available, it is used for bounds; otherwise,
+    the parameter's explicit bounds are used.
+
+    Args:
+        model: The Catalax model containing parameters to add
+        enzmldoc: The EnzymeML document to add parameters to
+
+    Note:
+        For existing parameters, preserve string fields (name, symbol) but update
+        numerical values (value, bounds).
+    """
+    for parameter in model.parameters.values():
+        param_id = str(parameter.symbol)
+
+        # Determine bounds from HDI if available, otherwise use parameter bounds
+        if parameter.hdi:
+            lower_bound = parameter.hdi.lower_50
+            upper_bound = parameter.hdi.upper_50
+        else:
+            lower_bound = parameter.lower_bound
+            upper_bound = parameter.upper_bound
+
+        existing = next(iter(enzmldoc.filter_parameters(id=parameter.name)), None)
+        if existing:
+            # Only update numerical values, preserve existing name/symbol if they exist
+            update_object(
+                existing,
+                name=parameter.name,
+                symbol=param_id,
+                value=parameter.value,
+                lower_bound=lower_bound,
+                upper_bound=upper_bound,
+                overwrite_strings=True,
+            )
+        else:
+            enzmldoc.add_to_parameters(
+                id=param_id,
+                name=parameter.name,
+                symbol=param_id,
+                value=parameter.value,
+                lower_bound=lower_bound,
+                upper_bound=upper_bound,
+            )
+
+
+def _add_reactions_to_document(model: Model, enzmldoc: pe.EnzymeMLDocument) -> None:
+    """Add model reactions to the EnzymeML document with kinetic laws.
+
+    This function converts Catalax reactions to EnzymeML format, including
+    reactants, products, stoichiometry, kinetic laws, and reversibility
+    information. Each reaction's equation is converted to a kinetic law.
+
+    Args:
+        model: The Catalax model containing reactions to add
+        enzmldoc: The EnzymeML document to add reactions to
+
+    Note:
+        For existing reactions, preserve their names if already defined and update
+        kinetic laws and stoichiometry.
+    """
+    for reaction in model.reactions.values():
+        reaction_id = str(reaction.symbol)
+
+        reactants = [
+            pe.ReactionElement(
+                species_id=str(reactant.state),
+                stoichiometry=reactant.stoichiometry,
+            )
+            for reactant in reaction.reactants
+        ]
+
+        products = [
+            pe.ReactionElement(
+                species_id=str(product.state),
+                stoichiometry=product.stoichiometry,
+            )
+            for product in reaction.products
+        ]
+
+        kinetic_law = pe.Equation(
+            species_id=f"v_{reaction_id}",
+            equation=str(reaction.equation),
+            equation_type=pe.EquationType.RATE_LAW,
+        )
+
+        existing = next(iter(enzmldoc.filter_reactions(id=reaction_id)), None)
+        if existing:
+            # Preserve existing name, but always update kinetic law and stoichiometry
+            update_object(
+                existing,
+                overwrite_strings=False,
+                reversible=reaction.reversible,
+                name=reaction.symbol,
+                id=reaction_id,
+                reactants=reactants,
+                products=products,
+                kinetic_law=kinetic_law,
+            )
+        else:
+            enzmldoc.add_to_reactions(
+                id=reaction_id,
+                name=reaction.symbol,
+                reactants=reactants,
+                products=products,
+                kinetic_law=kinetic_law,
+                reversible=reaction.reversible,
+            )
+
+
+def _add_odes_to_document(model: Model, enzmldoc: pe.EnzymeMLDocument) -> None:
+    """Add model ODEs to the EnzymeML document as equations.
+
+    This function converts Catalax ODE objects to EnzymeML equation format,
+    preserving the differential equation structure and associating each ODE
+    with its corresponding species.
+
+    Args:
+        model: The Catalax model containing ODEs to add
+        enzmldoc: The EnzymeML document to add ODEs to
+
+    Note:
+        Always updates equations since they are the core content.
+    """
+    for ode in model.odes.values():
+        species_id = str(ode.state.symbol)
+
+        existing = next(iter(enzmldoc.filter_equations(species_id=species_id)), None)
+        if existing:
+            update_object(
+                existing,
+                equation=str(ode.equation),
+                equation_type=pe.EquationType.ODE,
+            )
+        else:
+            enzmldoc.add_to_equations(
+                id=species_id,
+                species_id=species_id,
+                equation=str(ode.equation),
+                equation_type=pe.EquationType.ODE,
+            )
+
+
+def _add_assignments_to_document(model: Model, enzmldoc: pe.EnzymeMLDocument) -> None:
+    """Add model assignments to the EnzymeML document as assignment equations.
+
+    This function converts Catalax assignment rules to EnzymeML assignment
+    equations, which define algebraic relationships between variables.
+
+    Args:
+        model: The Catalax model containing assignments to add
+        enzmldoc: The EnzymeML document to add assignments to
+
+    Note:
+        Always updates equations since they are the core content.
+    """
+    for assignment in model.assignments.values():
+        assignment_id = str(assignment.symbol)
+
+        existing = next(iter(enzmldoc.filter_equations(species_id=assignment_id)), None)
+        if existing:
+            update_object(existing, equation=str(assignment.equation))
+        else:
+            enzmldoc.add_to_equations(
+                id=assignment_id,
+                species_id=assignment_id,
+                equation_type=pe.EquationType.ASSIGNMENT,
+                equation=str(assignment.equation),
+            )
+
+
+def update_object(
+    object: BaseModel,
+    overwrite_strings: bool = False,
+    **kwargs,
+) -> None:
+    """Update a Pydantic BaseModel object with the given keyword arguments.
+
+    This utility function selectively updates object attributes, with special
+    handling for string fields to preserve existing values when desired.
+
+    Args:
+        object: The Pydantic BaseModel object to update
+        overwrite_strings: If False, existing string values are preserved.
+                          If True, string values are updated with new values.
+        **kwargs: Keyword arguments representing attribute names and their new values
+
+    Note:
+        Non-string attributes are always updated regardless of the overwrite_strings
+        parameter.
+    """
+    for key, value in kwargs.items():
+        enzmld_value = getattr(object, key)
+
+        if isinstance(enzmld_value, str) and not overwrite_strings:
+            continue
+
+        setattr(object, key, value)
 
 
 def from_enzymeml(
@@ -317,71 +596,3 @@ def _transfer_parameters(model: Model, enzmldoc: pe.EnzymeMLDocument) -> None:
         model_param.constant = False  # Allow parameter to be optimized
         model_param.upper_bound = parameter.upper_bound  # type: ignore
         model_param.lower_bound = parameter.lower_bound  # type: ignore
-
-
-def _cleanup_unused_states_and_constants(model: Model) -> None:
-    """
-    Remove species from the model that are not referenced in any equations.
-
-    This function identifies species that are not used in any ODE, assignment
-    equations, or reactions and removes them from the model. This cleanup helps
-    maintain a minimal model with only the necessary species, improving
-    computational efficiency and model clarity.
-
-    The cleanup process:
-    1. Identifies species that participate in reactions
-    2. Identifies species that appear in ODE equations
-    3. Removes unused states and constants that don't appear in either
-
-    Args:
-        model: The Catalax model to clean up
-
-    Note:
-        Uses regex with word boundaries to ensure exact species name matches,
-        preventing false positives from partial string matches (e.g., 'A' vs 'ATP').
-    """
-    reacting_states = model.get_reacting_state_order()
-
-    # Find unused states and constants
-    unused_states = {
-        species
-        for species in model.states
-        if species not in reacting_states and not _is_in_odes(species, model.odes)
-    }
-
-    unused_constants = {
-        constant
-        for constant in model.constants
-        if constant not in reacting_states and not _is_in_odes(constant, model.odes)
-    }
-
-    # Remove unused species
-    for species in unused_states:
-        del model.states[species]
-
-    for constant in unused_constants:
-        del model.constants[constant]
-
-
-def _is_in_odes(state: str, odes: dict[str, ODE]) -> bool:
-    """
-    Check if a state is referenced in any ODE equation.
-
-    This function uses regex with word boundaries to ensure exact matches,
-    preventing false positives from partial string matches.
-
-    Args:
-        state: The state/species name to search for
-        odes: Dictionary of ODE objects to search through
-
-    Returns:
-        True if the state appears in any ODE equation, False otherwise
-
-    Example:
-        >>> odes = {'A': ODE('A', 'k1*B - k2*A')}
-        >>> _is_in_odes('A', odes)  # True
-        >>> _is_in_odes('B', odes)  # True
-        >>> _is_in_odes('C', odes)  # False
-    """
-    pattern = r"\b" + re.escape(state) + r"\b"
-    return any(re.search(pattern, str(ode.equation)) for ode in odes.values())
