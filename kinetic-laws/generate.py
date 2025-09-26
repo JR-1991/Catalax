@@ -180,6 +180,12 @@ def main():
             for category in sorted(categories.keys()):
                 module_name = sanitize_filename(category)
                 f.write(f"from . import {module_name}\n")
+
+            f.write("\n\n__all__ = [\n")
+            for category in sorted(categories.keys()):
+                module_name = sanitize_filename(category)
+                f.write(f'    "{module_name}",\n')
+            f.write("]\n")
     except IOError as e:
         print(f"Error: Could not write to {init_file}: {e}")
         sys.exit(1)
