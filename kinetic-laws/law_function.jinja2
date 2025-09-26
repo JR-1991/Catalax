@@ -1,0 +1,37 @@
+def {{ function_name }}(
+    {%- for species in species %}
+    {{ species.id.lower() }}: Annotated[str, "{{ species.shortDescription }}"]
+    {%- if not loop.last or parameters -%},{%- endif %}
+    {%- endfor %}
+    {%- for param in parameters %}
+    {{ param.id }}: Annotated[str, "{{ param.shortDescription }}"] = "{{ param.id }}"
+    {%- if not loop.last -%},{%- endif %}
+    {%- endfor %}
+) -> Expr:
+    """{{ description }}
+    
+    Args:
+    {%- for species in species %}
+        {{ species.id.lower() }} (str): {{ species.shortDescription }}
+    {%- endfor %}
+    {%- for param in parameters %}
+        {{ param.id }} (str): {{ param.shortDescription }}
+    {%- endfor %}
+        
+    Returns:
+        str: The kinetic law equation as a string
+    """
+    equation = sympify("{{ equation }}", locals=LOCALS)
+    
+    substitutions = {}
+    {%- for species in species %}
+    substitutions["{{ species.id }}"] = {{ species.id.lower() }}
+    {%- endfor %}
+    {%- for param in parameters %}
+    substitutions["{{ param.id }}"] = {{ param.id }}
+    {%- endfor %}
+    
+    for original, replacement in substitutions.items():
+        equation = equation.subs(original, replacement)
+    
+    return equation

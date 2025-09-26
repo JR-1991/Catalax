@@ -1,0 +1,3882 @@
+[
+    {
+      "id": "SBO:0000047",
+      "name": "Zeroth order irreversible reactions",
+      "category": "Mass Action Rate Law",
+      "equation": "k",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities.  The reaction scheme does not include any reverse process that creates the reactants from the products. The change of a product quantity is constant.  It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k",
+          "symbol": "k",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        }
+      ],
+      "species": []
+    },
+    {
+      "id": "SBO:0000333",
+      "name": "Monoexponential decay rate law",
+      "category": "Mass Action Rate Law",
+      "equation": "(R)/(l)",
+      "description": "Monotonic decrease of a quantity proportionally to its value.",
+      "parameters": [
+        {
+          "id": "l",
+          "symbol": "l",
+          "shortDescription": "Half-life of an exponential decay",
+          "longDescription": "Time taken by a quantity decreasing according to a mono-exponential decay to be divided by two. Sometimes called t1/2."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000052",
+      "name": "Second order irreversible reactions, one reactant",
+      "category": "Mass Action Rate Law",
+      "equation": "k*R^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does not include any reverse process that creates the reactants from the products. The change of a product quantity is proportional to the square of one reactant quantity. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k",
+          "symbol": "k",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000054",
+      "name": "Second order irreversible reactions, two reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k*R_1*R_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does not include any reverse process that creates the reactants from the products. The change of a product quantity is proportional to the product of two reactant quantities. It is to be used in a reaction modelled using a continuous framework.  ",
+      "parameters": [
+        {
+          "id": "k",
+          "symbol": "k",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000057",
+      "name": "Third order irreversible reactions, one reactant",
+      "category": "Mass Action Rate Law",
+      "equation": "k*R^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does not include any reverse process that creates the reactants from the products, and the change of a product quantity is proportional to the cube of one reactant quantity. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k",
+          "symbol": "k",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000059",
+      "name": "Third order irreversible reactions, two reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k*R_1^2*R_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does not include any reverse process that creates the reactants from the products. The change of a product quantity is proportional to the quantity of one reactant and the square of the quantity of the other reactant. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k",
+          "symbol": "k",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000061",
+      "name": "Third order irreversible reactions, three reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k*R_1*R_2*R_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does not include any reverse process that creates the reactants from the products, and the change of a product quantity is proportional to the product of three reactant quantities. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k",
+          "symbol": "k",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000560",
+      "name": "First order irreversible reactions, single essential stimulator",
+      "category": "Mass Action Rate Law",
+      "equation": "k*A",
+      "description": "Reaction scheme in which the reaction velocity is direct proportional to the activity or concentration of a single molecular species. The reaction scheme does not include any reverse process that creates the reactants from the products. The change of a product quantity is proportional to the quantity of the stimulator. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k",
+          "symbol": "k",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "A",
+          "role": "Activator",
+          "required": true,
+          "shortDescription": "Concentration of activator",
+          "longDescription": "The amount of a specific activator entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000070",
+      "name": "Zeroth order forward, first order reverse, reversible reactions",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f-k_r*P",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities.  The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is constant. The rate of the reverse process is proportional to the quantity of one product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000072",
+      "name": "Zeroth order forward, second order reverse, reversible reactions, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f-k_r*P^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities.  The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is constant. The rate of the reverse process is proportional to the square of one product quantity. It is to be used in a reaction modelled using a continuous framework.\n\n",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000073",
+      "name": "Zeroth order forward, second order reverse, reversible reactions, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f-k_r*P_1*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities.  The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is constant. The rate of the reverse process is proportional to the product of two product quantities. It is to be used in a reaction modelled using a continuous framework.\n",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000075",
+      "name": "Zeroth order forward, third order reverse, reversible reactions, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f-k_r*P^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities.  The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is constant. The rate of the reverse process is proportional to the cube of one product quantity. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000076",
+      "name": "Zeroth order forward, third order reverse, reversible reactions, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f-k_r*P_1*P_2^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities.  The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is constant. The rate of the reverse process is proportional to the quantity of one product and the square of the quantity of the other product. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000077",
+      "name": "Zeroth order forward, third order reverse, reversible reactions, three products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f-k_r*P_1*P_2*P_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities.  The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is constant. The rate of the reverse process is proportional to the product of three product quantities. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_3",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000079",
+      "name": "First order forward, zeroth order reverse, reversible reactions",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R-k_r",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant. The rate of the reverse process is constant. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000080",
+      "name": "First order forward, first order reverse, reversible reactions",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R-k_r*P",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant. The rate of the reverse process is proportional to the quantity of one product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000082",
+      "name": "First order forward, second order reverse, reversible reactions, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R-k_r*P^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant. The rate of the reverse process is proportional to the square of one product quantity.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000083",
+      "name": "First order forward, second order reverse, reversible reactions, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R-k_r*P_1*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant. The rate of the reverse process is proportional to the product of two product quantities.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000085",
+      "name": "First order forward, third order reverse, reversible reactions, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R-k_r*P^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant. The rate of the reverse process is proportional to the cube of one product quantity. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000086",
+      "name": "First order forward, third order reverse, reversible reactions, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R-k_r*P_1^2*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant. The rate of the reverse process is proportional to the quantity of one product and the square of the quantity of the other product. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000087",
+      "name": "First order forward, third order reverse, reversible reactions, three products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R-k_r*P_1*P_2*P_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant. The rate of the reverse process is proportional to the product of three product quantities. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving only one reactant. This parameter encompasses all the contributions to the velocity except the quantity of the reactant. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_3",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000090",
+      "name": "Second order forward, zeroth order reverse, reversible reactions, one reactant",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^2-k_r",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the square of one reactant quantity. The rate of the reverse process is constant. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000091",
+      "name": "Second order forward, first order reverse, reversible reactions, one reactant",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^2-k_r*P",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the square of one reactant quantity. The rate of the reverse process is proportional to the quantity of one product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000093",
+      "name": "Second order forward, second order reverse, reversible reactions, one reactant, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^2-k_r*P^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the square of one reactant quantity. The rate of the reverse process is proportional to the square of one product quantity.  It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000094",
+      "name": "Second order forward, second order reverse, reversible reactions, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^2-k_r*P_1*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the square of one reactant quantity. The rate of the reverse process is proportional to the product of two product quantities.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000096",
+      "name": "Second order forward, third order reverse, reversible reactions, one reactant, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^2-k_r*P^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the square of one reactant quantity. The rate of the reverse process is proportional to the cube of one product quantity. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000097",
+      "name": "Second order forward, third order reverse, reversible reactions, one reactant, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^2-k_r*P_1^2*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the square of one reactant quantity. The rate of the reverse process is proportional to the quantity of one product and the square of the quantity of the other product. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000098",
+      "name": "Second order forward, third order reverse, reversible reactions, one reactant, three products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^2-k_r*P_1*P_2*P_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the square of one reactant quantity. The rate of the reverse process is proportional to the product of three product quantities. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_3",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000100",
+      "name": "Second order forward, zeroth order reverse, reversible reactions, two reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2-k_r",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of two reactant quantities. The rate of the reverse process is constant. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000101",
+      "name": "Second order forward, first order reverse, reversible reactions, two reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2-k_r*P",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of two reactant quantities. The rate of the reverse process is proportional to the quantity of one product. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000103",
+      "name": "Second order forward, second order reverse, reversible reactions, two reactants, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2-k_r*P^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of two reactant quantities. The rate of the reverse process is proportional to the square of one product quantity.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000104",
+      "name": "Second order forward, second order reverse, reversible reactions, two reactants, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2-k_r*P_1*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of two reactant quantities. The rate of the reverse process is proportional to the product of two product quantities.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000106",
+      "name": "Second order forward, third order reverse, reversible reactions, two reactants, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2-k_r*P^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of two reactant quantities. The rate of the reverse process is proportional to the cube of one product quantity. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000107",
+      "name": "Second order forward, third order reverse, reversible reactions, two reactants, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2-k_r*P_1^2*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of two reactant quantities. The rate of the reverse process is proportional to the quantity of one product and the square of the quantity of the other product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000108",
+      "name": "Second order forward, third order reverse, reversible reactions, two reactants, three products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2-k_r*P_1*P_2*P_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of two reactant quantities. The rate of the reverse process is proportional to the product of three product quantities. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving two reactants.  This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_3",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000111",
+      "name": "Third order forward, zeroth order reverse, reversible reactions, two reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant and the square of quantity of the other reactant. The rate of the reverse process is constant. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000112",
+      "name": "Third order forward, first order reverse, reversible reactions, two reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r*P",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant and the square of quantity of the other reactant. The rate of the reverse process is proportional to the quantity of one product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000114",
+      "name": "Third order forward, second order reverse, reversible reactions, two reactants, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r*P^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant and the square of quantity of the other reactant. The rate of the reverse process is proportional to the square of one product quantity.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000115",
+      "name": "Third order forward, second order reverse, reversible reactions, two reactants, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r*P_1*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant and the square of quantity of the other reactant. The rate of the reverse process is proportional to the product of two product quantities.  It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000117",
+      "name": "Third order forward, third order reverse, reversible reactions, two reactants, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r*P^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant and the square of quantity of the other reactant. The rate of the reverse process is proportional to the cube of one product quantity. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000118",
+      "name": "Third order forward, third order reverse, reversible reactions, two reactants, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r*P_1^2*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the quantity of one reactant and the square of quantity of the other reactant. The rate of the reverse process is proportional to the quantity of one product and the square of the quantity of the other product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000119",
+      "name": "Third order forward, third order reverse, reversible reactions, two reactants, three products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r*P_1*P_2*P_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the  quantity of one reactant and the square of quantity of the other reactant. The rate of the reverse process is proportional to the product of three product quantities. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_3",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000121",
+      "name": "Third order forward, zeroth order reverse, reversible reactions, three reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1^2*R_2-k_r",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of three reactant quantities. The rate of the reverse process is constant. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000122",
+      "name": "Third order forward, first order reverse, reversible reactions, three reactants",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2*R_3-k_r*P",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of three reactant quantities. The rate of the reverse process is proportional to the quantity of one product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000124",
+      "name": "Third order forward, second order reverse, reversible reactions, three reactants, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2*R_3-k_r*P^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of three reactant quantities. The rate of the reverse process is proportional to the square of one product quantity.  It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000125",
+      "name": "Third order forward, second order reverse, reversible reactions, three reactants, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2*R_3-k_r*P_1*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of three reactant quantities. The rate of the reverse process is proportional to the product of two product quantities.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000127",
+      "name": "Third order forward, third order reverse, reversible reactions, three reactants, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2*R_3-k_r*P^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of three reactant quantities. The rate of the reverse process is proportional to the cube of one product quantity. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000128",
+      "name": "Third order forward, third order reverse, reversible reactions, three reactants, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2*R_3-k_r*P_1^2*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of three reactant quantities. The rate of the reverse process is proportional to the quantity of one product and the square of the quantity of the other product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000129",
+      "name": "Third order forward, third order reverse, reversible reactions, three reactants, three products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R_1*R_2*R_3-k_r*P_1*P_2*P_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the product of three reactant quantities. The rate of the reverse process is proportional to the product of three product quantities. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R_1",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_2",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "R_3",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_3",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000131",
+      "name": "Third order forward, zeroth order reverse, reversible reactions, one reactant",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^3-k_r",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the cube of one reactant quantity. The rate of the reverse process is constant. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Forward zeroth order rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction independant of the reactant quantities. This parameter encompasses all the contributions to the velocity. It is to be used in a reaction modelled using a continuous framework. "
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000132",
+      "name": "Third order forward, first order reverse, reversible reactions, one reactant",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^3-k_r*P",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the cube of one reactant quantity. The rate of the reverse process is proportional to the quantity of one product. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse unimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000134",
+      "name": "Third order forward, second order reverse, reversible reactions, one reactant, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^3-k_r*P^2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the cube of one reactant quantity. The rate of the reverse process is proportional to the square of one product quantity.  It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000135",
+      "name": "Third order forward, second order reverse, reversible reactions, one reactant, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^3-k_r*P_1*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the cube of one reactant quantity. The rate of the reverse process is proportional to the product of two product quantities.  It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse bimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving only one product. This parameter encompasses all the contributions to the velocity except the quantity of the product. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000137",
+      "name": "Third order forward, third order reverse, reversible reactions, one reactant, one product",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^3-k_r*P^3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the cube of one reactant quantity. The rate of the reverse process is proportional to the cube of one product quantity. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000138",
+      "name": "Third order forward, third order reverse, reversible reactions, one reactant, two products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^3-k_r*P_1^2*P_2",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the cube of one reactant quantity. The rate of the reverse process is proportional to the quantity of one product and the square of the quantity of the other product. It is to be used in a reaction modelled using a continuous framework. ",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000139",
+      "name": "Third order forward, third order reverse, reversible reactions, one reactant, three products",
+      "category": "Mass Action Rate Law",
+      "equation": "k_f*R^3-k_r*P_1*P_2*P_3",
+      "description": "Reaction scheme where the products are created from the reactants and the change of a product quantity is proportional to the product of reactant activities. The reaction scheme does include a reverse process that creates the reactants from the products. The rate of the forward process is proportional to the cube of one reactant quantity. The rate of the reverse process is proportional to the product of three product quantities. It is to be used in a reaction modelled using a continuous framework.",
+      "parameters": [
+        {
+          "id": "k_f",
+          "symbol": "k_f",
+          "shortDescription": "Forward trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the forward velocity of a chemical reaction involving three reactants. This parameter encompasses all the contributions to the velocity except the quantity of the reactants. It is to be used in a reaction modelled using a continuous framework."
+        },
+        {
+          "id": "k_r",
+          "symbol": "k_r",
+          "shortDescription": "Reverse trimolecular rate constant.",
+          "longDescription": "Numerical parameter that quantifies the reverse velocity of a chemical reaction involving three products. This parameter encompasses all the contributions to the velocity except the quantity of the products. It is to be used in a reaction modelled using a continuous framework."
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        },
+        {
+          "id": "P_1",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_2",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_3",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000195",
+      "name": "Hill-type rate law, microscopic form",
+      "category": "Hill-type Rate Law",
+      "equation": "(V_max*R^h)/(K^h+R^h)",
+      "description": "Hill equation rewritten by creating a pseudo-microscopic constant, equal to the Hill constant powered to the opposite of the Hill coefficient.",
+      "parameters": [
+        {
+          "id": "V_max",
+          "symbol": "V_max",
+          "shortDescription": "Maximal velocity",
+          "longDescription": "Synonym: Vmax "
+        },
+        {
+          "id": "K",
+          "symbol": "K",
+          "shortDescription": "Pseudo-dissociation constant",
+          "longDescription": "Dissociation constant equivalent to an intrinsic microscopic dissociation constant, but obtained from an averaging process, for instance by extracting the root of a Hill constant. "
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000198",
+      "name": "Hill-type rate law, reduced form",
+      "category": "Hill-type Rate Law",
+      "equation": "(V_max*R^h)/(1+R^h)",
+      "description": "Hill equation rewritten by replacing the concentration of reactant with its reduced form, that is the concentration divide by a pseudo-microscopic constant, equal to the Hill constant powered to the opposite of the Hill coefficient.",
+      "parameters": [
+        {
+          "id": "V_max",
+          "symbol": "V_max",
+          "shortDescription": "Maximal velocity",
+          "longDescription": "Synonym: Vmax "
+        }
+      ],
+      "species": [
+        {
+          "id": "R",
+          "role": "Reactant",
+          "required": true,
+          "shortDescription": "Concentration of reactant",
+          "longDescription": "The amount of a specific entity pool reactant present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000029",
+      "name": "Michaelis-Menten",
+      "category": "Enzymatic Rate Law",
+      "equation": "(k_cat*E_t*S)/(K_m+S)",
+      "description": "First general rate equation for reactions involving enzymes, it was presented in \"Victor Henri. Lois Generales de l'Action des Diastases. Paris, Hermann, 1903.\". The reaction is assumed to be made of a reversible of the binding of the substrate to the enzyme, followed by the breakdown of the complex generating the product. Ten years after Henri, Michaelis and Menten presented a variant of his equation, based on the hypothesis that the dissociation rate of the substrate was much larger than the rate of the product generation. Leonor Michaelis, Maud Menten (1913). Die Kinetik der Invertinwirkung, Biochem. Z. 49:333-369.",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_m",
+          "symbol": "K_m",
+          "shortDescription": "Michaelis constant in quasi-steady state situation",
+          "longDescription": "Michaelis constant derived using a steady-state assumption for enzyme-substrate and enzyme-product intermediates. For example see Briggs-Haldane equation (SBO:0000031)."
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000031",
+      "name": "Briggs-Haldane rate law",
+      "category": "Enzymatic Rate Law",
+      "equation": "(k_cat*E_t*S)/(K_m+S)",
+      "description": "The Briggs-Haldane rate law is a general rate equation that does not require the restriction of equilibrium of Henri-Michaelis-Menten or irreversible reactions of Van Slyke, but instead make the hypothesis that the complex enzyme-substrate is in quasi-steady-state. Although of the same form than the Henri-Michaelis-Menten equation, it is semantically different since Km now represents a pseudo-equilibrium constant, and is equal to the ratio between the rate of consumption of the complex (sum of dissociation of substrate and generation of product) and the association rate of the enzyme and the substrate.",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_m",
+          "symbol": "K_m",
+          "shortDescription": "Michaelis constant in quasi-steady state situation",
+          "longDescription": "Michaelis constant derived using a steady-state assumption for enzyme-substrate and enzyme-product intermediates. For example see Briggs-Haldane equation (SBO:0000031)."
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000199",
+      "name": "Normalised enzymatic rate law for unireactant enzymes",
+      "category": "Enzymatic Rate Law",
+      "equation": "(k_cat*S)/(K_s+S)",
+      "description": "Kinetics of enzymes that react only with one substance, their substrate. The total enzyme concentration is considered to be equal to 1, therefore the maximal velocity equals the catalytic constant.",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000151",
+      "name": "Irreversible non-modulated non-interacting bireactant enzymes",
+      "category": "Enzymatic Rate Law",
+      "equation": "(E_t*k_p*(S_a)/(K_1)*(S_b)/(K_2))/((1+(S_a)/(K_1))*(1+(S_b)/(K_2)))",
+      "description": "Kinetics of enzymes that react with two substances, their substrates, that bind independently. The enzymes do not catalyse the reactions in both directions.  ",
+      "parameters": [
+        {
+          "id": "k_p",
+          "symbol": "k_p",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_1",
+          "symbol": "K_1",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_2",
+          "symbol": "K_2",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S_a",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "S_b",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000152",
+      "name": "Irreversible non-modulated non-interacting trireactant enzymes",
+      "category": "Enzymatic Rate Law",
+      "equation": "(E_t*k_p*(S_a)/(K_1)*(S_b)/(K_2)*(S_3)/(K_3))/((1+(S_a)/(K_1))*(1+(S_b)/(K_2))*(1+(S_3)/(K_3)))",
+      "description": "Kinetics of enzymes that react with three substances, their substrates, that bind independently. The enzymes do not catalyse the reactions in both directions.",
+      "parameters": [
+        {
+          "id": "k_p",
+          "symbol": "k_p",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_1",
+          "symbol": "K_1",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_2",
+          "symbol": "K_2",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_3",
+          "symbol": "K_3",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S_a",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "S_b",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "S_3",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000437",
+      "name": "Reversible Iso Uni-Uni",
+      "category": "Enzymatic Rate Law",
+      "equation": "(V_f*(S-(P)/(K_eq)))/(S*(1+(P)/(K_i))+K_ms*(1+(P)/(K_mp)))",
+      "description": "Enzyme catalysed reaction involving one substrate and one product. Unlike the reversible uni-uni mechanism (SBO:0000326), the mechanism assumes an enzyme intermediate. Therefore, the free enzyme generated after the release of product from enzyme-product complex is not the same form as that which bind the substrate to form enzyme-substrate complex. Some permeases are thought to follow this mechanism, such that isomerization in the membrane may be accomplished through re-orientation in the membrane.",
+      "parameters": [
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "K_i",
+          "symbol": "K_i",
+          "shortDescription": "Isoinhibition constant",
+          "longDescription": "Inhibitory constant for the binding of a given ligand with an isomeric form of an enzyme.\n"
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_eq",
+          "symbol": "K_eq",
+          "shortDescription": "Equilibrium constant",
+          "longDescription": "Synonym: Keq "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000271",
+      "name": "Competitive inhibition of irreversible unireactant enzymes by two exclusive inhibitors",
+      "category": "Inhibition",
+      "equation": "(k_cat*E_t*S)/(K_s*(1+(I_a)/(K_ia)+(I_b)/(K_ib))+S)",
+      "description": "Inhibition of a unireactant enzyme by two inhibitors that bind to the free enzyme on the same binding site than the substrate.  The enzymes do not catalyse the reactions in both directions. ",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_ia",
+          "symbol": "K_ia",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_ib",
+          "symbol": "K_ib",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "I_a",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        },
+        {
+          "id": "I_b",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000388",
+      "name": "Inhibition of irreversible unireactant enzymes by single competing substrate with product inhibition",
+      "category": "Inhibition",
+      "equation": "(k_cat*E_t*S)/(K_s*(1+(S_a)/(K_sa)+(P)/(K_pa)+(P_a)/(K_pa))+S)",
+      "description": "Inhibition of a unireactant enzyme by a competing substrate (Sa) that binds to the free enzyme on the same binding site, and competitive inhibition by a product (P) and an alternative product (Pa). The enzyme does not catalyse the reactions in both directions.\n ",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_sa",
+          "symbol": "K_sa",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_p",
+          "symbol": "K_p",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_pa",
+          "symbol": "K_pa",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "S_a",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_a",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000387",
+      "name": "Competitive inhibition of irreversible unireactant enzyme by product",
+      "category": "Inhibition",
+      "equation": "(k_cat*E_t*S)/(K_s*(1+(P)/(K_p))+S)",
+      "description": "Inhibition of a unireactant enzyme by a competing product (P) that binds to the free enzyme on the same binding site. The enzyme does not catalyse the reactions in both directions.\n",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_p",
+          "symbol": "K_p",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000274",
+      "name": "Simple competitive inhibition of irreversible unireactant enzymes by two non-exclusive, non-cooperative inhibitors",
+      "category": "Inhibition",
+      "equation": "(k_cat*E_t*S)/(K_s*(1+(I_a)/(K_ia)+(I_b)/(K_ib)+(I_a*I_b)/(K_ia*K_ib))+S)",
+      "description": "Inhibition of a unireactant enzyme by two inhibitors that can bind independently once to the free enzyme and preclude the binding of the substrate. The enzymes do not catalyse the reactions in both directions.",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_ia",
+          "symbol": "K_ia",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_ib",
+          "symbol": "K_ib",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "I_a",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        },
+        {
+          "id": "I_b",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000266",
+      "name": "Simple irreversible non-competitive inhibition of unireactant enzymes",
+      "category": "Inhibition",
+      "equation": "(k_cat*E_t*S)/(S*(1+(I)/(K_i))+K_s*(1+(I)/(K_i)))",
+      "description": "Inhibition of a unireactant enzyme by one inhibitor that can bind to the complex enzyme-substrate and the free enzyme with the same equilibrium constant, and totally prevent the catalysis.",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_i",
+          "symbol": "K_i",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "I",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000277",
+      "name": "Non-competitive inhibition of irreversible unireactant enzymes by two exclusively binding inhibitors",
+      "category": "Inhibition",
+      "equation": "(k_cat*E_t*S)/(S*(1+(I_a)/(K_ia)+(I_b)/(K_ib))+K_s*(1+(I_a)/(K_ia)+(I_b)/(K_ib)))",
+      "description": "Inhibition of unireactant enzymes by two inhibitors that can bind to the complex enzyme-substrate and the free enzyme with the same equilibrium constant and totally prevent the catalysis.  ",
+      "parameters": [
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Catalytic rate constant",
+          "longDescription": "Synonym: turnover number "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "K_ia",
+          "symbol": "K_ia",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_ib",
+          "symbol": "K_ib",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        },
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "I_a",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        },
+        {
+          "id": "I_b",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000441",
+      "name": "Mixed-type inhibition of reversible enzymes by mutually exclusive inhibitors",
+      "category": "Inhibition",
+      "equation": "(V_f*(S)/(K_ms)-V_r*(P)/(K_mp))/(1+(I)/(K_is)+((S)/(K_ms)+(P)/(K_mp))*(1+(I)/(K_ic)))",
+      "description": "Reversible inhibition of a unireactant enzyme by inhibitors that can bind to the enzyme-substrate complex and to the free enzyme with the same equilibrium constant. The inhibitor is noncompetitive with the substrate.",
+      "parameters": [
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "V_r",
+          "symbol": "V_r",
+          "shortDescription": "Reverse maximal velocity",
+          "longDescription": "Synonym: Vmaxr "
+        },
+        {
+          "id": "K_is",
+          "symbol": "K_is",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_ic",
+          "symbol": "K_ic",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "I",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000440",
+      "name": "Irreversible allosteric inhibition",
+      "category": "Inhibition",
+      "equation": "(V*S*(K_s+S)^(n-1))/(L*(K_s*(1+(I)/(K_i)))^n+(K_s+S)^n)",
+      "description": "Enzymatic rate law which follows from the allosteric concerted model (symmetry model or MWC model).This states that enzyme subunits can assume one of two conformational states (relaxed or tense), and that the state of one subunit is shared or enforced on the others. The binding of a ligand to a site other than that bound by the substrate (active site) can shift the conformation from one state to the other. L represents the equilibrium constant between active and inactive states of the enzyme, and n represents the number of binding sites for the substrate and inhibitor.",
+      "parameters": [
+        {
+          "id": "V",
+          "symbol": "V",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Dissociation constant",
+          "longDescription": "Synonym: Kd "
+        },
+        {
+          "id": "L",
+          "symbol": "L",
+          "shortDescription": "Equilibrium constant",
+          "longDescription": "Synonym: Keq "
+        },
+        {
+          "id": "K_i",
+          "symbol": "K_i",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "I",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000445",
+      "name": "Irreversible substrate activation",
+      "category": "Activation",
+      "equation": "(V*((S)/(K_sa))^2)/(1+(S)/(K_sc)+(S)/(K_sa)+((S)/(K_sa))^2)",
+      "description": "This enzymatic rate law is available only for irreversible reactions, with one substrate and one product. There is a second binding site for the enzyme which, when occupied, activates the enzyme. Substrate binding at either site can occur at random.\n",
+      "parameters": [
+        {
+          "id": "V",
+          "symbol": "V",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_sc",
+          "symbol": "K_sc",
+          "shortDescription": "Dissociation constant",
+          "longDescription": "Synonym: Kd "
+        },
+        {
+          "id": "K_sa",
+          "symbol": "K_sa",
+          "shortDescription": "Dissociation constant",
+          "longDescription": "Synonym: Kd "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000446",
+      "name": "Irrreversible mixed activation",
+      "category": "Activation",
+      "equation": "(V*S*A)/(K_ms*(K_as+A)+S*(K_ac+A))",
+      "description": "Enzymatic rate law where the activator enhances the rate of reaction through specific and catalytic effects, which increase the apparent limiting rate and decrease apparent Michaelis constant. The activator can bind irreversibly both free enzyme and enzyme-substrate complex, while the substrate can bind only to enzyme-activator complex. Catalytic activity is seen only when enzyme, substrate and activator are complexed.",
+      "parameters": [
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "V",
+          "symbol": "V",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_as",
+          "symbol": "K_as",
+          "shortDescription": "Activation constant",
+          "longDescription": "Synonym: Kx "
+        },
+        {
+          "id": "K_ac",
+          "symbol": "K_ac",
+          "shortDescription": "Activation constant",
+          "longDescription": "Synonym: Kx "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "A",
+          "role": "Activator",
+          "required": true,
+          "shortDescription": "Concentration of activator",
+          "longDescription": "The amount of a specific activator entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000449",
+      "name": "Irreversible catalytic activation with one activator",
+      "category": "Activation",
+      "equation": "(V*S*A)/((K_ms+S)*(K_a+A))",
+      "description": "Enzymatic rate law where an activator enhances the rate of reaction by increasing the apparent limiting rate; The activator binding to the enzyme-substrate complex (irreversibly) is required for enzyme catalytic activity (to generate the product). ",
+      "parameters": [
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "V",
+          "symbol": "V",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_a",
+          "symbol": "K_a",
+          "shortDescription": "Activation constant",
+          "longDescription": "Synonym: Kx "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "A",
+          "role": "Activator",
+          "required": true,
+          "shortDescription": "Concentration of activator",
+          "longDescription": "The amount of a specific activator entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000450",
+      "name": "Irreversible specific activation",
+      "category": "Activation",
+      "equation": "(V*S*A)/(K_ms*K_a+(K_ms+S)*A)",
+      "description": "Enzymatic rate law for one substrate, one product and one modifier which acts as an activator. The activator enhances the rate of reaction by decreasing the apparent Michaelis constant. The activator must bind to the enzyme before the enzyme can bind the substrate. ",
+      "parameters": [
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "V",
+          "symbol": "V",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_a",
+          "symbol": "K_a",
+          "shortDescription": "Activation constant",
+          "longDescription": "Synonym: Kx "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "A",
+          "role": "Activator",
+          "required": true,
+          "shortDescription": "Concentration of activator",
+          "longDescription": "The amount of a specific activator entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000452",
+      "name": "Reversible competitive inhibition by one inhibitor",
+      "category": "Inhibition",
+      "equation": "(V_f*(S)/(K_ms)-V_r*(P)/(K_mp))/(1+(S)/(K_ms)+(P)/(K_mp)+(I)/(K_i))",
+      "description": "This enzymatic rate law involves one substrate, one product and one modifier. The modifier acts as a competitive inhibitor with the substrate at the enzyme binding site; The modifier (inhibitor) reversibly bound to the enzyme blocks access to the substrate. The inhibitor has the effect of increasing the apparent Km. ",
+      "parameters": [
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "V_r",
+          "symbol": "V_r",
+          "shortDescription": "Reverse maximal velocity",
+          "longDescription": "Synonym: Vmaxr "
+        },
+        {
+          "id": "K_i",
+          "symbol": "K_i",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "I",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000453",
+      "name": "Reversible empirical allosteric inhibition by one inhibitor",
+      "category": "Inhibition",
+      "equation": "(V_f*(S)/(K_ms)-V_r*(P)/(K_mp))/(1+(S)/(K_ms)+(P)/(K_mp)+((I)/(K_i))^n)",
+      "description": "Enzymatic rate law where the reversible binding of one ligand decreases the affinity for substrate at other active sites. The ligand does not bind the same site as the substrate on the enzyme. This is an empirical equation, where n represents the Hill coefficient.",
+      "parameters": [
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "V_r",
+          "symbol": "V_r",
+          "shortDescription": "Reverse maximal velocity",
+          "longDescription": "Synonym: Vmaxr "
+        },
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "K_i",
+          "symbol": "K_i",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "I",
+          "role": "Inhibitor",
+          "required": true,
+          "shortDescription": "Concentration of inhibitor",
+          "longDescription": "The amount of a specific inhibitor entity pool present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000455",
+      "name": "Irreversible substrate inhibition",
+      "category": "Inhibition",
+      "equation": "(V*S)/(K_m+S+K_m*((S)/(K_i))^2)",
+      "description": "Enzymatic rate law where the substrate for an enzyme also acts as an irreversible inhibitor. This may entail a second (non-active) binding site for the enzyme. The inhibition constant is then the dissociation constant for the substrate from this second site.\n",
+      "parameters": [
+        {
+          "id": "K_m",
+          "symbol": "K_m",
+          "shortDescription": "Michaelis constant",
+          "longDescription": "Synonym: Michaelis-Menten constant "
+        },
+        {
+          "id": "V",
+          "symbol": "V",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_i",
+          "symbol": "K_i",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000431",
+      "name": "Unmodulated reversible Hill-type rate law",
+      "category": "Enzymatic Rate Law",
+      "equation": "(V_f*(S)/(K_s)*(1-(P)/(S*K_eq))*((S)/(K_s)+(P)/(K_p))^(h-1))/(1+((S)/(K_s)+(P)/(K_p))^h)",
+      "description": "Reversible equivalent of Hill kinetics, where substrate and product bind co-operatively to the enzyme. A Hill coefficient (h) of greater than 1 indicates positive co-operativity between substrate and product, while h values below 1 indicate negative co-operativity. \n",
+      "parameters": [
+        {
+          "id": "K_eq",
+          "symbol": "K_eq",
+          "shortDescription": "Equilibrium constant",
+          "longDescription": "Synonym: Keq "
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "K_s",
+          "symbol": "K_s",
+          "shortDescription": "Pseudo-dissociation constant for substrate",
+          "longDescription": "In reversible reactions this is the concentration of substrate that is required to achieve half activation or inhibition in Hill-type kinetics, in the absence of the product. "
+        },
+        {
+          "id": "K_p",
+          "symbol": "K_p",
+          "shortDescription": "Pseudo-dissociation constant for product",
+          "longDescription": "In reversible reactions this is the concentration of product that is required to achieve half activation or inhibition in Hill-type kinetics, in the absence of the substrate. "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000432",
+      "name": "Irreversible Michaelis Menten rate law for two substrates",
+      "category": "Enzymatic Rate Law",
+      "equation": "(E_t*k_cat*A*B)/(K_iA*K_mB+K_mB*A+K_mA*B+A*B)",
+      "description": "Enzymatic rate law for an irreversible reaction involving two substrates and one product.",
+      "parameters": [
+        {
+          "id": "K_mA",
+          "symbol": "K_mA",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mB",
+          "symbol": "K_mB",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_iA",
+          "symbol": "K_iA",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "k_cat",
+          "symbol": "k_cat",
+          "shortDescription": "Product catalytic rate constant",
+          "longDescription": "Synonym: kcatp "
+        }
+      ],
+      "species": [
+        {
+          "id": "A",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "B",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "E_t",
+          "role": "Enzyme",
+          "required": true,
+          "shortDescription": "Concentration of enzyme",
+          "longDescription": "Amount of enzyme present per unit of volume. The participant role 'enzymatic catalyst' is defined in SBO:0000460."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000433",
+      "name": "Ordered Bi-Bi mechanism rate law",
+      "category": "Enzymatic Rate Law",
+      "equation": "(V_f*S_a*S_b-P_p*(P_q)/(K_eq))/(S_a*S_b*(1+(P_p)/(K_ip))+K_ma*S_b+K_mb*(S_a+K_ia)+(V_f)/(V_r*K_eq)*(K_mq*P_p*(1+(S_a)/(K_ia))+P_q*(K_mp*(1+(K_ma*S_b)/(K_ia*K_mb))+P_p*(1+(S_b)/(K_ib)))))",
+      "description": "Enzymatic rate law for a reaction involving two substrates and two products. The products P and then Q are released strictly in order, while the substrates are bound strictly in the order A and then B.",
+      "parameters": [
+        {
+          "id": "K_eq",
+          "symbol": "K_eq",
+          "shortDescription": "Equilibrium constant",
+          "longDescription": "Synonym: Keq "
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "V_r",
+          "symbol": "V_r",
+          "shortDescription": "Reverse maximal velocity",
+          "longDescription": "Synonym: Vmaxr "
+        },
+        {
+          "id": "K_ma",
+          "symbol": "K_ma",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mb",
+          "symbol": "K_mb",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "K_mq",
+          "symbol": "K_mq",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "K_ia",
+          "symbol": "K_ia",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_ib",
+          "symbol": "K_ib",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_ip",
+          "symbol": "K_ip",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "S_a",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "S_b",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P_p",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_q",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000434",
+      "name": "Ordered Bi-Uni mechanism rate law",
+      "category": "Enzymatic Rate Law",
+      "equation": "(V_f*S_a*S_b-(P)/(K_eq))/(S_a*S_b+K_ma*S_b+K_mb*S_a+(V_f)/(V_r*K_eq)*(K_mp+P*(1+(S_a)/(K_ia))))",
+      "description": "Enzymatic rate for a reaction involving two substrates and one product. The substrates A and then B are bound strictly in order.",
+      "parameters": [
+        {
+          "id": "K_ma",
+          "symbol": "K_ma",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mb",
+          "symbol": "K_mb",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "K_ia",
+          "symbol": "K_ia",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_eq",
+          "symbol": "K_eq",
+          "shortDescription": "Equilibrium constant",
+          "longDescription": "Synonym: Keq "
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "V_r",
+          "symbol": "V_r",
+          "shortDescription": "Reverse maximal velocity",
+          "longDescription": "Synonym: Vmaxr "
+        }
+      ],
+      "species": [
+        {
+          "id": "S_a",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "S_b",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000435",
+      "name": "Ordered Uni-Bi mechanism rate law",
+      "category": "Enzymatic Rate Law",
+      "equation": "(V_f*(S-(P_p*P_q)/(K_eq)))/(K_ms+S*(1+(P_p)/(K_ip))+(V_f)/(V_r*K_eq)*(K_mq*P_p+K_mp*P_q+P_p*P_q))",
+      "description": "Enzymatic rate law for a reaction with one substrate and two products. The products P and then Q are released in the strict order P and then Q.",
+      "parameters": [
+        {
+          "id": "K_ms",
+          "symbol": "K_ms",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mq",
+          "symbol": "K_mq",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for product",
+          "longDescription": "Synonym: Kmp "
+        },
+        {
+          "id": "K_ip",
+          "symbol": "K_ip",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_eq",
+          "symbol": "K_eq",
+          "shortDescription": "Equilibrium constant",
+          "longDescription": "Synonym: Keq "
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "V_r",
+          "symbol": "V_r",
+          "shortDescription": "Reverse maximal velocity",
+          "longDescription": "Synonym: Vmaxr "
+        }
+      ],
+      "species": [
+        {
+          "id": "S",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P_p",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_q",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    },
+    {
+      "id": "SBO:0000436",
+      "name": "Ping Pong Bi-Bi mechanism rate law",
+      "category": "Enzymatic Rate Law",
+      "equation": "(V_f*(S_a*S_b-(P_p*P_q)/(K_eq)))/(S_a*S_b+K_mb*S_a+K_ma*S_b*(1+(P_q)/(K_iq))+(V_f)/(V_r*K_eq)*(K_mq*P_p*(1+(S_a)/(K_ia))+P_q*(K_mp+P_p)))",
+      "description": "Enzymatic rate law for a reaction involving two substrates and two products. The first product (P) is released after the first substrate (A) has been bound. The second product (Q) is released after the second substrate (B) has been bound. ",
+      "parameters": [
+        {
+          "id": "K_eq",
+          "symbol": "K_eq",
+          "shortDescription": "Equilibrium constant",
+          "longDescription": "Synonym: Keq "
+        },
+        {
+          "id": "V_f",
+          "symbol": "V_f",
+          "shortDescription": "Forward maximal velocity",
+          "longDescription": "Synonym: Vmaxf "
+        },
+        {
+          "id": "V_r",
+          "symbol": "V_r",
+          "shortDescription": "Reverse maximal velocity",
+          "longDescription": "Synonym: Vmaxr "
+        },
+        {
+          "id": "K_ma",
+          "symbol": "K_ma",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mb",
+          "symbol": "K_mb",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mp",
+          "symbol": "K_mp",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_mq",
+          "symbol": "K_mq",
+          "shortDescription": "Michaelis constant for substrate",
+          "longDescription": "Synonym: Kms "
+        },
+        {
+          "id": "K_ia",
+          "symbol": "K_ia",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        },
+        {
+          "id": "K_iq",
+          "symbol": "K_iq",
+          "shortDescription": "Inhibitory constant",
+          "longDescription": "Synonym: Ki "
+        }
+      ],
+      "species": [
+        {
+          "id": "S_a",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "S_b",
+          "role": "Substrate",
+          "required": true,
+          "shortDescription": "Concentration of substrate",
+          "longDescription": "The amount of a specific entity pool substrate present per unit of volume."
+        },
+        {
+          "id": "P_p",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        },
+        {
+          "id": "P_q",
+          "role": "Product",
+          "required": true,
+          "shortDescription": "Concentration of product",
+          "longDescription": "The amount of a specific entity pool product present per unit of volume."
+        }
+      ]
+    }
+  ]
