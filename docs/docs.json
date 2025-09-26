@@ -37,6 +37,7 @@
             "icon": "flask",
             "pages": [
               "basic/model-class",
+              "basic/kinetic-laws",
               "basic/simulation",
               "basic/data-management",
               "basic/parameter-opt"
