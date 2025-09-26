@@ -41,14 +41,14 @@ def competitive_inhibition_of_irreversible_unireactant_enzymes_by_two_exclusive_
     )
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["I_a"] = i_a
-    substitutions["I_b"] = i_b
-    substitutions["k_cat"] = k_cat
-    substitutions["K_s"] = K_s
-    substitutions["K_ia"] = K_ia
-    substitutions["K_ib"] = K_ib
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("I_a", locals=LOCALS)] = sympify(i_a, locals=LOCALS)
+    substitutions[sympify("I_b", locals=LOCALS)] = sympify(i_b, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("K_ia", locals=LOCALS)] = sympify(K_ia, locals=LOCALS)
+    substitutions[sympify("K_ib", locals=LOCALS)] = sympify(K_ib, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -91,16 +91,16 @@ def inhibition_of_irreversible_unireactant_enzymes_by_single_competing_substrate
     )
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["S_a"] = s_a
-    substitutions["P"] = p
-    substitutions["P_a"] = p_a
-    substitutions["k_cat"] = k_cat
-    substitutions["K_s"] = K_s
-    substitutions["K_sa"] = K_sa
-    substitutions["K_p"] = K_p
-    substitutions["K_pa"] = K_pa
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("S_a", locals=LOCALS)] = sympify(s_a, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("P_a", locals=LOCALS)] = sympify(p_a, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("K_sa", locals=LOCALS)] = sympify(K_sa, locals=LOCALS)
+    substitutions[sympify("K_p", locals=LOCALS)] = sympify(K_p, locals=LOCALS)
+    substitutions[sympify("K_pa", locals=LOCALS)] = sympify(K_pa, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -133,12 +133,12 @@ def competitive_inhibition_of_irreversible_unireactant_enzyme_by_product(
     equation = sympify("(k_cat*E_t*S)/(K_s*(1+(P)/(K_p))+S)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["P"] = p
-    substitutions["k_cat"] = k_cat
-    substitutions["K_s"] = K_s
-    substitutions["K_p"] = K_p
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("K_p", locals=LOCALS)] = sympify(K_p, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -177,14 +177,14 @@ def simple_competitive_inhibition_of_irreversible_unireactant_enzymes_by_two_non
     )
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["I_a"] = i_a
-    substitutions["I_b"] = i_b
-    substitutions["k_cat"] = k_cat
-    substitutions["K_s"] = K_s
-    substitutions["K_ia"] = K_ia
-    substitutions["K_ib"] = K_ib
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("I_a", locals=LOCALS)] = sympify(i_a, locals=LOCALS)
+    substitutions[sympify("I_b", locals=LOCALS)] = sympify(i_b, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("K_ia", locals=LOCALS)] = sympify(K_ia, locals=LOCALS)
+    substitutions[sympify("K_ib", locals=LOCALS)] = sympify(K_ib, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -218,12 +218,12 @@ def simple_irreversible_non_competitive_inhibition_of_unireactant_enzymes(
     )
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["I"] = i
-    substitutions["k_cat"] = k_cat
-    substitutions["K_s"] = K_s
-    substitutions["K_i"] = K_i
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("I", locals=LOCALS)] = sympify(i, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("K_i", locals=LOCALS)] = sympify(K_i, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -262,14 +262,14 @@ def non_competitive_inhibition_of_irreversible_unireactant_enzymes_by_two_exclus
     )
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["I_a"] = i_a
-    substitutions["I_b"] = i_b
-    substitutions["k_cat"] = k_cat
-    substitutions["K_s"] = K_s
-    substitutions["K_ia"] = K_ia
-    substitutions["K_ib"] = K_ib
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("I_a", locals=LOCALS)] = sympify(i_a, locals=LOCALS)
+    substitutions[sympify("I_b", locals=LOCALS)] = sympify(i_b, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("K_ia", locals=LOCALS)] = sympify(K_ia, locals=LOCALS)
+    substitutions[sympify("K_ib", locals=LOCALS)] = sympify(K_ib, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -310,15 +310,15 @@ def mixed_type_inhibition_of_reversible_enzymes_by_mutually_exclusive_inhibitors
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["P"] = p
-    substitutions["I"] = i
-    substitutions["K_ms"] = K_ms
-    substitutions["K_mp"] = K_mp
-    substitutions["V_f"] = V_f
-    substitutions["V_r"] = V_r
-    substitutions["K_is"] = K_is
-    substitutions["K_ic"] = K_ic
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("I", locals=LOCALS)] = sympify(i, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("V_r", locals=LOCALS)] = sympify(V_r, locals=LOCALS)
+    substitutions[sympify("K_is", locals=LOCALS)] = sympify(K_is, locals=LOCALS)
+    substitutions[sympify("K_ic", locals=LOCALS)] = sympify(K_ic, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -352,12 +352,12 @@ def irreversible_allosteric_inhibition(
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["I"] = i
-    substitutions["V"] = V
-    substitutions["K_s"] = K_s
-    substitutions["L"] = L
-    substitutions["K_i"] = K_i
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("I", locals=LOCALS)] = sympify(i, locals=LOCALS)
+    substitutions[sympify("V", locals=LOCALS)] = sympify(V, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("L", locals=LOCALS)] = sympify(L, locals=LOCALS)
+    substitutions[sympify("K_i", locals=LOCALS)] = sympify(K_i, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -396,14 +396,14 @@ def reversible_competitive_inhibition_by_one_inhibitor(
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["P"] = p
-    substitutions["I"] = i
-    substitutions["K_ms"] = K_ms
-    substitutions["K_mp"] = K_mp
-    substitutions["V_f"] = V_f
-    substitutions["V_r"] = V_r
-    substitutions["K_i"] = K_i
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("I", locals=LOCALS)] = sympify(i, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("V_r", locals=LOCALS)] = sympify(V_r, locals=LOCALS)
+    substitutions[sympify("K_i", locals=LOCALS)] = sympify(K_i, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -442,14 +442,14 @@ def reversible_empirical_allosteric_inhibition_by_one_inhibitor(
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["P"] = p
-    substitutions["I"] = i
-    substitutions["V_f"] = V_f
-    substitutions["V_r"] = V_r
-    substitutions["K_ms"] = K_ms
-    substitutions["K_mp"] = K_mp
-    substitutions["K_i"] = K_i
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("I", locals=LOCALS)] = sympify(i, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("V_r", locals=LOCALS)] = sympify(V_r, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("K_i", locals=LOCALS)] = sympify(K_i, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -478,10 +478,10 @@ def irreversible_substrate_inhibition(
     equation = sympify("(V*S)/(K_m+S+K_m*((S)/(K_i))^2)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["K_m"] = K_m
-    substitutions["V"] = V
-    substitutions["K_i"] = K_i
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("K_m", locals=LOCALS)] = sympify(K_m, locals=LOCALS)
+    substitutions[sympify("V", locals=LOCALS)] = sympify(V, locals=LOCALS)
+    substitutions[sympify("K_i", locals=LOCALS)] = sympify(K_i, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)

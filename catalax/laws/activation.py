@@ -34,10 +34,10 @@ def irreversible_substrate_activation(
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["V"] = V
-    substitutions["K_sc"] = K_sc
-    substitutions["K_sa"] = K_sa
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("V", locals=LOCALS)] = sympify(V, locals=LOCALS)
+    substitutions[sympify("K_sc", locals=LOCALS)] = sympify(K_sc, locals=LOCALS)
+    substitutions[sympify("K_sa", locals=LOCALS)] = sympify(K_sa, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -69,12 +69,12 @@ def irrreversible_mixed_activation(
     equation = sympify("(V*S*A)/(K_ms*(K_as+A)+S*(K_ac+A))", locals=LOCALS)
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["A"] = a
-    substitutions["K_ms"] = K_ms
-    substitutions["V"] = V
-    substitutions["K_as"] = K_as
-    substitutions["K_ac"] = K_ac
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("A", locals=LOCALS)] = sympify(a, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("V", locals=LOCALS)] = sympify(V, locals=LOCALS)
+    substitutions[sympify("K_as", locals=LOCALS)] = sympify(K_as, locals=LOCALS)
+    substitutions[sympify("K_ac", locals=LOCALS)] = sympify(K_ac, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -104,11 +104,11 @@ def irreversible_catalytic_activation_with_one_activator(
     equation = sympify("(V*S*A)/((K_ms+S)*(K_a+A))", locals=LOCALS)
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["A"] = a
-    substitutions["K_ms"] = K_ms
-    substitutions["V"] = V
-    substitutions["K_a"] = K_a
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("A", locals=LOCALS)] = sympify(a, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("V", locals=LOCALS)] = sympify(V, locals=LOCALS)
+    substitutions[sympify("K_a", locals=LOCALS)] = sympify(K_a, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -138,11 +138,11 @@ def irreversible_specific_activation(
     equation = sympify("(V*S*A)/(K_ms*K_a+(K_ms+S)*A)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["A"] = a
-    substitutions["K_ms"] = K_ms
-    substitutions["V"] = V
-    substitutions["K_a"] = K_a
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("A", locals=LOCALS)] = sympify(a, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("V", locals=LOCALS)] = sympify(V, locals=LOCALS)
+    substitutions[sympify("K_a", locals=LOCALS)] = sympify(K_a, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)

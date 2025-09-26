@@ -25,10 +25,10 @@ def {{ function_name }}(
     
     substitutions = {}
     {%- for species in species %}
-    substitutions["{{ species.id }}"] = {{ species.id.lower() }}
+    substitutions[sympify("{{ species.id }}", locals=LOCALS)] = sympify({{ species.id.lower() }}, locals=LOCALS)
     {%- endfor %}
     {%- for param in parameters %}
-    substitutions["{{ param.id }}"] = {{ param.id }}
+    substitutions[sympify("{{ param.id }}", locals=LOCALS)] = sympify({{ param.id }}, locals=LOCALS)
     {%- endfor %}
     
     for original, replacement in substitutions.items():

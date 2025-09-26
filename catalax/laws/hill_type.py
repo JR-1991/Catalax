@@ -29,9 +29,9 @@ def hill_type_microscopic_form(
     equation = sympify("(V_max*R^h)/(K^h+R^h)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["V_max"] = V_max
-    substitutions["K"] = K
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("V_max", locals=LOCALS)] = sympify(V_max, locals=LOCALS)
+    substitutions[sympify("K", locals=LOCALS)] = sympify(K, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -55,8 +55,8 @@ def hill_type_reduced_form(
     equation = sympify("(V_max*R^h)/(1+R^h)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["V_max"] = V_max
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("V_max", locals=LOCALS)] = sympify(V_max, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)

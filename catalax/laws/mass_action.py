@@ -25,7 +25,7 @@ def zeroth_order_irreversible_reactions(
     equation = sympify("k", locals=LOCALS)
 
     substitutions = {}
-    substitutions["k"] = k
+    substitutions[sympify("k", locals=LOCALS)] = sympify(k, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -49,8 +49,8 @@ def monoexponential_decay(
     equation = sympify("(R)/(l)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["l"] = l
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("l", locals=LOCALS)] = sympify(l, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -74,8 +74,8 @@ def second_order_irreversible_reactions_one_reactant(
     equation = sympify("k*R^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["k"] = k
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("k", locals=LOCALS)] = sympify(k, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -101,9 +101,9 @@ def second_order_irreversible_reactions_two_reactants(
     equation = sympify("k*R_1*R_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["k"] = k
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("k", locals=LOCALS)] = sympify(k, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -127,8 +127,8 @@ def third_order_irreversible_reactions_one_reactant(
     equation = sympify("k*R^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["k"] = k
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("k", locals=LOCALS)] = sympify(k, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -154,9 +154,9 @@ def third_order_irreversible_reactions_two_reactants(
     equation = sympify("k*R_1^2*R_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["k"] = k
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("k", locals=LOCALS)] = sympify(k, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -184,10 +184,10 @@ def third_order_irreversible_reactions_three_reactants(
     equation = sympify("k*R_1*R_2*R_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["k"] = k
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("k", locals=LOCALS)] = sympify(k, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -211,8 +211,8 @@ def first_order_irreversible_reactions_single_essential_stimulator(
     equation = sympify("k*A", locals=LOCALS)
 
     substitutions = {}
-    substitutions["A"] = a
-    substitutions["k"] = k
+    substitutions[sympify("A", locals=LOCALS)] = sympify(a, locals=LOCALS)
+    substitutions[sympify("k", locals=LOCALS)] = sympify(k, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -238,9 +238,9 @@ def zeroth_order_forward_first_order_reverse_reversible_reactions(
     equation = sympify("k_f-k_r*P", locals=LOCALS)
 
     substitutions = {}
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -268,9 +268,9 @@ def zeroth_order_forward_second_order_reverse_reversible_reactions_one_product(
     equation = sympify("k_f-k_r*P^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -299,10 +299,10 @@ def zeroth_order_forward_second_order_reverse_reversible_reactions_two_products(
     equation = sympify("k_f-k_r*P_1*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -328,9 +328,9 @@ def zeroth_order_forward_third_order_reverse_reversible_reactions_one_product(
     equation = sympify("k_f-k_r*P^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -358,10 +358,10 @@ def zeroth_order_forward_third_order_reverse_reversible_reactions_two_products(
     equation = sympify("k_f-k_r*P_1*P_2^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -391,11 +391,11 @@ def zeroth_order_forward_third_order_reverse_reversible_reactions_three_products
     equation = sympify("k_f-k_r*P_1*P_2*P_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["P_3"] = p_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("P_3", locals=LOCALS)] = sympify(p_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -421,9 +421,9 @@ def first_order_forward_zeroth_order_reverse_reversible_reactions(
     equation = sympify("k_f*R-k_r", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -451,10 +451,10 @@ def first_order_forward_first_order_reverse_reversible_reactions(
     equation = sympify("k_f*R-k_r*P", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -482,10 +482,10 @@ def first_order_forward_second_order_reverse_reversible_reactions_one_product(
     equation = sympify("k_f*R-k_r*P^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -515,11 +515,11 @@ def first_order_forward_second_order_reverse_reversible_reactions_two_products(
     equation = sympify("k_f*R-k_r*P_1*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -547,10 +547,10 @@ def first_order_forward_third_order_reverse_reversible_reactions_one_product(
     equation = sympify("k_f*R-k_r*P^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -580,11 +580,11 @@ def first_order_forward_third_order_reverse_reversible_reactions_two_products(
     equation = sympify("k_f*R-k_r*P_1^2*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -616,12 +616,12 @@ def first_order_forward_third_order_reverse_reversible_reactions_three_products(
     equation = sympify("k_f*R-k_r*P_1*P_2*P_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["P_3"] = p_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("P_3", locals=LOCALS)] = sympify(p_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -647,9 +647,9 @@ def second_order_forward_zeroth_order_reverse_reversible_reactions_one_reactant(
     equation = sympify("k_f*R^2-k_r", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -677,10 +677,10 @@ def second_order_forward_first_order_reverse_reversible_reactions_one_reactant(
     equation = sympify("k_f*R^2-k_r*P", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -708,10 +708,10 @@ def second_order_forward_second_order_reverse_reversible_reactions_one_reactant_
     equation = sympify("k_f*R^2-k_r*P^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -741,11 +741,11 @@ def second_order_forward_second_order_reverse_reversible_reactions_two_products(
     equation = sympify("k_f*R^2-k_r*P_1*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -773,10 +773,10 @@ def second_order_forward_third_order_reverse_reversible_reactions_one_reactant_o
     equation = sympify("k_f*R^2-k_r*P^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -806,11 +806,11 @@ def second_order_forward_third_order_reverse_reversible_reactions_one_reactant_t
     equation = sympify("k_f*R^2-k_r*P_1^2*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -842,12 +842,12 @@ def second_order_forward_third_order_reverse_reversible_reactions_one_reactant_t
     equation = sympify("k_f*R^2-k_r*P_1*P_2*P_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["P_3"] = p_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("P_3", locals=LOCALS)] = sympify(p_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -875,10 +875,10 @@ def second_order_forward_zeroth_order_reverse_reversible_reactions_two_reactants
     equation = sympify("k_f*R_1*R_2-k_r", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -908,11 +908,11 @@ def second_order_forward_first_order_reverse_reversible_reactions_two_reactants(
     equation = sympify("k_f*R_1*R_2-k_r*P", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -942,11 +942,11 @@ def second_order_forward_second_order_reverse_reversible_reactions_two_reactants
     equation = sympify("k_f*R_1*R_2-k_r*P^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -978,12 +978,12 @@ def second_order_forward_second_order_reverse_reversible_reactions_two_reactants
     equation = sympify("k_f*R_1*R_2-k_r*P_1*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1013,11 +1013,11 @@ def second_order_forward_third_order_reverse_reversible_reactions_two_reactants_
     equation = sympify("k_f*R_1*R_2-k_r*P^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1049,12 +1049,12 @@ def second_order_forward_third_order_reverse_reversible_reactions_two_reactants_
     equation = sympify("k_f*R_1*R_2-k_r*P_1^2*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1088,13 +1088,13 @@ def second_order_forward_third_order_reverse_reversible_reactions_two_reactants_
     equation = sympify("k_f*R_1*R_2-k_r*P_1*P_2*P_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["P_3"] = p_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("P_3", locals=LOCALS)] = sympify(p_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1122,10 +1122,10 @@ def third_order_forward_zeroth_order_reverse_reversible_reactions_two_reactants(
     equation = sympify("k_f*R_1^2*R_2-k_r", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1155,11 +1155,11 @@ def third_order_forward_first_order_reverse_reversible_reactions_two_reactants(
     equation = sympify("k_f*R_1^2*R_2-k_r*P", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1189,11 +1189,11 @@ def third_order_forward_second_order_reverse_reversible_reactions_two_reactants_
     equation = sympify("k_f*R_1^2*R_2-k_r*P^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1225,12 +1225,12 @@ def third_order_forward_second_order_reverse_reversible_reactions_two_reactants_
     equation = sympify("k_f*R_1^2*R_2-k_r*P_1*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1260,11 +1260,11 @@ def third_order_forward_third_order_reverse_reversible_reactions_two_reactants_o
     equation = sympify("k_f*R_1^2*R_2-k_r*P^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1296,12 +1296,12 @@ def third_order_forward_third_order_reverse_reversible_reactions_two_reactants_t
     equation = sympify("k_f*R_1^2*R_2-k_r*P_1^2*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1335,13 +1335,13 @@ def third_order_forward_third_order_reverse_reversible_reactions_two_reactants_t
     equation = sympify("k_f*R_1^2*R_2-k_r*P_1*P_2*P_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["P_3"] = p_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("P_3", locals=LOCALS)] = sympify(p_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1371,11 +1371,11 @@ def third_order_forward_zeroth_order_reverse_reversible_reactions_three_reactant
     equation = sympify("k_f*R_1^2*R_2-k_r", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1407,12 +1407,12 @@ def third_order_forward_first_order_reverse_reversible_reactions_three_reactants
     equation = sympify("k_f*R_1*R_2*R_3-k_r*P", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1444,12 +1444,12 @@ def third_order_forward_second_order_reverse_reversible_reactions_three_reactant
     equation = sympify("k_f*R_1*R_2*R_3-k_r*P^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1483,13 +1483,13 @@ def third_order_forward_second_order_reverse_reversible_reactions_three_reactant
     equation = sympify("k_f*R_1*R_2*R_3-k_r*P_1*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1521,12 +1521,12 @@ def third_order_forward_third_order_reverse_reversible_reactions_three_reactants
     equation = sympify("k_f*R_1*R_2*R_3-k_r*P^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1560,13 +1560,13 @@ def third_order_forward_third_order_reverse_reversible_reactions_three_reactants
     equation = sympify("k_f*R_1*R_2*R_3-k_r*P_1^2*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1602,14 +1602,14 @@ def third_order_forward_third_order_reverse_reversible_reactions_three_reactants
     equation = sympify("k_f*R_1*R_2*R_3-k_r*P_1*P_2*P_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R_1"] = r_1
-    substitutions["R_2"] = r_2
-    substitutions["R_3"] = r_3
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["P_3"] = p_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R_1", locals=LOCALS)] = sympify(r_1, locals=LOCALS)
+    substitutions[sympify("R_2", locals=LOCALS)] = sympify(r_2, locals=LOCALS)
+    substitutions[sympify("R_3", locals=LOCALS)] = sympify(r_3, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("P_3", locals=LOCALS)] = sympify(p_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1635,9 +1635,9 @@ def third_order_forward_zeroth_order_reverse_reversible_reactions_one_reactant(
     equation = sympify("k_f*R^3-k_r", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1665,10 +1665,10 @@ def third_order_forward_first_order_reverse_reversible_reactions_one_reactant(
     equation = sympify("k_f*R^3-k_r*P", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1696,10 +1696,10 @@ def third_order_forward_second_order_reverse_reversible_reactions_one_reactant_o
     equation = sympify("k_f*R^3-k_r*P^2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1729,11 +1729,11 @@ def third_order_forward_second_order_reverse_reversible_reactions_one_reactant_t
     equation = sympify("k_f*R^3-k_r*P_1*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1761,10 +1761,10 @@ def third_order_forward_third_order_reverse_reversible_reactions_one_reactant_on
     equation = sympify("k_f*R^3-k_r*P^3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P"] = p
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1794,11 +1794,11 @@ def third_order_forward_third_order_reverse_reversible_reactions_one_reactant_tw
     equation = sympify("k_f*R^3-k_r*P_1^2*P_2", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -1830,12 +1830,12 @@ def third_order_forward_third_order_reverse_reversible_reactions_one_reactant_th
     equation = sympify("k_f*R^3-k_r*P_1*P_2*P_3", locals=LOCALS)
 
     substitutions = {}
-    substitutions["R"] = r
-    substitutions["P_1"] = p_1
-    substitutions["P_2"] = p_2
-    substitutions["P_3"] = p_3
-    substitutions["k_f"] = k_f
-    substitutions["k_r"] = k_r
+    substitutions[sympify("R", locals=LOCALS)] = sympify(r, locals=LOCALS)
+    substitutions[sympify("P_1", locals=LOCALS)] = sympify(p_1, locals=LOCALS)
+    substitutions[sympify("P_2", locals=LOCALS)] = sympify(p_2, locals=LOCALS)
+    substitutions[sympify("P_3", locals=LOCALS)] = sympify(p_3, locals=LOCALS)
+    substitutions[sympify("k_f", locals=LOCALS)] = sympify(k_f, locals=LOCALS)
+    substitutions[sympify("k_r", locals=LOCALS)] = sympify(k_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)

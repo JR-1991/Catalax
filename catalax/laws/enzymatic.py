@@ -31,10 +31,10 @@ def michaelis_menten(
     equation = sympify("(k_cat*E_t*S)/(K_m+S)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["k_cat"] = k_cat
-    substitutions["K_m"] = K_m
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_m", locals=LOCALS)] = sympify(K_m, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -62,10 +62,10 @@ def briggs_haldane(
     equation = sympify("(k_cat*E_t*S)/(K_m+S)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S"] = s
-    substitutions["k_cat"] = k_cat
-    substitutions["K_m"] = K_m
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_m", locals=LOCALS)] = sympify(K_m, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -91,9 +91,9 @@ def normalised_enzymatic_for_unireactant_enzymes(
     equation = sympify("(k_cat*S)/(K_s+S)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["k_cat"] = k_cat
-    substitutions["K_s"] = K_s
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -128,12 +128,12 @@ def irreversible_non_modulated_non_interacting_bireactant_enzymes(
     )
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S_a"] = s_a
-    substitutions["S_b"] = s_b
-    substitutions["k_p"] = k_p
-    substitutions["K_1"] = K_1
-    substitutions["K_2"] = K_2
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S_a", locals=LOCALS)] = sympify(s_a, locals=LOCALS)
+    substitutions[sympify("S_b", locals=LOCALS)] = sympify(s_b, locals=LOCALS)
+    substitutions[sympify("k_p", locals=LOCALS)] = sympify(k_p, locals=LOCALS)
+    substitutions[sympify("K_1", locals=LOCALS)] = sympify(K_1, locals=LOCALS)
+    substitutions[sympify("K_2", locals=LOCALS)] = sympify(K_2, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -172,14 +172,14 @@ def irreversible_non_modulated_non_interacting_trireactant_enzymes(
     )
 
     substitutions = {}
-    substitutions["E_t"] = e_t
-    substitutions["S_a"] = s_a
-    substitutions["S_b"] = s_b
-    substitutions["S_3"] = s_3
-    substitutions["k_p"] = k_p
-    substitutions["K_1"] = K_1
-    substitutions["K_2"] = K_2
-    substitutions["K_3"] = K_3
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("S_a", locals=LOCALS)] = sympify(s_a, locals=LOCALS)
+    substitutions[sympify("S_b", locals=LOCALS)] = sympify(s_b, locals=LOCALS)
+    substitutions[sympify("S_3", locals=LOCALS)] = sympify(s_3, locals=LOCALS)
+    substitutions[sympify("k_p", locals=LOCALS)] = sympify(k_p, locals=LOCALS)
+    substitutions[sympify("K_1", locals=LOCALS)] = sympify(K_1, locals=LOCALS)
+    substitutions[sympify("K_2", locals=LOCALS)] = sympify(K_2, locals=LOCALS)
+    substitutions[sympify("K_3", locals=LOCALS)] = sympify(K_3, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -215,13 +215,13 @@ def reversible_iso_uni_uni(
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["P"] = p
-    substitutions["K_ms"] = K_ms
-    substitutions["K_mp"] = K_mp
-    substitutions["K_i"] = K_i
-    substitutions["V_f"] = V_f
-    substitutions["K_eq"] = K_eq
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("K_i", locals=LOCALS)] = sympify(K_i, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("K_eq", locals=LOCALS)] = sympify(K_eq, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -257,12 +257,12 @@ def unmodulated_reversible_hill_type(
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["P"] = p
-    substitutions["K_eq"] = K_eq
-    substitutions["V_f"] = V_f
-    substitutions["K_s"] = K_s
-    substitutions["K_p"] = K_p
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("K_eq", locals=LOCALS)] = sympify(K_eq, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("K_s", locals=LOCALS)] = sympify(K_s, locals=LOCALS)
+    substitutions[sympify("K_p", locals=LOCALS)] = sympify(K_p, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -296,13 +296,13 @@ def irreversible_michaelis_menten_for_two_substrates(
     equation = sympify("(E_t*k_cat*A*B)/(K_iA*K_mB+K_mB*A+K_mA*B+A*B)", locals=LOCALS)
 
     substitutions = {}
-    substitutions["A"] = a
-    substitutions["B"] = b
-    substitutions["E_t"] = e_t
-    substitutions["K_mA"] = K_mA
-    substitutions["K_mB"] = K_mB
-    substitutions["K_iA"] = K_iA
-    substitutions["k_cat"] = k_cat
+    substitutions[sympify("A", locals=LOCALS)] = sympify(a, locals=LOCALS)
+    substitutions[sympify("B", locals=LOCALS)] = sympify(b, locals=LOCALS)
+    substitutions[sympify("E_t", locals=LOCALS)] = sympify(e_t, locals=LOCALS)
+    substitutions[sympify("K_mA", locals=LOCALS)] = sympify(K_mA, locals=LOCALS)
+    substitutions[sympify("K_mB", locals=LOCALS)] = sympify(K_mB, locals=LOCALS)
+    substitutions[sympify("K_iA", locals=LOCALS)] = sympify(K_iA, locals=LOCALS)
+    substitutions[sympify("k_cat", locals=LOCALS)] = sympify(k_cat, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -353,20 +353,20 @@ def ordered_bi_bi_mechanism(
     )
 
     substitutions = {}
-    substitutions["S_a"] = s_a
-    substitutions["S_b"] = s_b
-    substitutions["P_p"] = p_p
-    substitutions["P_q"] = p_q
-    substitutions["K_eq"] = K_eq
-    substitutions["V_f"] = V_f
-    substitutions["V_r"] = V_r
-    substitutions["K_ma"] = K_ma
-    substitutions["K_mb"] = K_mb
-    substitutions["K_mp"] = K_mp
-    substitutions["K_mq"] = K_mq
-    substitutions["K_ia"] = K_ia
-    substitutions["K_ib"] = K_ib
-    substitutions["K_ip"] = K_ip
+    substitutions[sympify("S_a", locals=LOCALS)] = sympify(s_a, locals=LOCALS)
+    substitutions[sympify("S_b", locals=LOCALS)] = sympify(s_b, locals=LOCALS)
+    substitutions[sympify("P_p", locals=LOCALS)] = sympify(p_p, locals=LOCALS)
+    substitutions[sympify("P_q", locals=LOCALS)] = sympify(p_q, locals=LOCALS)
+    substitutions[sympify("K_eq", locals=LOCALS)] = sympify(K_eq, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("V_r", locals=LOCALS)] = sympify(V_r, locals=LOCALS)
+    substitutions[sympify("K_ma", locals=LOCALS)] = sympify(K_ma, locals=LOCALS)
+    substitutions[sympify("K_mb", locals=LOCALS)] = sympify(K_mb, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("K_mq", locals=LOCALS)] = sympify(K_mq, locals=LOCALS)
+    substitutions[sympify("K_ia", locals=LOCALS)] = sympify(K_ia, locals=LOCALS)
+    substitutions[sympify("K_ib", locals=LOCALS)] = sympify(K_ib, locals=LOCALS)
+    substitutions[sympify("K_ip", locals=LOCALS)] = sympify(K_ip, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -409,16 +409,16 @@ def ordered_bi_uni_mechanism(
     )
 
     substitutions = {}
-    substitutions["S_a"] = s_a
-    substitutions["S_b"] = s_b
-    substitutions["P"] = p
-    substitutions["K_ma"] = K_ma
-    substitutions["K_mb"] = K_mb
-    substitutions["K_mp"] = K_mp
-    substitutions["K_ia"] = K_ia
-    substitutions["K_eq"] = K_eq
-    substitutions["V_f"] = V_f
-    substitutions["V_r"] = V_r
+    substitutions[sympify("S_a", locals=LOCALS)] = sympify(s_a, locals=LOCALS)
+    substitutions[sympify("S_b", locals=LOCALS)] = sympify(s_b, locals=LOCALS)
+    substitutions[sympify("P", locals=LOCALS)] = sympify(p, locals=LOCALS)
+    substitutions[sympify("K_ma", locals=LOCALS)] = sympify(K_ma, locals=LOCALS)
+    substitutions[sympify("K_mb", locals=LOCALS)] = sympify(K_mb, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("K_ia", locals=LOCALS)] = sympify(K_ia, locals=LOCALS)
+    substitutions[sympify("K_eq", locals=LOCALS)] = sympify(K_eq, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("V_r", locals=LOCALS)] = sympify(V_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -461,16 +461,16 @@ def ordered_uni_bi_mechanism(
     )
 
     substitutions = {}
-    substitutions["S"] = s
-    substitutions["P_p"] = p_p
-    substitutions["P_q"] = p_q
-    substitutions["K_ms"] = K_ms
-    substitutions["K_mq"] = K_mq
-    substitutions["K_mp"] = K_mp
-    substitutions["K_ip"] = K_ip
-    substitutions["K_eq"] = K_eq
-    substitutions["V_f"] = V_f
-    substitutions["V_r"] = V_r
+    substitutions[sympify("S", locals=LOCALS)] = sympify(s, locals=LOCALS)
+    substitutions[sympify("P_p", locals=LOCALS)] = sympify(p_p, locals=LOCALS)
+    substitutions[sympify("P_q", locals=LOCALS)] = sympify(p_q, locals=LOCALS)
+    substitutions[sympify("K_ms", locals=LOCALS)] = sympify(K_ms, locals=LOCALS)
+    substitutions[sympify("K_mq", locals=LOCALS)] = sympify(K_mq, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("K_ip", locals=LOCALS)] = sympify(K_ip, locals=LOCALS)
+    substitutions[sympify("K_eq", locals=LOCALS)] = sympify(K_eq, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("V_r", locals=LOCALS)] = sympify(V_r, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
@@ -519,19 +519,19 @@ def ping_pong_bi_bi_mechanism(
     )
 
     substitutions = {}
-    substitutions["S_a"] = s_a
-    substitutions["S_b"] = s_b
-    substitutions["P_p"] = p_p
-    substitutions["P_q"] = p_q
-    substitutions["K_eq"] = K_eq
-    substitutions["V_f"] = V_f
-    substitutions["V_r"] = V_r
-    substitutions["K_ma"] = K_ma
-    substitutions["K_mb"] = K_mb
-    substitutions["K_mp"] = K_mp
-    substitutions["K_mq"] = K_mq
-    substitutions["K_ia"] = K_ia
-    substitutions["K_iq"] = K_iq
+    substitutions[sympify("S_a", locals=LOCALS)] = sympify(s_a, locals=LOCALS)
+    substitutions[sympify("S_b", locals=LOCALS)] = sympify(s_b, locals=LOCALS)
+    substitutions[sympify("P_p", locals=LOCALS)] = sympify(p_p, locals=LOCALS)
+    substitutions[sympify("P_q", locals=LOCALS)] = sympify(p_q, locals=LOCALS)
+    substitutions[sympify("K_eq", locals=LOCALS)] = sympify(K_eq, locals=LOCALS)
+    substitutions[sympify("V_f", locals=LOCALS)] = sympify(V_f, locals=LOCALS)
+    substitutions[sympify("V_r", locals=LOCALS)] = sympify(V_r, locals=LOCALS)
+    substitutions[sympify("K_ma", locals=LOCALS)] = sympify(K_ma, locals=LOCALS)
+    substitutions[sympify("K_mb", locals=LOCALS)] = sympify(K_mb, locals=LOCALS)
+    substitutions[sympify("K_mp", locals=LOCALS)] = sympify(K_mp, locals=LOCALS)
+    substitutions[sympify("K_mq", locals=LOCALS)] = sympify(K_mq, locals=LOCALS)
+    substitutions[sympify("K_ia", locals=LOCALS)] = sympify(K_ia, locals=LOCALS)
+    substitutions[sympify("K_iq", locals=LOCALS)] = sympify(K_iq, locals=LOCALS)
 
     for original, replacement in substitutions.items():
         equation = equation.subs(original, replacement)
