@@ -495,7 +495,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
     def add_constants(self, **constants):
         """Adds multiple constants to the model."""
         for symbol, name in constants.items():
-            self.add_constant(symbol=symbol, name=name)
+            self.add_constant(**{symbol: name})
 
     # ! Simulation methods
     def simulate(
