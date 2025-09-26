@@ -219,7 +219,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         symbol: str,
         reactants: List[Tuple[float, str]] = [],
         products: List[Tuple[float, str]] = [],
-        equation: str,
+        equation: str | Expr,
         reversible: bool = False,
     ):
         """Adds a reaction to the model and converts the equation to a SymPy expression.
