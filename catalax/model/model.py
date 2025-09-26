@@ -1015,9 +1015,9 @@ class Model(CatalaxBase, Predictor, Surrogate):
             model (Model): Catalax model to prepare the rate function for.
         """
 
-        assert in_axes is None or len(in_axes) == 4, (
-            "Got invalid dimension for 'in_axes' - Needs to have four ints/Nones"
-        )
+        assert (
+            in_axes is None or len(in_axes) == 4
+        ), "Got invalid dimension for 'in_axes' - Needs to have four ints/Nones"
 
         # Build the stack
         model = self._replace_assignments()
@@ -1174,9 +1174,9 @@ class Model(CatalaxBase, Predictor, Surrogate):
         if len(y0_array.shape) == 1:
             y0_array = jnp.expand_dims(y0_array, axis=0)
 
-        assert y0_array.shape[-1] == len(self.states), (
-            "Length of y0 array does not match the number of states in the model."
-        )
+        assert y0_array.shape[-1] == len(
+            self.states
+        ), "Length of y0 array does not match the number of states in the model."
 
         return [
             {state: float(value) for state, value in zip(self.get_state_order(), y0)}

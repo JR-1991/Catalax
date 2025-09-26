@@ -356,9 +356,9 @@ def from_enzymeml(
     # Identify observable and non-observable species
     observables, non_observables = _extract_species_observability(enzmldoc, all_species)
 
-    assert all_species == observables | non_observables, (
-        "all species should be either observable or non-observable"
-    )
+    assert (
+        all_species == observables | non_observables
+    ), "all species should be either observable or non-observable"
 
     # Convert equations based on the specified mode
     _import_reactions(model, enzmldoc)

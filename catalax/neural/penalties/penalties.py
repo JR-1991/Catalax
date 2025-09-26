@@ -106,9 +106,9 @@ class Penalties:
         new_penalties = deepcopy(self)
         for penalty in new_penalties.penalties:
             if penalty.name in kwargs:
-                assert isinstance(kwargs[penalty.name], float), (
-                    f"Alpha for {penalty.name} must be a float"
-                )
+                assert isinstance(
+                    kwargs[penalty.name], float
+                ), f"Alpha for {penalty.name} must be a float"
                 penalty.alpha = kwargs[penalty.name]
             elif alpha is not None:
                 penalty.alpha = alpha

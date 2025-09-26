@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import List, Optional, Tuple
 
+from sympy import Expr
+
 from catalax.model.base import CatalaxBase
 from catalax.model.equation import Equation
 
@@ -31,7 +33,7 @@ class Reaction(Equation):
         cls,
         symbol: str,
         schema: str,
-        equation: str,
+        equation: str | Expr,
         reversible: bool,
         states: Optional[List[str]] = None,
     ) -> Reaction:

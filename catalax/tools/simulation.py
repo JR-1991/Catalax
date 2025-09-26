@@ -297,9 +297,9 @@ class Simulation(BaseModel):
         Raises:
             AssertionError: If sensitivity is not an instance of InAxes
         """
-        assert isinstance(self.sensitivity, InAxes), (
-            "Expected sensitivity to be an instance of 'InAxes'"
-        )
+        assert isinstance(
+            self.sensitivity, InAxes
+        ), "Expected sensitivity to be an instance of 'InAxes'"
 
         def sens_fun(y0s, parameters, constants, time):
             """Sensitivity analysis wrapper function."""

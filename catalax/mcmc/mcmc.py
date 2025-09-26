@@ -541,9 +541,7 @@ def _validate_parameter_priors(model: "Model") -> None:
     missing_priors = [
         param.name for param in model.parameters.values() if param.prior is None
     ]
-    assert not missing_priors, (
-        f"Parameters {', '.join(missing_priors)} do not have priors. Please specify priors for all parameters."
-    )
+    assert not missing_priors, f"Parameters {', '.join(missing_priors)} do not have priors. Please specify priors for all parameters."
 
 
 def _validate_model_functions(

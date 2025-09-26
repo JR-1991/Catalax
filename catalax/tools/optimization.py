@@ -58,9 +58,9 @@ def optimize(
         ]
     )
 
-    assert set(dataset.states) == set(model.get_state_order()), (
-        "States in dataset and model do not match."
-    )
+    assert set(dataset.states) == set(
+        model.get_state_order()
+    ), "States in dataset and model do not match."
 
     # Extract data arrays for the residual computation
     data, times, _ = dataset.to_jax_arrays(model.get_observable_state_order())
@@ -136,18 +136,18 @@ def _initialize_params(
 
     for param in model.parameters.values():
         if param.lower_bound is None:
-            assert global_lower_bound is not None, (
-                f"Neither a global lower bound nor lower bound for parameter '{param.name}' is given. \
+            assert (
+                global_lower_bound is not None
+            ), f"Neither a global lower bound nor lower bound for parameter '{param.name}' is given. \
                 Please specify either a global lower bound or a lower bound for the parameter."
-            )
 
             param.lower_bound = global_lower_bound
 
         if param.upper_bound is None:
-            assert global_upper_bound is not None, (
-                f"Neither a global upper bound nor upper bound for parameter '{param.name}' is given. \
+            assert (
+                global_upper_bound is not None
+            ), f"Neither a global upper bound nor upper bound for parameter '{param.name}' is given. \
                 Please specify either a global upper bound or a upper bound for the parameter."
-            )
 
             param.upper_bound = global_upper_bound
 

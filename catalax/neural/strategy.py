@@ -40,9 +40,9 @@ class Step(CatalaxBase):
             Tuple[ClosureODE, ClosureODE]: The partitioned models.
         """
 
-        assert issubclass(type(model), NeuralBase), (
-            "Model must be a subclass of NeuralBase."
-        )
+        assert issubclass(
+            type(model), NeuralBase
+        ), "Model must be a subclass of NeuralBase."
 
         if isinstance(self.train, Modes):
             train = self.train.value
@@ -85,9 +85,9 @@ class Step(CatalaxBase):
             filter_spec = jtu.tree_map(lambda _: True, model)
 
         elif train == Modes.MLP.value:
-            assert hasattr(model, "func"), (
-                "Mode is set to MLP, but the model does not have an MLP."
-            )
+            assert hasattr(
+                model, "func"
+            ), "Mode is set to MLP, but the model does not have an MLP."
 
             filter_spec = eqx.tree_at(
                 lambda tree: tree.func,
@@ -96,9 +96,9 @@ class Step(CatalaxBase):
             )
 
         elif train == Modes.VECTOR_FIELD.value:
-            assert hasattr(model, "vector_field"), (
-                "Mode is set to vector field, but the model does not have a vector field."
-            )
+            assert hasattr(
+                model, "vector_field"
+            ), "Mode is set to vector field, but the model does not have a vector field."
 
             filter_spec = eqx.tree_at(
                 lambda tree: (tree.vector_field, tree.parameters),
@@ -145,9 +145,9 @@ class Strategy(CatalaxBase):
                 "No loss function provided. Please provide a loss function or set the loss function in the strategy initialization."
             )
 
-        assert penalties is not None, (
-            "Penalties must be provided. Please provide penalties or set the penalties in the strategy initialization."
-        )
+        assert (
+            penalties is not None
+        ), "Penalties must be provided. Please provide penalties or set the penalties in the strategy initialization."
 
         self.steps.append(
             Step(
