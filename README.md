@@ -4,7 +4,7 @@
 
 **A High-Performance JAX Framework for Biochemical Modeling, Neural ODEs, and Bayesian Inference**
 
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
 [![Documentation](https://img.shields.io/badge/documentation-blue)](https://catalax.mintlify.app/welcome)
 [![JAX](https://img.shields.io/badge/JAX-powered-orange.svg)](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
