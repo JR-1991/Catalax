@@ -451,29 +451,60 @@ class Measurement(BaseModel):
             - 4-6 entries: Two lines, font size 10
             - >6 entries: Three lines, font size 9
         """
+
+        def format_value(value: float) -> str:
+            """Format a value with scientific notation for very small or very large numbers."""
+            if value == 0.0:
+                return f"{value:.2f}"
+            elif abs(value) < 0.1 or abs(value) >= 1000:
+                # Convert to scientific notation in LaTeX format
+                exp_str = f"{value:.2e}"
+                mantissa, exponent = exp_str.split("e")
+                exponent = int(exponent)
+                return f"{float(mantissa):.2f}\\cdot10^{{{exponent}}}"
+            else:
+                return f"{value:.2f}"
+
         init_conditions_list = [
-            f"{key}: ${value:.2f}$" for key, value in initial_conditions.items()
+            f"{key}: ${format_value(value)}$"
+            for key, value in initial_conditions.items()
         ]
         num_entries = len(init_conditions_list)
 
+        # Calculate column width for alignment
+        max_width = (
+            max(len(item) for item in init_conditions_list)
+            if init_conditions_list
+            else 0
+        )
+        col_width = max(max_width, 15)  # Minimum width of 15 characters
+
         if num_entries <= 3:
-            # Few entries: single line
-            title = " ".join(init_conditions_list)
+            # Few entries: single line, left-aligned
+            formatted_items = [item.ljust(col_width) for item in init_conditions_list]
+            title = "".join(formatted_items).rstrip()
             fontsize = 12
         elif num_entries <= 6:
-            # Medium entries: break into 2 lines
-            mid_point = num_entries // 2
-            line1 = " ".join(init_conditions_list[:mid_point])
-            line2 = " ".join(init_conditions_list[mid_point:])
+            # Medium entries: break into 2 lines with 3 columns each
+            # Pad with empty strings if needed
+            padded_list = init_conditions_list + [""] * (6 - num_entries)
+            line1_items = [item.ljust(col_width) for item in padded_list[:3]]
+            line2_items = [item.ljust(col_width) for item in padded_list[3:6]]
+            line1 = "".join(line1_items).rstrip()
+            line2 = "".join(line2_items).rstrip()
             title = f"{line1}\n{line2}"
             fontsize = 10
         else:
-            # Many entries: break into 3 lines
-            third = num_entries // 3
-            line1 = " ".join(init_conditions_list[:third])
-            line2 = " ".join(init_conditions_list[third : 2 * third])
-            line3 = " ".join(init_conditions_list[2 * third :])
-            title = f"{line1}\n{line2}\n{line3}"
+            # Many entries: break into rows of 3 columns
+            lines = []
+            for i in range(0, num_entries, 3):
+                row = init_conditions_list[i : i + 3]
+                # Pad row to 3 columns if needed
+                while len(row) < 3:
+                    row.append("")
+                formatted_row = [item.ljust(col_width) for item in row]
+                lines.append("".join(formatted_row).rstrip())
+            title = "\n".join(lines)
             fontsize = 9
 
         return title, fontsize
