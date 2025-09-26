@@ -12,7 +12,7 @@ class TestDataset:
         times, data, initial_conditions = time_states_inits
 
         # Act
-        dataset = ctx.Dataset(species=["s1"], id="test")
+        dataset = ctx.Dataset(states=["s1"], id="test")
         dataset.add_measurement(
             ctx.Measurement(
                 id="meas1",
@@ -33,7 +33,7 @@ class TestDataset:
 
         # Assert
         assert len(dataset.measurements) == 2, "Two measurements should be present"
-        assert dataset.species == ["s1"], "Species should be ['s1']"
+        assert dataset.states == ["s1"], "Species should be ['s1']"
         assert dataset.id == "test", "Dataset ID should be 'test'"
 
         assert dataset.measurements[0].id == "meas1", "Measurement ID should be 'meas1'"
@@ -48,12 +48,12 @@ class TestDataset:
             "Data shape should be (100,)"
         )  # type: ignore
 
-        assert dataset.measurements[0].initial_conditions == {"s1": 100.0}, (
-            "Initial conditions should be {'s1': 100.0}"
-        )
-        assert dataset.measurements[1].initial_conditions == {"s1": 200.0}, (
-            "Initial conditions should be {'s1': 200.0}"
-        )
+        assert dataset.measurements[0].initial_conditions == {
+            "s1": 100.0
+        }, "Initial conditions should be {'s1': 100.0}"
+        assert dataset.measurements[1].initial_conditions == {
+            "s1": 200.0
+        }, "Initial conditions should be {'s1': 200.0}"
 
 
 class TestDatasetPad:
@@ -62,7 +62,7 @@ class TestDatasetPad:
     def test_pad_no_changes_needed(self):
         """Test padding when all measurements already have consistent data shapes."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
 
         # Both measurements have same-length data for all species
         dataset.add_measurement(
@@ -103,7 +103,7 @@ class TestDatasetPad:
     def test_pad_missing_species_data(self):
         """Test padding when a measurement has initial conditions but no data array for a species."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
 
         # First measurement has data for both species
         dataset.add_measurement(
@@ -152,7 +152,7 @@ class TestDatasetPad:
     def test_pad_different_data_lengths(self):
         """Test padding when data arrays have different lengths across measurements."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
 
         # Different length data arrays
         dataset.add_measurement(
@@ -215,7 +215,7 @@ class TestDatasetPad:
     def test_pad_different_data_lengths_across_measurements(self):
         """Test padding when different measurements have different data lengths for the same species."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
 
         # First measurement with shorter data
         dataset.add_measurement(
@@ -269,7 +269,7 @@ class TestDatasetPad:
     def test_pad_empty_data_measurements(self):
         """Test padding when measurements have only initial conditions (no data)."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
 
         # One measurement with data
         dataset.add_measurement(
@@ -311,10 +311,10 @@ class TestDatasetPad:
     def test_pad_missing_initial_conditions(self):
         """Test that adding measurement raises error when initial conditions are missing for required species."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
 
         # Act & Assert - should fail when trying to add measurement with missing initial conditions
-        with pytest.raises(ValueError, match="inconsistent with the dataset species"):
+        with pytest.raises(ValueError, match="inconsistent with the dataset states"):
             dataset.add_measurement(
                 ctx.Measurement(
                     id="meas1",
@@ -327,7 +327,7 @@ class TestDatasetPad:
     def test_pad_preserves_original_dataset(self):
         """Test that padding creates a new dataset and doesn't modify the original."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
 
         dataset.add_measurement(
             ctx.Measurement(
@@ -375,7 +375,7 @@ class TestDatasetPad:
     def test_pad_all_species_equal_length(self):
         """Test padding when all species already have equal length data."""
         # Arrange
-        dataset = ctx.Dataset(species=["s1", "s2", "s3"], id="test_pad")
+        dataset = ctx.Dataset(states=["s1", "s2", "s3"], id="test_pad")
 
         dataset.add_measurement(
             ctx.Measurement(

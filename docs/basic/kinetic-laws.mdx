@@ -1,0 +1,278 @@
+---
+title: "Kinetic Laws"
+---
+
+# Kinetic Laws in Catalax
+
+Catalax provides a comprehensive library of predefined kinetic law functions organized by biochemical categories. These functions generate mathematically correct rate equations that can be directly used in your reaction models, ensuring consistent and validated kinetics.
+
+## Overview
+
+Kinetic laws in Catalax are Python functions that return mathematical expressions as strings. They are organized into categories:
+
+- **`catalax.laws.enzymatic`** - Enzymatic rate laws (Michaelis-Menten, Briggs-Haldane, etc.)
+- **`catalax.laws.mass_action`** - Mass action kinetics
+- **`catalax.laws.inhibition`** - Inhibition mechanisms
+- **`catalax.laws.activation`** - Activation mechanisms  
+- **`catalax.laws.hill_type`** - Hill-type cooperative kinetics
+
+## Basic Usage: Michaelis-Menten Example
+
+### Step 1: Import the Kinetic Law
+
+```python
+import catalax as ctx
+from catalax.laws.enzymatic import michaelis_menten
+
+# Create model and add states
+model = ctx.Model(name="Enzyme Kinetics")
+model.add_states(
+    S="Substrate",
+    E="Enzyme", 
+    P="Product"
+)
+```
+
+### Step 2: Generate the Kinetic Equation
+
+The `michaelis_menten` function takes species and parameter names as arguments:
+
+```python
+# Use default parameter names
+equation = michaelis_menten()
+print(equation)
+# Output: "(k_cat*E_t*S)/(K_m + S)"
+
+# Customize species and parameter names to match your model
+# Note: Parameters do not need to be renamed, but species do
+#       Renaming parameters is useful if you re-use the law
+#       elsewhere and want to make sure parameters are unique
+equation = michaelis_menten(
+    e_t="E",        # Enzyme concentration (matches state 'E')
+    s="S",          # Substrate concentration (matches state 'S') 
+    k_cat="k_cat",  # Catalytic rate constant
+    K_m="K_m"       # Michaelis constant
+)
+print(equation)
+# Output: "(k_cat*E*S)/(K_m + S)"
+```
+
+### Step 3: Add Reaction with Kinetic Law
+
+```python
+# Add the reaction using the kinetic equation
+model.add_reaction(
+    "S -> P",
+    symbol="enzymatic_conversion",
+    equation=equation
+)
+```
+
+### Complete Working Example
+
+```python
+import catalax as ctx
+from catalax.laws.enzymatic import michaelis_menten
+
+# 1. Create model and states
+model = ctx.Model(name="Michaelis-Menten Kinetics")
+model.add_states(S="Substrate", E="Enzyme", P="Product")
+
+# 2. Generate kinetic equation with matching names
+equation = michaelis_menten(
+    e_t="E",     # Must match enzyme state name
+    s="S",       # Must match substrate state name  
+    k_cat="k_cat",
+    K_m="K_m"
+)
+
+# 3. Add reaction
+model.add_reaction(
+    "S -> P", 
+    symbol="r1",
+    equation=equation
+)
+
+# 4. Set parameter values
+model.parameters.k_cat.value = 10.0
+model.parameters.K_m.value = 5.0
+
+# 5. Create dataset and simulate
+dataset = ctx.Dataset.from_model(model)
+dataset.add_initial(S=100, E=1, P=0)
+
+config = ctx.SimulationConfig(t1=10, nsteps=100)
+results = model.simulate(dataset=dataset, config=config)
+results.plot()
+```
+
+## Parameter Naming Strategy
+
+### Default Parameters
+Each kinetic law function provides sensible defaults:
+
+```python
+# Check function signature for defaults
+help(michaelis_menten)
+# michaelis_menten(e_t="E_t", s="S", k_cat="k_cat", K_m="K_m")
+```
+
+### Custom Parameter Mapping
+Always match your model's naming convention:
+
+```python
+# If your model uses different names
+model.add_states(enzyme="Enzyme", substrate="Substrate", product="Product")
+
+equation = michaelis_menten(
+    e_t="enzyme",      # Match your state name
+    s="substrate",     # Match your state name
+    k_cat="vmax",      # Use your preferred parameter name
+    K_m="Km"           # Use your preferred parameter name
+)
+```
+
+## Advanced Examples
+
+### Competitive Inhibition
+
+```python
+from catalax.laws.inhibition import competitive_inhibition_of_irreversible_unireactant_enzyme_by_product
+
+model = ctx.Model(name="Product Inhibition")
+model.add_states(S="Substrate", E="Enzyme", P="Product")
+
+equation = competitive_inhibition_of_irreversible_unireactant_enzyme_by_product(
+    e_t="E",
+    s="S", 
+    p="P",
+    k_cat="k_cat",
+    K_s="K_m",
+    K_p="K_i"
+)
+
+model.add_reaction("S -> P", symbol="inhibited_reaction", equation=equation)
+```
+
+### Two-Substrate Reaction
+
+```python
+from catalax.laws.enzymatic import irreversible_michaelis_menten_for_two_substrates
+
+model = ctx.Model(name="Bi-substrate Reaction")
+model.add_states(A="Substrate_A", B="Substrate_B", E="Enzyme", P="Product")
+
+equation = irreversible_michaelis_menten_for_two_substrates(
+    a="A",
+    b="B", 
+    e_t="E",
+    K_mA="K_mA",
+    K_mB="K_mB", 
+    K_iA="K_iA",
+    k_cat="k_cat"
+)
+
+model.add_reaction("A + B -> P", symbol="bisubstrate", equation=equation)
+```
+
+## Best Practices
+
+### 1. Match Species Names Exactly
+
+**❌ Wrong - Name Mismatch:**
+```python
+model.add_states(substrate="Substrate")
+
+# This will fail - 'S' doesn't match 'substrate' 
+equation = michaelis_menten(s="S")  
+```
+
+**✅ Correct - Names Match:**
+```python
+model.add_states(substrate="Substrate")
+
+equation = michaelis_menten(s="substrate")  # Matches state name
+```
+
+### 2. Verify Reaction Stoichiometry
+
+**❌ Wrong - Kinetics Don't Match Reaction:**
+```python
+# Using single-substrate kinetics for two-substrate reaction
+model.add_reaction(
+    "A + B -> P",
+    symbol="wrong",
+    equation=michaelis_menten(s="A")  # Only considers A, ignores B
+)
+```
+
+**✅ Correct - Kinetics Match Reaction:**
+```python
+# Using appropriate two-substrate kinetics  
+from catalax.laws.enzymatic import irreversible_michaelis_menten_for_two_substrates
+
+model.add_reaction(
+    "A + B -> P", 
+    symbol="correct",
+    equation=irreversible_michaelis_menten_for_two_substrates(a="A", b="B", e_t="E")
+)
+```
+
+### 3. Choose Appropriate Kinetic Laws
+
+**Consider the mechanism:**
+- **Single substrate/product**: `michaelis_menten`
+- **Two substrates**: `irreversible_michaelis_menten_for_two_substrates`
+- **Product inhibition**: Functions from `catalax.laws.inhibition`
+- **Cooperative binding**: Functions from `catalax.laws.hill_type`
+- **Simple mass action**: Functions from `catalax.laws.mass_action`
+
+### 4. Validate Parameter Units
+
+```python
+# Set parameters with appropriate values and check units
+model.parameters.k_cat.value = 100.0      # s⁻¹
+model.parameters.K_m.value = 0.1          # Same units as substrate concentration  
+model.parameters.K_i.value = 0.05         # Same units as inhibitor concentration
+```
+
+### 5. Document Your Kinetic Choices
+
+```python
+model = ctx.Model(name="Enzyme with Product Inhibition")
+
+# Document the kinetic mechanism chosen
+equation = competitive_inhibition_of_irreversible_unireactant_enzyme_by_product(
+    e_t="E", s="S", p="P", 
+    k_cat="k_cat", K_s="K_m", K_p="K_i"
+)
+
+# Add clear reaction description
+model.add_reaction(
+    "S -> P",
+    symbol="competitive_inhibition", 
+    equation=equation
+)
+```
+
+## Exploring Available Laws
+
+### Browse by Category
+
+```python
+# List all enzymatic laws
+from catalax.laws import enzymatic
+print([func for func in dir(enzymatic) if not func.startswith('_')])
+
+# List all inhibition laws  
+from catalax.laws import inhibition
+print([func for func in dir(inhibition) if not func.startswith('_')])
+```
+
+### Function Documentation
+
+```python
+# Get detailed information about any kinetic law
+from catalax.laws.enzymatic import michaelis_menten
+help(michaelis_menten)
+```

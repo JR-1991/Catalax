@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+
 from diffrax import Tsit5
 from jax import Array
 
@@ -16,3 +17,4 @@ class SimulationConfig:
     rtol: float = 1e-5
     atol: float = 1e-5
     max_steps: int = 4096
+    throw: bool = True

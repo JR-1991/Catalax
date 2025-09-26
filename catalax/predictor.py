@@ -3,12 +3,14 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING, Literal, Optional
 
+from deprecated import deprecated
+
 from catalax.dataset.measurement import Measurement
 from catalax.widget import create_interactive_prediction_widget
 
 if TYPE_CHECKING:
-    from catalax.model.model import SimulationConfig, Model
     from catalax.dataset import Dataset
+    from catalax.model.model import Model, SimulationConfig
 
 
 class Predictor(abc.ABC):
@@ -76,10 +78,18 @@ class Predictor(abc.ABC):
             ref_measurement=ref_measurement,
         )
 
+    @deprecated("This method is deprecated. Use get_state_order instead.")
     @abc.abstractmethod
     def get_species_order(self) -> list[str]:
         """
         Get the species order of the predictor.
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_state_order(self) -> list[str]:
+        """
+        Get the state order of the predictor.
         """
         pass
 

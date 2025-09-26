@@ -7,23 +7,23 @@ sidebarTitle: model
 
 ## Classes
 
-### `Model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L45" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `Model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L48" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
-Model class for storing ODEs, species, and parameters, which is used
+Model class for storing ODEs, states, and parameters, which is used
 to describe a biological system. Model classes can be passed to analysis
 and optimisation methods, which will utilize the defined model. The workflow
 of using the Model class is as follows:
 
     (1) Instantiate a Model object
-    (2) Add species to the model
+    (2) Add states to the model
     (3) Add ODEs to the model
     (4) Further modify parameters as needed (values, equations, etc.)
 
 Example usage:
 
     model = Model(name="model")
-    model.add_species("s1, s2, e1, c1") # see 'add_species' method for more details
+    model.add_state("s1, s2, e1, c1") # see 'add_state' method for more details
 
     # Add ODEs
     model.add_ode("s1", "k1 * s1")
@@ -35,40 +35,105 @@ Example usage:
 
 **Methods:**
 
-#### `add_ode` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L91" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `stack` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L96" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-add_ode(self, species: str, equation: str, observable: bool = True)
+stack(self) -> BaseStack | MixedStack
+```
+
+Get the stack of the model.
+
+
+#### `sim_input` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L101" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+sim_input(self) -> SimulationInput
+```
+
+Get the simulation input of the model.
+
+
+#### `species` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L115" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+species(self) -> Dict[str, State]
+```
+
+Get the states of the model.
+
+
+#### `add_ode` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L119" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_ode(self, state: str, equation: str, observable: bool = True)
 ```
 
 Adds an ODE to the model and converts the equation to a SymPy expression.
 
 This method will add the new ODE to the model and the model's ODEs attribute,
 which can be accessed by object dot-notation. For example, if the ODE is set
-for species 's1' and the model is named 'model', the ODE can be accessed by:
+for state 's1' and the model is named 'model', the ODE can be accessed by:
 
 model = Model(name="model")
-model.add_ode(species="s1", equation="k1*s1")
-model.odes.s1 -> ODE(equation=k1*s1, species=s1)
+model.add_ode(state="s1", equation="k1*s1")
+model.odes.s1 -> ODE(equation=k1*s1, state=s1)
 
 Parameters will be inferred from the equation and added to the model automatically
-by comparing free symbols in the equation to the model's species. If a symbol is not
-present as a species, it will be added as a parameter. If the symbol is already present
+by comparing free symbols in the equation to the model's states. If a symbol is not
+present as a state, it will be added as a parameter. If the symbol is already present
 as a parameter the already defined one will be referenced instead of creating a new one.
 
-If there already exists an ODE for the given species, a ValueError will be raised.
+If there already exists an ODE for the given state, a ValueError will be raised.
 Due to the theoretical nature of dynamic systems, there can only be one ODE per
-species. If a species hasn't been added to the model, it will be added automatically.
+state. If a state hasn't been added to the model, it will be added automatically.
 
 **Args:**
-- `species`: The species to be modelled within this ODE.
-- `equation`: The equation that describes the dynamics of the species.
+- `state`: The state to be modelled within this ODE.
+- `equation`: The equation that describes the dynamics of the state.
 
 **Raises:**
 - `ValueError`: _description_
 
 
-#### `add_assignment` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L143" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `add_reaction` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L171" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_reaction(self, symbol: str, reactants: List[Tuple[float, str]], products: List[Tuple[float, str]], equation: str, reversible: bool)
+```
+
+Adds a reaction to the model and converts the equation to a SymPy expression.
+
+This method will add a new reaction to the model and the model's reactions attribute,
+which can be accessed by object dot-notation. For example, if the reaction is named 'r1'
+and the model is named 'model', the reaction can be accessed by:
+
+model = Model(name="model")
+model.add_reaction(symbol="r1", reactants=[(1.0, "A")], products=[(1.0, "B")],
+                  equation="k1*A", reversible=False)
+model.reactions.r1 -> Reaction(name=r1, reactants=[...], products=[...])
+
+Parameters will be inferred from the equation and added to the model automatically
+by comparing free symbols in the equation to the model's states. If a symbol is not
+present as a state, it will be added as a parameter.
+
+All states referenced in the reactants and products must already exist in the model.
+If any state is not found, a ValueError will be raised.
+
+**Args:**
+- `symbol`: The unique identifier for this reaction.
+- `reactants`: List of tuples containing (stoichiometry, state_name)
+                          for reactants.
+- `products`: List of tuples containing (stoichiometry, state_name)
+                         for products.
+- `equation`: The rate equation that describes the reaction kinetics.
+- `reversible`: Whether the reaction is reversible or not.
+
+**Raises:**
+- `ValueError`: If the reaction has no reactants or products, or if any referenced
+       state is not found in the model.
+
+
+#### `add_assignment` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L233" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 add_assignment(self, symbol: str, equation: str)
@@ -77,41 +142,50 @@ add_assignment(self, symbol: str, equation: str)
 Adds an assignment to the model and converts the equation to a SymPy expression.
 
 
-#### `add_species` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L160" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `add_state` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L250" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+add_state(self, state_string: str = '', **state_map) -> List[State]
+```
+
+Adds a single or multiple states to the model, which can later be used in ODEs.
+
+This method will add new states to the model and the model's states dictionary,
+which can be accessed by object dot-notation. For example, if the state is named 's1'
+and the model is named 'model', the state can be accessed by:
+
+    model = Model(name="model")
+    model.add_state("s1")
+    model.states.s1 -> State(name="s1", symbol=s1)
+
+States can be added in three ways. The first is by passing a string of state names that
+are separated by a comma. Please note, symbols will be also be used as names. The second is
+by passing a dictionary of state symbols (key) and names (values) and unpacking them as
+keyword arguments. The third is by passing each as a keyword argument.
+
+The following are all valid ways to add states:
+
+    (1) model.add_state("s1, s2, s3")
+    (2) model.add_state(**{"s1": "state1", "s2": "state2", "s3": "state3"})
+    (3) model.add_state(s1="state1", s2="state2", s3="state3")
+
+If a state already exists, a ValueError will be raised.
+
+**Args:**
+- `state_string`: String of comma-separated state symbols. Defaults to "".
+- `**state_map`: Dictionary of state symbols (key) and names (values).
+
+
+#### `add_species` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L305" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 add_species(self, species_string: str = '', **species_map)
 ```
 
-Adds a single or multiple species to the model, which can later be used in ODEs.
-
-This method will add new species to the model and the model's species dictionary,
-which can be accessed by object dot-notation. For example, if the species is named 's1'
-and the model is named 'model', the species can be accessed by:
-
-    model = Model(name="model")
-    model.add_species("s1")
-    model.species.s1 -> Species(name="s1", symbol=s1)
-
-Species can be added in three ways. The first is by passing a string of species names that
-are separated by a comma. Please note, symbols will be also be used as names. The second is
-by passing a dictionary of species symbols (key) and names (values) and unpacking them as
-keyword arguments. The third is by passing each as a keyword argument.
-
-The following are all valid ways to add species:
-
-    (1) model.add_species("s1, s2, s3")
-    (2) model.add_species(**{"s1": "species1", "s2": "species2", "s3": "species3"})
-    (3) model.add_species(s1="species1", s2="species2", s3="species3")
-
-If a species already exists, a ValueError will be raised.
-
-**Args:**
-- `species_string`: String of comma-separated species symbols. Defaults to "".
-- `**species_map`: Dictionary of species symbols (key) and names (values).
+DEPRECATED: Adds a single or multiple states to the model, which can later be used in ODEs and reactions.
 
 
-#### `add_constant` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L257" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `add_constant` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L359" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 add_constant(self, constant_string: str = '', **constants_map)
@@ -146,7 +220,7 @@ If a constant already exists, a ValueError will be raised.
 - `TypeError`: If the constant names are not of type str.
 
 
-#### `simulate` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L307" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `simulate` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L409" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 simulate(self, dataset: Dataset, config: SimulationConfig, saveat: Union[jax.Array, None] = None, parameters: Optional[jax.Array] = None, in_axes: InAxes = InAxes.Y0, return_array: bool = False, use_hdi: Optional[Literal['lower', 'upper', 'lower_50', 'upper_50']] = None, hdi_prob: float = 0.95) -> Dataset
@@ -167,10 +241,10 @@ Simulate the model with given dataset and parameters.
 - Either a tuple of (time points, results) arrays or a Dataset object
 
 
-#### `predict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L365" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `predict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L467" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-predict(self, dataset: Dataset, config: SimulationConfig | None = None, n_steps: int = 100, use_times: bool = False) -> Dataset
+predict(self, dataset: Dataset, config: SimulationConfig | None = None, n_steps: int = 100, use_times: bool = False, hdi: Optional[Literal['lower', 'upper', 'lower_50', 'upper_50']] = None) -> Dataset
 ```
 
 Predict model behavior using the given dataset.
@@ -190,7 +264,7 @@ Returns:
     A Dataset object containing the prediction results
 
 
-#### `rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L400" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L503" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 rates(self, t: Array, y: Array, constants: Optional[Array] = None) -> Array
@@ -209,7 +283,7 @@ This method particularly useful to gather rates for quiver plots.
 - Rates
 
 
-#### `predict_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L426" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `predict_rates` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L529" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 predict_rates(self, dataset: Dataset) -> jax.Array
@@ -224,7 +298,7 @@ Predict rates using the given dataset.
 - A Dataset object containing the prediction results
 
 
-#### `get_parameter_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L675" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_parameter_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L780" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_parameter_order(self) -> List[str]
@@ -233,25 +307,79 @@ get_parameter_order(self) -> List[str]
 Returns the order of the parameters in the model
 
 
-#### `get_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L679" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L784" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_state_order(self, modeled: bool = True) -> List[str]
+```
+
+Returns the order of the states and constants in the model
+
+
+#### `get_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L796" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_species_order(self) -> List[str]
 ```
 
-Returns the order of the species ad constants in the model
+Returns the order of the states in the model
 
 
-#### `get_observable_species_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L683" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_reaction_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L800" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-get_observable_species_order(self) -> List[str]
+get_reaction_order(self) -> List[str]
 ```
 
-Returns the order of the observable species in the model
+Returns the order of the reactions in the model
 
 
-#### `get_constants_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L691" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_reacting_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L804" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_reacting_state_order(self) -> List[str]
+```
+
+Returns the order of the states that are involved in reactions in the model
+
+
+#### `get_observable_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L819" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_observable_state_order(self) -> List[str]
+```
+
+Returns the order of the observable states in the model as strings
+
+
+#### `get_observable_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L824" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_observable_state_order(self, as_indices: Literal[True]) -> List[int]
+```
+
+Returns the order of the observable states in the model as indices
+
+
+#### `get_observable_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L829" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_observable_state_order(self, as_indices: Literal[False]) -> List[str]
+```
+
+Returns the order of the observable states in the model as strings
+
+
+#### `get_observable_state_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L833" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_observable_state_order(self, as_indices: bool = False) -> List[str | int]
+```
+
+Returns the order of the observable states in the model
+
+
+#### `get_constants_order` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L851" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_constants_order(self) -> List[str]
@@ -260,7 +388,7 @@ get_constants_order(self) -> List[str]
 Returns the order of the constants in the model
 
 
-#### `reset` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L762" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `reset` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L907" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 reset(self)
@@ -269,7 +397,7 @@ reset(self)
 Resets the model
 
 
-#### `reparametrize` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L769" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `reparametrize` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L914" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 reparametrize(self, **replacements: Dict[str, Expr | str | float | int | None]) -> 'Model'
@@ -295,7 +423,7 @@ substitutions applied, leaving the original model unchanged.
 - A new model instance with the substitutions applied.
 
 
-#### `has_hdi` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L848" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `has_hdi` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L993" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 has_hdi(self)
@@ -304,7 +432,7 @@ has_hdi(self)
 Checks whether the model has HDI values for any of the parameters
 
 
-#### `y0_array_to_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L896" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `y0_array_to_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1039" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 y0_array_to_dict(self, y0_array: jax.Array) -> List[Dict[str, float]]
@@ -317,13 +445,13 @@ Converts a 1D or 2D array of initial values to a list of dictionaries.
 
 **Returns:**
 - List[Dict[str, float]]: A list of dictionaries, where each dictionary represents
-- the initial values for each species in the model.
+- the initial values for each state in the model.
 
 **Raises:**
-- `AssertionError`: If the length of y0 array does not match the number of species in the model.
+- `AssertionError`: If the length of y0 array does not match the number of states in the model.
 
 
-#### `n_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L926" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `n_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1066" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 n_parameters(self) -> int
@@ -332,7 +460,7 @@ n_parameters(self) -> int
 Get the number of parameters of the model.
 
 
-#### `save` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L931" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `save` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1071" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 save(self, path: str, name: Optional[str] = None, **json_kwargs)
@@ -344,7 +472,7 @@ Saves a model to a JSON file.
 - `path`: Path to which the model will be serialized
 
 
-#### `to_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L954" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `to_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1094" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 to_dict(self)
@@ -353,7 +481,7 @@ to_dict(self)
 Converts the model into a serializable dictionary.
 
 
-#### `from_samples` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L984" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_samples` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1124" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 from_samples(self, samples: Dict[str, Array], hdi_prob: float = 0.95, set_bounds: bool = False) -> 'Model'
@@ -365,7 +493,24 @@ Create a new model from samples drawn from the posterior distribution.
 - `samples`: The samples to update the parameters with.
 
 
-#### `load` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1040" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_arviz` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1178" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+from_arviz(self, samples: az.InferenceData, hdi_prob: float = 0.95, set_bounds: bool = False) -> 'Model'
+```
+
+Create a new model from samples drawn from the posterior distribution.
+
+**Args:**
+- `samples`: The ArviZ InferenceData object containing posterior samples.
+- `hdi_prob`: Probability for the highest density interval. Default is 0.95.
+- `set_bounds`: Whether to set parameter bounds based on HDI. Default is False.
+
+**Returns:**
+- A new model instance with parameters updated from the posterior samples.
+
+
+#### `load` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1240" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 load(cls, path: str)
@@ -383,7 +528,7 @@ Loads a model from a JSON file and initializes a model.
 - Resulting model instance.
 
 
-#### `from_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1058" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_dict` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1258" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 from_dict(cls, model_dict: Dict)
@@ -392,10 +537,10 @@ from_dict(cls, model_dict: Dict)
 Initializes a model from a dictionary.
 
 
-#### `from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1101" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `from_enzymeml` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1312" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-from_enzymeml(cls, enzmldoc: pe.EnzymeMLDocument, name: str | None = None, from_reactions: bool = False)
+from_enzymeml(cls, enzmldoc: pe.EnzymeMLDocument, name: str | None = None)
 ```
 
 Initializes a model from an EnzymeML document.
@@ -406,7 +551,7 @@ Initializes a model from an EnzymeML document.
 - `from_reactions`: Whether to initialize the model from reactions.
 
 
-#### `update_enzymeml_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1116" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `update_enzymeml_parameters` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/model.py#L1326" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 update_enzymeml_parameters(self, enzmldoc: EnzymeMLDocument)

@@ -29,6 +29,7 @@ import mlcroissant as mlc
 import numpy as np
 import pandas as pd
 import pyenzyme as pe
+from deprecated import deprecated
 from jax import Array
 from matplotlib.figure import Figure
 from pydantic import BaseModel, Field
@@ -62,7 +63,7 @@ class Dataset(BaseModel):
 
     Attributes:
         id: Unique identifier of the dataset
-        species: List of chemical species within this dataset
+        states: List of chemical states within this dataset
         name: Human-readable name or identifier
         description: Longer text description of the dataset
         measurements: Collection of experimental measurements
@@ -74,9 +75,9 @@ class Dataset(BaseModel):
         description="Unique identifier of the dataset.",
     )
 
-    species: List[str] = Field(
+    states: List[str] = Field(
         ...,
-        description="List of species within this dataset.",
+        description="List of states within this dataset.",
     )
 
     name: Optional[str] = Field(
@@ -124,17 +125,22 @@ class Dataset(BaseModel):
 
         return meas
 
+    @deprecated("This method is deprecated. Use get_observable_states_order instead.")
     def get_observable_species_order(self) -> List[str]:
-        """Get the ordered list of species that are observed across measurements.
+        """Get the ordered list of species that are observed across measurements."""
+        return self.get_observable_states_order()
 
-        This method determines which species have measurement data and ensures
+    def get_observable_states_order(self) -> List[str]:
+        """Get the ordered list of states that are observed across measurements.
+
+        This method determines which states have measurement data and ensures
         consistency across different measurements in the dataset.
 
         Returns:
-            Ordered list of observable species names
+            Ordered list of observable states names
 
         Raises:
-            ValueError: If no common observable species exist across measurements
+            ValueError: If no common observable states exist across measurements
         """
         if not self.measurements:
             return []
@@ -163,17 +169,17 @@ class Dataset(BaseModel):
 
                 observable_ids = common_observables
 
-        # Return sorted observable species
+        # Return sorted observable states
         return sorted(observable_ids)
 
     def get_observable_indices(self) -> List[int]:
-        """Get the indices of observable species within the full species list.
+        """Get the indices of observable states within the full states list.
 
         Returns:
             List of integer indices corresponding to the positions of observable
-            species in the full species list
+            states in the full states list
         """
-        return [self.species.index(sp) for sp in self.get_observable_species_order()]
+        return [self.states.index(sp) for sp in self.get_observable_states_order()]
 
     # =====================
     # Data Addition Methods
@@ -190,7 +196,7 @@ class Dataset(BaseModel):
             time: Time points for the initial condition. Useful if you want to predict
                   using neural ODEs.
             **kwargs: Initial condition values as keyword arguments where
-                      keys are species names and values are concentrations
+                      keys are states names and values are concentrations
         """
         self.measurements.append(
             Measurement(
@@ -207,34 +213,36 @@ class Dataset(BaseModel):
 
         Raises:
             AssertionError: If a measurement with the same ID already exists
-            ValueError: If species in the measurement are inconsistent with dataset species
+            ValueError: If states in the measurement are inconsistent with dataset states
         """
         # Check for duplicate measurement ID
-        assert not any(meas.id == measurement.id for meas in self.measurements), (
-            f"Measurement with ID={measurement.id} already exists."
-        )
+        assert not any(
+            meas.id == measurement.id for meas in self.measurements
+        ), f"Measurement with ID={measurement.id} already exists."
 
-        # Check for species consistency
-        unused_species = [
-            sp for sp in measurement.data.keys() if sp not in self.species
+        # Check for states consistency
+        unused_states = [
+            state for state in measurement.data.keys() if state not in self.states
         ]
-        missing_species = [
-            sp for sp in self.species if sp not in measurement.initial_conditions.keys()
+        missing_states = [
+            state
+            for state in self.states
+            if state not in measurement.initial_conditions.keys()
         ]
 
-        if unused_species:
-            warnings.warn(f"Species {unused_species} are not used in the dataset.")
+        if unused_states:
+            warnings.warn(f"States {unused_states} are not used in the dataset.")
 
-        if missing_species:
+        if missing_states:
             raise ValueError(
-                f"The measurement species are inconsistent with the dataset species. Missing {missing_species}"
+                f"The measurement states are inconsistent with the dataset states. Missing {missing_states}"
             )
 
         self.measurements.append(measurement)
 
     def add_from_jax_array(
         self,
-        species_order: List[str],
+        state_order: List[str],
         initial_condition: Dict[str, float],
         data: Array,
         time: Array,
@@ -242,17 +250,15 @@ class Dataset(BaseModel):
         """Add a measurement from JAX arrays directly.
 
         Args:
-            species_order: Ordered list of species names matching data array columns
-            initial_condition: Dictionary mapping species names to initial concentrations
-            data: JAX array of concentration measurements (shape: time_points x species)
+            state_order: Ordered list of state names matching data array columns
+            initial_condition: Dictionary mapping states names to initial concentrations
+            data: JAX array of concentration measurements (shape: time_points x states)
             time: JAX array of time points
         """
         measurement = Measurement(
             initial_conditions=initial_condition,
             time=time,
-            data={
-                species: data[:, i].squeeze() for i, species in enumerate(species_order)
-            },
+            data={state: data[:, i].squeeze() for i, state in enumerate(state_order)},
         )
 
         self.add_measurement(measurement)
@@ -262,8 +268,8 @@ class Dataset(BaseModel):
 
         This method deep-copies the dataset and ensures that each `Measurement`
         has:
-        * A `data` entry for every species in `self.species`.
-        * All per-species arrays right-padded to the maximum length with NaN.
+        * A `data` entry for every state in `self.states`.
+        * All per-state arrays right-padded to the maximum length with NaN.
         * A `time` array right-padded to the same maximum length with NaN
             (if present). If `time` is `None`, it is left unchanged.
 
@@ -273,15 +279,15 @@ class Dataset(BaseModel):
 
         Returns:
             Dataset: A new dataset instance where all measurements have
-            homogeneously shaped 1-D lists for all species and padded `time`
+            homogeneously shaped 1-D lists for all states and padded `time`
             arrays.
 
         Raises:
             ValueError: If any measurement's `initial_conditions` do not cover
-            all species in `self.species`.
+            all states in `self.states`.
         """
         ds = deepcopy(self)
-        required = set(self.species)
+        required = set(self.states)
 
         # Get max length from data arrays and time arrays
         max_len = 0
@@ -296,7 +302,7 @@ class Dataset(BaseModel):
             missing = required - keys
             if missing:
                 raise ValueError(
-                    f"Measurement {meas.id} missing definition of initial condition for species: {sorted(missing)}"
+                    f"Measurement {meas.id} missing definition of initial condition for states: {sorted(missing)}"
                 )
 
         # Pad missing measurement data with NaNs
@@ -315,8 +321,8 @@ class Dataset(BaseModel):
                     time_arr = jnp.concatenate((time_arr, pad_vals))
                 meas.time = time_arr
 
-            # Pad data for each species
-            for sid in self.species:
+            # Pad data for each state
+            for sid in self.states:
                 try:
                     arr = jnp.asarray(meas.data[sid], dtype=float)
                 except KeyError:
@@ -342,8 +348,8 @@ class Dataset(BaseModel):
 
         Returns:
             Tuple containing:
-            - DataFrame with time course data (columns: measurementId, time, species...)
-            - DataFrame with initial conditions (columns: measurementId, species...)
+            - DataFrame with time course data (columns: measurementId, time, states...)
+            - DataFrame with initial conditions (columns: measurementId, states...)
         """
         data = pd.concat([meas.to_dataframe() for meas in self.measurements])
         inits = pd.DataFrame(
@@ -355,21 +361,21 @@ class Dataset(BaseModel):
 
     def to_jax_arrays(
         self,
-        species_order: List[str],
+        state_order: List[str],
         inits_to_array: bool = False,
     ) -> tuple[Array, Array, Union[Array, List[Union[Array, Dict[str, float]]]]]:
         """Convert dataset to JAX arrays for computational use.
 
         Args:
-            species_order: Ordered list of species names to ensure consistent array structure
+            state_order: Ordered list of state names to ensure consistent array structure
             inits_to_array: Whether to convert initial conditions to a JAX array
 
         Returns:
             A tuple containing:
-            - data: JAX array of shape (n_measurements, n_time_points, n_species)
+            - data: JAX array of shape (n_measurements, n_time_points, n_states)
             - time: JAX array of shape (n_measurements, n_time_points)
-            - initial_conditions: Either a JAX array of shape (n_measurements, n_species)
-              if inits_to_array=True, or a list of dictionaries mapping species names
+            - initial_conditions: Either a JAX array of shape (n_measurements, n_states)
+              if inits_to_array=True, or a list of dictionaries mapping states names
               to initial concentrations
         """
         data = []
@@ -378,7 +384,7 @@ class Dataset(BaseModel):
 
         for meas in self.measurements:
             data_, time_, inits = meas.to_jax_arrays(
-                species_order=species_order,
+                state_order=state_order,
                 inits_to_array=inits_to_array,
             )
 
@@ -399,20 +405,20 @@ class Dataset(BaseModel):
                 initial_conditions,  # type: ignore
             )
 
-    def to_y0_matrix(self, species_order: List[str]) -> Array:
+    def to_y0_matrix(self, state_order: List[str]) -> Array:
         """Create a matrix of initial conditions for all measurements.
 
         Args:
-            species_order: Ordered list of species names for the matrix columns
+            state_order: Ordered list of state names for the matrix columns
 
         Returns:
-            JAX array of shape (n_measurements, n_species) containing initial
+            JAX array of shape (n_measurements, n_states) containing initial
             conditions for all measurements
         """
         inits = []
 
         for meas in self.measurements:
-            inits.append(meas.to_y0_array(species_order=species_order))
+            inits.append(meas.to_y0_array(state_order=state_order))
 
         return jnp.stack(inits, axis=0)
 
@@ -495,12 +501,13 @@ class Dataset(BaseModel):
 
         small_molecules = [sp.id for sp in enzmldoc.small_molecules]
         proteins = [sp.id for sp in enzmldoc.proteins]
-        all_species = small_molecules + proteins
+        complexes = [sp.id for sp in enzmldoc.complexes]
+        all_states = small_molecules + proteins + complexes
 
         dataset = cls(
             id=enzmldoc.name,
             name=enzmldoc.name,
-            species=all_species,
+            states=all_states,
             measurements=measurements,
         )
 
@@ -520,9 +527,9 @@ class Dataset(BaseModel):
         Args:
             name: Name for the dataset
             data: DataFrame containing time course data
-                  Expected columns: measurementId, time, species1, species2...
+                  Expected columns: measurementId, time, state1, state2...
             inits: DataFrame containing initial conditions
-                   Expected columns: measurementId, species1, species2...
+                   Expected columns: measurementId, state1, state2...
             meas_id: Optional custom ID for the dataset
             description: Optional description for the dataset
 
@@ -534,13 +541,13 @@ class Dataset(BaseModel):
             ValueError: If measurement IDs are inconsistent between data and inits
         """
         # Validate required columns
-        assert "measurementId" in data.columns, (
-            "Missing column in data table: 'measurementId'"
-        )
+        assert (
+            "measurementId" in data.columns
+        ), "Missing column in data table: 'measurementId'"
         assert "time" in data.columns, "Missing column in data table: 'time'"
-        assert "measurementId" in inits.columns, (
-            "Missing column in inits table: 'measurementId'"
-        )
+        assert (
+            "measurementId" in inits.columns
+        ), "Missing column in inits table: 'measurementId'"
 
         if meas_id is None:
             meas_id = str(uuid.uuid4())
@@ -566,12 +573,12 @@ class Dataset(BaseModel):
                 f"- Missing in initial conditions: {missing_in_inits}"
             )
 
-        # Extract species names (all columns except measurementId)
-        species = [sp for sp in inits.columns if sp != "measurementId"]
+        # Extract states names (all columns except measurementId)
+        states = [sp for sp in inits.columns if sp != "measurementId"]
 
         # Create the dataset
         dataset = cls(
-            species=species,
+            states=states,
             name=name,
             description=description,
             id=meas_id,
@@ -595,13 +602,13 @@ class Dataset(BaseModel):
 
     @classmethod
     def from_model(cls, model: "Model") -> "Dataset":
-        """Create an empty dataset with species from a model.
+        """Create an empty dataset with states from a model.
 
         Args:
-            model: Model object containing species information
+            model: Model object containing states information
 
         Returns:
-            A new Dataset object with species from the model but no measurements
+            A new Dataset object with states from the model but no measurements
 
         Raises:
             AssertionError: If the provided object is not a Model instance
@@ -613,7 +620,7 @@ class Dataset(BaseModel):
         return cls(
             id=model.name,
             name=model.name,
-            species=model.get_species_order(),
+            states=model.get_state_order(modeled=False),
         )
 
     @classmethod
@@ -646,14 +653,14 @@ class Dataset(BaseModel):
                 croissant_ds, lambda meas_id: "/inits" not in meas_id
             )
 
-            species: set[str] = set()
+            states: set[str] = set()
             measurements = []
 
             # Process each measurement
             for meas_uuid, rs in meas_rs.items():
-                assert meas_uuid in init_rs, (
-                    f"Initial conditions not found for {meas_uuid}"
-                )
+                assert (
+                    meas_uuid in init_rs
+                ), f"Initial conditions not found for {meas_uuid}"
 
                 # Extract initial conditions
                 inits = {
@@ -666,8 +673,8 @@ class Dataset(BaseModel):
                 data = json_lines_to_dict(meas_recs)
                 time = data.pop("time")
 
-                # Update species set
-                species.update(inits.keys())
+                # Update states set
+                states.update(inits.keys())
 
                 # Create measurement
                 measurements.append(
@@ -684,14 +691,14 @@ class Dataset(BaseModel):
             id=croissant_ds.metadata.id,
             name=croissant_ds.metadata.name,
             description=croissant_ds.metadata.description,
-            species=list(species),
+            states=list(states),
             measurements=measurements,
         )
 
     @classmethod
     def from_jax_arrays(
         cls,
-        species_order: List[str],
+        state_order: List[str],
         data: Array,
         time: Array,
         y0s: Array,
@@ -699,10 +706,10 @@ class Dataset(BaseModel):
         """Create a dataset directly from JAX arrays.
 
         Args:
-            species_order: Ordered list of species names
-            data: JAX array of concentrations with shape (n_measurements, n_timepoints, n_species)
+            state_order: Ordered list of state names
+            data: JAX array of concentrations with shape (n_measurements, n_timepoints, n_state)
             time: JAX array of timepoints with shape (n_measurements, n_timepoints)
-            y0s: JAX array of initial conditions with shape (n_measurements, n_species)
+            y0s: JAX array of initial conditions with shape (n_measurements, n_state)
 
         Returns:
             A new Dataset object with measurements constructed from the arrays
@@ -717,27 +724,27 @@ class Dataset(BaseModel):
             f"First dimensions must be equal."
         )
 
-        assert y0s.shape[-1] == len(species_order), (
+        assert y0s.shape[-1] == len(state_order), (
             f"Incompatible shapes: y0s shape = {y0s.shape}, "
-            f"species_order length = {len(species_order)}. "
-            f"Last species dimensions must be equal to species_order length."
+            f"state_order length = {len(state_order)}. "
+            f"Last state dimensions must be equal to state_order length."
         )
 
         # Create dataset
         dataset = cls(
             id=str(uuid.uuid4()),
             name=str(uuid.uuid4()),
-            species=species_order,
+            states=state_order,
         )
 
         # Add measurements
         for i in range(data.shape[0]):
             initial_conditions = {
-                species: float(y0s[i, j]) for j, species in enumerate(species_order)
+                state: float(y0s[i, j]) for j, state in enumerate(state_order)
             }
 
             dataset.add_from_jax_array(
-                species_order=species_order,
+                state_order=state_order,
                 initial_condition=initial_conditions,
                 data=data[i],
                 time=time[i],
@@ -965,8 +972,8 @@ class Dataset(BaseModel):
         from catalax.model.simconfig import SimulationConfig
 
         _, saveat, _ = self.to_jax_arrays(
-            species_order=[
-                spec for spec in self.species if spec not in model.constants
+            state_order=[
+                state for state in self.states if state not in model.constants
             ],
             inits_to_array=True,
         )
@@ -1025,6 +1032,10 @@ class Dataset(BaseModel):
     def _format_legends(self, axs, ncols, measurement_ids):
         """Format legends for each subplot."""
         # Place legends only on rightmost plots in each row
+        if len(axs) == 1:
+            axs[0].legend(loc="center left", bbox_to_anchor=(1, 0.5))
+            return
+
         for i, ax in enumerate(axs):
             if i % ncols == ncols - 1:
                 ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
@@ -1096,7 +1107,7 @@ class Dataset(BaseModel):
                 id=self.id,
                 name=self.name,
                 description=self.description,
-                species=self.species,
+                states=self.states,
             )
 
         # Generate augmented measurements
@@ -1133,7 +1144,7 @@ class Dataset(BaseModel):
 
         The method performs the following steps:
         1. Generate predictions using the provided predictor
-        2. Extract observable species data from both predictions and measurements
+        2. Extract observable state data from both predictions and measurements
         3. Calculate chi-square, reduced chi-square, AIC, and BIC statistics
 
         Args:
@@ -1151,22 +1162,22 @@ class Dataset(BaseModel):
 
         Raises:
             ValueError: If predictor cannot generate predictions for this dataset
-            RuntimeError: If observable species orders don't match between dataset and predictions
+            RuntimeError: If observable states orders don't match between dataset and predictions
 
         Note:
-            Only observable species (those with actual measurement data) are included in the
+            Only observable states (those with actual measurement data) are included in the
             metric calculations. This ensures fair comparison when models predict additional
-            unmeasured species.
+            unmeasured states.
         """
         pred = predictor.predict(self, use_times=True)
-        species_order = self.get_observable_species_order()
+        state_order = self.get_observable_states_order()
 
-        y_pred, _, _ = pred.to_jax_arrays(species_order=species_order)
-        y_true, _, _ = self.to_jax_arrays(species_order=species_order)
+        y_pred, _, _ = pred.to_jax_arrays(state_order=state_order)
+        y_true, _, _ = self.to_jax_arrays(state_order=state_order)
 
         observable_indices = self.get_observable_indices()
 
-        # Extract observable species data for metric calculation
+        # Extract observable states data for metric calculation
         y_pred_obs = y_pred[:, :, observable_indices]
         y_true_obs = y_true[:, :, observable_indices]
 
@@ -1198,10 +1209,10 @@ class Dataset(BaseModel):
 
         Args:
             data: JAX array of concentration time courses with shape
-                 (n_measurements, n_timepoints, n_species) or (n_timepoints, n_species)
+                 (n_measurements, n_timepoints, n_states) or (n_timepoints, n_states)
             time: JAX array of time points with shape (n_measurements, n_timepoints) or (n_timepoints,)
-            y0s: Either a JAX array of initial conditions with shape (n_measurements, n_species)
-                 or a list of dictionaries mapping species names to initial concentrations
+            y0s: Either a JAX array of initial conditions with shape (n_measurements, n_states)
+                 or a list of dictionaries mapping state names to initial concentrations
 
         Returns:
             A tuple of three elements:

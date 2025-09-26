@@ -7,20 +7,11 @@ sidebarTitle: equation
 
 ## Classes
 
-### `Equation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/equation.py#L19" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `Equation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/equation.py#L20" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 **Methods:**
 
-#### `converts_assignment_to_sympy` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/equation.py#L33" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
-
-```python
-converts_assignment_to_sympy(cls, value)
-```
-
-Convertes a string to a sympy expression
-
-
-#### `reparametrize` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/equation.py#L46" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `reparametrize` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/equation.py#L41" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 reparametrize(self, **replacements: Dict[str, Expr | str | float])
@@ -29,7 +20,7 @@ reparametrize(self, **replacements: Dict[str, Expr | str | float])
 Reparametrizes the equation
 
 
-#### `add_parameters_to_model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/equation.py#L52" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `add_parameters_to_model` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/equation.py#L47" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 add_parameters_to_model(self)
@@ -39,5 +30,5 @@ Adds parameters given by the ODE to the model and ODE
 
 This step is necessary to ensure that the parameters are available
 model-wide and not just within the ODE. Also, this step can only be
-done upon addition of the model due to no given knowledge of the species.
+done upon addition of the model due to no given knowledge of the state.
 

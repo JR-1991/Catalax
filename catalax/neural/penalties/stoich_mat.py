@@ -34,7 +34,7 @@ def penalize_density(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> jax.Ar
     sparse reaction networks which are often more interpretable and realistic.
 
     Args:
-        stoich_matrix: The stoichiometric matrix to penalize, shape (n_species, n_reactions)
+        stoich_matrix: The stoichiometric matrix to penalize, shape (n_state, n_reactions)
         alpha: Penalty strength coefficient, higher values increase sparsity pressure
 
     Returns:
@@ -56,7 +56,7 @@ def penalize_non_bipolar(model: RateFlowODE, alpha: float = 0.1, **kwargs) -> ja
     reactants (-1) and products (+1), resulting in zero column sums.
 
     Args:
-        stoich_matrix: The stoichiometric matrix to penalize, shape (n_species, n_reactions)
+        stoich_matrix: The stoichiometric matrix to penalize, shape (n_state, n_reactions)
         alpha: Penalty strength coefficient, higher values enforce stricter mass balance
 
     Returns:

@@ -7,7 +7,7 @@ sidebarTitle: widget
 
 ## Functions
 
-### `create_interactive_prediction_widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L411" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `create_interactive_prediction_widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L409" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 create_interactive_prediction_widget(model: Model, predictor: Predictor, t0: float = 0.0, t1: float = 100.0, ref_measurement: Optional[Measurement] = None) -> widgets.Widget
@@ -17,17 +17,17 @@ create_interactive_prediction_widget(model: Model, predictor: Predictor, t0: flo
 Create an interactive widget for exploring Neural ODE predictions with adjustable initial conditions.
 
 This function creates a comprehensive interactive interface that allows users to:
-- Adjust initial conditions for each species in the model
+- Adjust initial conditions for each state in the model
 - Modify the end time for predictions
 - View real-time updates of the prediction plot
 
 **Args:**
-- `model`: The model containing species information and structure
+- `model`: The model containing state information and structure
 - `predictor`: The predictor object for generating predictions (e.g., trained Neural ODE)
 - `t0`: Start time for predictions (default\: 0.0)
 - `t1`: End time for predictions (default\: 100.0)
 - `ref_measurement`: Reference measurement containing initial conditions to use as defaults.
-            If None, uses default values of 10.0 for all species
+            If None, uses default values of 10.0 for all states
 - `plot_style`: Dictionary of matplotlib styling options. Merged with defaults\:
        - figsize\: (12, 6)
        - linewidth\: 2.5
@@ -46,7 +46,7 @@ This function creates a comprehensive interactive interface that allows users to
 
 ## Classes
 
-### `PredictionWidget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L67" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `PredictionWidget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L68" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 A class to encapsulate the interactive prediction widget functionality.
@@ -57,7 +57,7 @@ by organizing related functionality into methods.
 
 **Methods:**
 
-#### `create_widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L379" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `create_widget` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/widget.py#L377" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 create_widget(self) -> widgets.Widget

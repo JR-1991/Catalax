@@ -1,13 +1,13 @@
-from typing import Dict, Tuple, Union, Optional
+from typing import Dict, Optional, Tuple, Union
 
 import arviz as az
 import corner
 import jax
 import matplotlib.pyplot as plt
-from numpyro.diagnostics import hpdi
-from numpyro.infer import MCMC
 import pandas as pd
 import xarray
+from numpyro.diagnostics import hpdi
+from numpyro.infer import MCMC
 
 # Backend type hints
 BackendType = Union[str, None]
@@ -149,15 +149,15 @@ def plot_credibility_interval(
     hpdi_mu = hpdi(post_states, 0.9)
 
     fig, ax = plt.subplots(figsize=figsize)
-    for i, species in enumerate(model.get_species_order()):
-        ax.plot(time, states[:, i], label=f"{species} simulation")
+    for i, state in enumerate(model.get_state_order()):
+        ax.plot(time, states[:, i], label=f"{state} simulation")
         ax.fill_between(
             time,
             hpdi_mu[0, :, i],  # type: ignore
             hpdi_mu[1, :, i],  # type: ignore
             alpha=0.3,
             interpolate=True,
-            label=f"{species} CI",
+            label=f"{state} CI",
         )
 
     ax.grid(alpha=0.3, linestyle="--")

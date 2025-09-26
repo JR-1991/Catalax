@@ -50,7 +50,7 @@ import catalax.mcmc as cmc
 
 # Create your biochemical model
 model = ctx.Model(name="Enzyme Kinetics Study")
-model.add_species("S")  # Substrate
+model.add_state("S")  # Substrate
 model.add_ode("S", "-(v_max * S) / (K_m + S)")
 
 # Set initial parameter values (these will be overridden by MCMC)

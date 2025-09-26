@@ -8,7 +8,7 @@ Parameter estimation in Catalax enables precise estimation of kinetic constants 
 
 ### The Optimization Problem
 
-Parameter optimization in biochemical modeling involves finding parameter values that minimize the difference between model predictions and experimental observations. The optimization problem seeks parameter values θ that minimize the sum of squared residuals between experimental data and model predictions across all experimental conditions, species, and time points.
+Parameter optimization in biochemical modeling involves finding parameter values that minimize the difference between model predictions and experimental observations. The optimization problem seeks parameter values θ that minimize the sum of squared residuals between experimental data and model predictions across all experimental conditions, states, and time points.
 
 This deterministic approach contrasts with Bayesian methods by providing single "best-fit" parameter values rather than probability distributions, making it computationally efficient and mathematically straightforward.
 
@@ -37,8 +37,8 @@ import jax.numpy as jnp
 # Create biochemical model
 model = ctx.Model(name="Michaelis-Menten Kinetics")
 
-# Define species and dynamics
-model.add_species("S", "Substrate")
+# Define states and dynamics
+model.add_state("S", "Substrate")
 model.add_ode("S", "-(v_max * S) / (K_m + S)")
 
 # Configure parameters for optimization

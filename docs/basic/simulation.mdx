@@ -8,7 +8,7 @@ Model simulation in Catalax is centered around generating synthetic datasets fro
 
 The simulation process follows a straightforward pattern:
 
-1. **Define a Model**: Create species and differential equations
+1. **Define a Model**: Create states and differential equations
 2. **Create a Dataset**: Set up initial conditions  
 3. **Configure Simulation**: Define time parameters
 4. **Run Simulation**: Generate time-series data
@@ -24,8 +24,8 @@ import catalax as ctx
 # Create a model
 model = ctx.Model(name="Enzyme Kinetics")
 
-# Add species
-model.add_species("S")  # Substrate
+# Add states
+model.add_state("S")  # Substrate
 
 # Define the differential equation
 model.add_ode("S", "-v_max * S / (K_m + S)")
@@ -96,7 +96,7 @@ print(f"Species data: {list(measurement.data.keys())}")
 The `simulate()` method is the core function that transforms your initial conditions into complete time-series trajectories. It returns a new `Dataset` object where each `Measurement` has been populated with simulation results. Each measurement now contains three key components:
 
 - **`time`**: An array of time points from t0 to t1 with the specified number of steps
-- **`data`**: A dictionary mapping each species name to its concentration time-series
+- **`data`**: A dictionary mapping each states name to its concentration time-series
 - **`initial_conditions`**: The original initial values that were used to start this trajectory
 
 This structure means that your simulation results are immediately ready for analysis, plotting, and integration with other Catalax workflows.
@@ -158,7 +158,7 @@ Understanding how parameter changes affect system behavior is a fundamental aspe
 ```python
 # Create base model
 model = ctx.Model(name="Parameter Study")
-model.add_species("S")
+model.add_state("S")
 model.add_ode("S", "-v_max * S / (K_m + S)")
 
 # Test different v_max values
@@ -198,7 +198,7 @@ import numpy as np
 
 # Set up model with realistic parameters
 model = ctx.Model(name="Synthetic Data Generator")
-model.add_species("S")
+model.add_state("S")
 model.add_ode("S", "-v_max * S / (K_m + S)")
 model.parameters["v_max"].value = 7.0
 model.parameters["K_m"].value = 100.0
@@ -227,7 +227,7 @@ Model validation is crucial for ensuring that your computational model accuratel
 ```python
 # Generate "true" data with known parameters
 true_model = ctx.Model(name="True System")
-true_model.add_species("S")
+true_model.add_state("S")
 true_model.add_ode("S", "-v_max * S / (K_m + S)")
 true_model.parameters["v_max"].value = 7.0
 true_model.parameters["K_m"].value = 100.0
@@ -264,7 +264,7 @@ An important feature of the Catalax design is that any `Model` can serve as a `P
 
 Following these best practices will help you develop robust and reliable simulation workflows:
 
-1. **Start simple**: Begin with single species and basic kinetics before adding complexity. This approach helps you understand the fundamental behavior of your system and makes it easier to diagnose issues when they arise.
+1. **Start simple**: Begin with single state and basic kinetics before adding complexity. This approach helps you understand the fundamental behavior of your system and makes it easier to diagnose issues when they arise.
 
 2. **Check parameters**: Always verify that parameter values are reasonable for your biological system. Parameters should fall within ranges that make sense given the physical and chemical constraints of your system.
 

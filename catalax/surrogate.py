@@ -59,15 +59,15 @@ class Surrogate(abc.ABC):
         y = y.reshape(-1, 1) if y.ndim == 1 else y
 
         # Validate shapes
-        assert t.shape[0] == y.shape[0], (
-            "Time and state must have the same number of rows"
-        )
+        assert (
+            t.shape[0] == y.shape[0]
+        ), "Time and state must have the same number of rows"
 
         if constants is not None:
             constants = constants.reshape(-1, 1) if constants.ndim == 1 else constants
-            assert constants.shape[0] == y.shape[0], (
-                "Constants must have the same number of rows as time and state"
-            )
+            assert (
+                constants.shape[0] == y.shape[0]
+            ), "Constants must have the same number of rows as time and state"
         else:
             constants = jnp.array([])
 

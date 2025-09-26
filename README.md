@@ -4,7 +4,7 @@
 
 **A High-Performance JAX Framework for Biochemical Modeling, Neural ODEs, and Bayesian Inference**
 
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
 [![Documentation](https://img.shields.io/badge/documentation-blue)](https://catalax.mintlify.app/welcome)
 [![JAX](https://img.shields.io/badge/JAX-powered-orange.svg)](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -27,7 +27,7 @@ Check out the [documentation](https://catalax.mintlify.app/) for more details.
 
 ### 🔬 **Mechanistic Modeling**
 
-- Intuitive model building with species, reactions, and ODEs
+- Intuitive model building with states, reactions, and ODEs
 - Automatic parameter extraction and constraint handling
 - Support for complex biochemical networks and pathways
 - Integration with experimental data and EnzymeML format
@@ -86,32 +86,34 @@ import catalax as ctx
 # Create a Michaelis-Menten enzyme kinetics model
 model = ctx.Model(name="Enzyme Kinetics")
 
-# Define species
-model.add_species(
-    S="Substrate",
-    E="Enzyme", 
-    ES="Enzyme-Substrate Complex",
-    P="Product"
+# Define states
+model.add_states(S="Substrate", E="Enzyme", P="Product")
+
+# Add reaction kinetics via schemes
+model.add_reaction(
+    "S -> P",
+    symbol="r1",
+    equation="k_cat * E * S / (K_m + S)",
 )
 
-# Add reaction kinetics
-model.add_ode("S", "-k1*E*S + k2*ES")
-model.add_ode("E", "-k1*E*S + k2*ES + k3*ES")
-model.add_ode("ES", "k1*E*S - k2*ES - k3*ES")
-model.add_ode("P", "k3*ES")
+# Or as ODEs
+model.add_odes(
+    S="-k_cat * E * S / (K_m + S)",
+    P="k_cat * E * S / (K_m + S)",
+    E="0",
+)
 
 # Set parameters
-model.parameters.k1.value = 0.1
-model.parameters.k2.value = 0.05
-model.parameters.k3.value = 0.02
+model.parameters.k_cat.value = 0.1
+model.parameters.K_m.value = 0.05
 
 # Create dataset and add initial conditions
 dataset = ctx.Dataset.from_model(model)
-dataset.add_initial(S=100, E=10, ES=0, P=0)
-dataset.add_initial(S=200, E=10, ES=0, P=0)  # Different initial conditions
+dataset.add_initial(S=100, E=10, P=0)
+dataset.add_initial(S=200, E=10, P=0)
 
 # Configure simulation
-config = ctx.SimulationConfig(t0=0, t1=100, nsteps=1000)
+config = ctx.SimulationConfig(t1=100, nsteps=1000)
 
 # Run simulation
 results = model.simulate(dataset=dataset, config=config)
@@ -133,7 +135,7 @@ Discover unknown reaction networks directly from experimental time-series data u
 - **Multi-step training** strategies with adaptive learning rates
 - **Rate visualization** to interpret discovered reactions
 
-<details open>
+<details>
 <summary><strong>🧠 Click to see neural ODE discovery code</strong></summary>
 
 ```python
@@ -250,9 +252,139 @@ Explore comprehensive examples in the `examples/` directory:
 - **[SurrogateHMC](examples/SurrogateHMC.ipynb)** - Accelerated inference with surrogates
 - **[Data Import](examples/DataImport.ipynb)** - Working with experimental data
 
+## 🛠️ Developer Guide
+
+### Prerequisites
+
+- Python 3.11+ 
+- [uv](https://docs.astral.sh/uv/) for dependency management
+- Git for version control
+
+### Development Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/JR-1991/Catalax.git
+   cd Catalax
+   ```
+
+2. **Install development dependencies**
+   ```bash
+   # Install all dependencies including dev dependencies
+   uv sync --dev
+   ```
+
+3. **Set up pre-commit hooks** 
+   ```bash
+   # Install pre-commit hooks
+   uv run pre-commit install
+   ```
+
+### Testing
+
+Catalax uses `pytest` for testing with multiple test categories:
+
+```bash
+# Run all tests (excluding expensive/slow tests)
+uv run pytest -vv -m "not expensive"
+
+# Run all tests including expensive ones
+uv run pytest -vv
+
+# Run specific test categories
+uv run pytest -vv tests/unit/          # Unit tests
+uv run pytest -vv tests/integration/   # Integration tests
+
+# Run tests with coverage
+uv run pytest -vv --cov=catalax --cov-report=html
+```
+
+The test suite includes:
+- **Unit tests**: Fast tests for individual components
+- **Integration tests**: End-to-end testing of workflows  
+- **Expensive tests**: Computationally intensive tests (marked with `@pytest.mark.expensive`)
+
+### Code Quality
+
+The project uses several tools to maintain code quality:
+
+- **[Ruff](https://docs.astral.sh/ruff/)**: Fast Python linter and formatter
+- **[Pyright](https://github.com/microsoft/pyright)**: Type checking
+- **[Pre-commit](https://pre-commit.com/)**: Git hooks for automated checks
+
+Code quality checks run automatically via pre-commit hooks and GitHub Actions.
+
+### Kinetic Laws Generation
+
+Catalax includes an automated system for generating kinetic law functions from SBO (Systems Biology Ontology) definitions:
+
+#### How it works:
+1. **Source data**: `kinetic-laws/sbo_laws.json` contains SBO kinetic law definitions
+2. **Template**: `kinetic-laws/law_function.jinja2` defines the function generation template  
+3. **Generator**: `kinetic-laws/generate.py` processes the JSON and generates Python files
+4. **Output**: Functions are organized by category in `catalax/laws/`
+
+#### Automatic generation:
+- **Pre-commit hook**: Laws are automatically regenerated when `kinetic-laws/` files change
+- **Manual generation**: Run `python kinetic-laws/generate.py` from project root
+
+#### Generated structure:
+```
+catalax/laws/
+├── __init__.py          # Imports all law modules
+├── mass_action.py       # Mass action rate laws (56 functions)  
+├── enzymatic.py         # Enzymatic rate laws (12 functions)
+├── inhibition.py        # Inhibition laws (11 functions)
+├── activation.py        # Activation laws (4 functions)
+└── hill_type_generalised_form.py  # Hill-type laws (2 functions)
+```
+
+Each generated function:
+- Takes species and parameters as string arguments
+- Uses SymPy for symbolic manipulation
+- Returns the kinetic equation as a string
+- Includes comprehensive docstrings
+
+Example usage:
+```python
+from catalax.laws.enzymatic import henri_michaelis_menten_rate_law
+
+# Generate Michaelis-Menten equation with custom parameter names
+equation = henri_michaelis_menten_rate_law(
+    s="substrate_conc", 
+    k_cat="turnover_rate"
+)
+```
+
+### Development Workflow
+
+1. **Make changes** to your code
+2. **Run tests** to ensure functionality: `uv run pytest -vv -m "not expensive"`
+3. **Pre-commit hooks** automatically run on `git commit`:
+   - Code formatting (Ruff)
+   - Linting (Ruff) 
+   - Type checking (Pyright)
+   - Kinetic laws regeneration (if `kinetic-laws/` changed)
+4. **Push changes** - GitHub Actions will run full test suite
+
+### Continuous Integration
+
+GitHub Actions automatically run on push/PR:
+- **Tests**: Run on Python 3.11, 3.12, 3.13 
+- **Linting**: Ruff code quality checks
+- **Type checking**: Pyright static analysis
+
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please follow the developer guide above for setup. When contributing:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes following the development workflow  
+4. Ensure all tests pass
+5. Submit a pull request
+
+For major changes, please open an issue first to discuss the proposed changes.
 
 ## 📄 License
 

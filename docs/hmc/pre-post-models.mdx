@@ -70,7 +70,7 @@ def measurement_specific_parameters(ctx: PreModelContext):
     """Apply measurement-specific parameter modifications using shape information."""
     
     # Access shape information for proper broadcasting
-    n_measurements, n_species = ctx.shapes.y0s
+    n_measurements, n_states = ctx.shapes.y0s
     n_parameters = ctx.theta.shape[-1]
     
     # Sample measurement-specific modifiers
@@ -85,7 +85,7 @@ The `ctx.shapes` object provides essential dimension information (`y0s`, `data`,
 
 ## PostModel Decorator: Output and Observable Transformations
 
-The `@post_model` decorator enables custom transformations applied after model simulation but before likelihood evaluation. This is essential for converting model states to experimentally measurable quantities when observables don't directly correspond to individual model species.
+The `@post_model` decorator enables custom transformations applied after model simulation but before likelihood evaluation. This is essential for converting model states to experimentally measurable quantities when observables don't directly correspond to individual model states.
 
 ### Basic Observable Construction
 
@@ -96,7 +96,7 @@ from catalax.mcmc.protocols import post_model, PostModelContext
 def total_protein_observable(ctx: PostModelContext):
     """Convert individual protein states to total measurable protein concentration."""
     
-    # Access simulated states: [time_points, species]
+    # Access simulated states: [time_points, states]
     free_protein = ctx.states[:, 0]
     bound_protein = ctx.states[:, 1]
     
@@ -170,7 +170,7 @@ results = hmc.run(
 
 The `ctx.shapes` object provides essential dimension information for proper array operations:
 
-- `ctx.shapes.y0s`: Initial conditions dimensions `(n_measurements, n_species)`
+- `ctx.shapes.y0s`: Initial conditions dimensions `(n_measurements, n_states)`
 - `ctx.shapes.data`: Observed data dimensions `(n_measurements, n_timepoints, n_observables)`
 - `ctx.shapes.constants`: Constants dimensions `(n_measurements, n_constants)`
 - `ctx.shapes.times`: Time points dimensions `(n_measurements, n_timepoints)`
@@ -181,7 +181,7 @@ The decorators are fully compatible with [NumPyro's](https://numpyro.readthedocs
 
 - Use `numpyro.sample()` to introduce new random variables
 - Use `numpyro.deterministic()` to track transformations for model interpretation
-- Use `numpyro.plate()` for vectorized operations across measurements or species
+- Use `numpyro.plate()` for vectorized operations across measurements or states
 - All JAX operations maintain automatic differentiation compatibility
 
 ### Best Practices

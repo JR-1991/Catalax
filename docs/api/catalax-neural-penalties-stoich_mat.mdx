@@ -33,7 +33,7 @@ non-zero entries by penalizing values greater than 0.5. This promotes
 sparse reaction networks which are often more interpretable and realistic.
 
 **Args:**
-- `stoich_matrix`: The stoichiometric matrix to penalize, shape (n_species, n_reactions)
+- `stoich_matrix`: The stoichiometric matrix to penalize, shape (n_state, n_reactions)
 - `alpha`: Penalty strength coefficient, higher values increase sparsity pressure
 
 **Returns:**
@@ -55,7 +55,7 @@ In a bipolar representation, balanced reactions should have equal numbers of
 reactants (-1) and products (+1), resulting in zero column sums.
 
 **Args:**
-- `stoich_matrix`: The stoichiometric matrix to penalize, shape (n_species, n_reactions)
+- `stoich_matrix`: The stoichiometric matrix to penalize, shape (n_state, n_reactions)
 - `alpha`: Penalty strength coefficient, higher values enforce stricter mass balance
 
 **Returns:**

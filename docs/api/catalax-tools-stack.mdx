@@ -1,0 +1,110 @@
+---
+title: stack
+sidebarTitle: stack
+---
+
+# `catalax.tools.stack`
+
+## Classes
+
+### `BaseStack` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/stack.py#L19" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A base stack for evaluating systems of equations.
+
+This abstract base class provides common functionality for stacks that evaluate
+collections of symbolic equations. It handles the assembly of SymbolicModule
+instances and provides methods for batch evaluation of multiple equations.
+
+
+### `ODEStack` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/stack.py#L116" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A stack of symbolic modules for evaluating systems of ODEs.
+
+This class creates a collection of SymbolicModule instances from a set of ODE
+equations and provides a unified interface for evaluating all equations
+simultaneously. Used primarily for ODE system evaluation in diffrax solvers.
+
+The stack directly returns the evaluated rates from each ODE equation,
+making it suitable for systems where each equation directly specifies
+the rate of change for a corresponding state variable.
+
+
+**Methods:**
+
+#### `fill_zero_modules` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/stack.py#L164" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+fill_zero_modules(self, used_states: List[str], all_states: List[str]) -> Self
+```
+
+Fill the modules with zero rates for states that are not used.
+
+This method creates a new ODEStack where unused states have zero rate modules,
+ensuring the output vector has the correct dimensionality for all states.
+
+**Args:**
+- `used_states`: List of state names that have corresponding ODE equations
+- `all_states`: Complete list of all state names in the system
+
+**Returns:**
+- New ODEStack instance with zero modules for unused states
+
+
+### `ReactionStack` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/stack.py#L192" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A stack of symbolic modules for evaluating systems of reactions.
+
+This class handles reaction-based systems where individual reaction rates
+are computed and then combined using a stoichiometry matrix to determine
+the net rate of change for each state. The stoichiometry matrix encodes
+how each reaction affects each state in the system.
+
+
+**Methods:**
+
+#### `fill_zero_modules` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/stack.py#L240" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+fill_zero_modules(self, used_states: List[str], all_states: List[str]) -> Self
+```
+
+Adjust stoichiometry matrix to include unused states with zero contributions.
+
+This method creates a new ReactionStack where the stoichiometry matrix is expanded
+to include all states in the system, with zero contributions for unused states.
+
+**Args:**
+- `used_states`: List of state names that participate in reactions
+- `all_states`: Complete list of all state names in the system
+
+**Returns:**
+- New ReactionStack instance with expanded stoichiometry matrix
+
+
+### `MixedStack` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/stack.py#L272" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A mixed stack combining ODE and reaction rate equations.
+
+This class handles systems that contain both direct ODE equations and
+reaction-based equations. It evaluates both types and combines them
+to produce the final rate vector. This is useful for models where some
+states have direct rate expressions while others are governed by
+reaction kinetics.
+
+The final rate for each state is the sum of:
+1. Direct ODE contributions
+2. Net reaction contributions from the stoichiometry matrix
+
+
+### `Zero` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/stack.py#L372" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A module that returns zero for any input.
+
+Used as a placeholder for states that don't have corresponding equations,
+ensuring consistent dimensionality in stack evaluations.
+

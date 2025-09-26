@@ -1,25 +1,25 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple, Optional, Union, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
-from jax import Array
 import arviz as az
-import numpyro
-import xarray
 import matplotlib.pyplot as plt
+import numpyro
 import pandas as pd
+import xarray
+from jax import Array
 
 from catalax.mcmc.mcmc import MCMC
 from catalax.mcmc.plotting import plot_corner, plot_ess, plot_mcse, plot_posterior
 
 if TYPE_CHECKING:
-    from catalax.model.model import Model
     from catalax.mcmc.mcmc import BayesianModel
+    from catalax.model.model import Model
 
 try:
     import ipywidgets as widgets
-    from IPython.display import display
     from IPython.core.getipython import get_ipython
+    from IPython.display import display
 
     WIDGETS_AVAILABLE = True
 except ImportError:
@@ -243,8 +243,8 @@ class HMCResults:
         understanding model reliability.
 
         Args:
-            initial_condition: Dictionary mapping species names to initial
-                concentrations for the simulation. Must include all species
+            initial_condition: Dictionary mapping state names to initial
+                concentrations for the simulation. Must include all state
                 defined in the model.
             time: Array of time points at which to evaluate the model.
                 Should span the desired simulation duration.

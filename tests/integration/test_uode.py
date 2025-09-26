@@ -1,13 +1,16 @@
 import os
 import tempfile
+
+import jax.numpy as jnp
+import optax
+import pytest
+
 import catalax as ctx
 import catalax.neural as ctn
 
-import optax
-import jax.numpy as jnp
-
 
 class TestUODE:
+    @pytest.mark.expensive
     def test_train_uode(self):
         model, dataset = self._load_model_and_data()
 
@@ -16,13 +19,7 @@ class TestUODE:
             l2_gate_alpha=None,
         )
 
-        neural_ode = ctn.UniversalODE.from_model(
-            model,
-            width_size=4,
-            depth=1,
-            use_final_bias=False,
-            final_activation=lambda x: x,
-        )
+        neural_ode = ctn.UniversalODE.from_model(model, width_size=4, depth=1)
 
         strategy = ctn.Strategy()
         strategy.add_step(
@@ -51,23 +48,18 @@ class TestUODE:
             save_milestones=False,
         )
 
+    @pytest.mark.expensive
     def test_save_load_uode(self):
         model, dataset = self._load_model_and_data()
 
-        neural_ode = ctn.UniversalODE.from_model(
-            model,
-            width_size=4,
-            depth=1,
-            use_final_bias=False,
-            final_activation=lambda x: x,
-        )
+        neural_ode = ctn.UniversalODE.from_model(model, width_size=4, depth=1)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "model.eqx")
             neural_ode.save_to_eqx(temp_dir, name="model")
             loaded_neural_ode = ctn.UniversalODE.from_eqx(path)
 
-            loaded_neural_ode.predict(dataset)
+            loaded_neural_ode.predict_rates(dataset)
 
     def _load_model_and_data(self):
         model = ctx.Model.load("tests/fixtures/uode/uode_model.json")
@@ -77,7 +69,7 @@ class TestUODE:
         y0 = jnp.load("tests/fixtures/uode/y0s.npy")
 
         dataset = ctx.Dataset.from_jax_arrays(
-            species_order=model.get_species_order(),
+            state_order=model.get_state_order(),
             data=data,
             time=times,
             y0s=y0,

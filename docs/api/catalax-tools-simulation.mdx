@@ -7,6 +7,62 @@ sidebarTitle: simulation
 
 ## Classes
 
-### `Stack` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/simulation.py#L25" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `SimulationInput` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/simulation.py#L32" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
-### `Simulation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/simulation.py#L63" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+Input configuration for simulation setup.
+
+This class encapsulates all the necessary components for setting up a simulation,
+including the differential equations, reactions, and variable definitions.
+
+
+**Methods:**
+
+#### `type` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/simulation.py#L54" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+type(self) -> Literal['ode', 'reaction', 'mixed']
+```
+
+Get the type of the simulation input.
+
+
+#### `stack` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/simulation.py#L68" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+stack(self) -> BaseStack | MixedStack
+```
+
+Get the stack of the simulation input.
+
+
+#### `get_equations` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/simulation.py#L96" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_equations(self, type: EQUATION_TYPES) -> Sequence[Equation]
+```
+
+Get equations of a specific type from the simulation input.
+
+**Args:**
+- `type`: Type of equations to retrieve ("ode" or "reaction")
+
+**Returns:**
+- Sequence of equations of the specified type
+
+
+### `Simulation` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/tools/simulation.py#L112" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A simulation class for solving systems of ODEs using diffrax.
+
+This class handles the setup and execution of ODE simulations with support for
+various solver configurations, sensitivity analysis, and batch processing through
+vectorization. It provides a high-level interface for numerical integration of
+differential equation systems.
+
+The simulation supports three types of systems:
+- Pure ODE systems (direct differential equations)
+- Pure reaction systems (reaction kinetics with stoichiometry)
+- Mixed systems (combination of ODEs and reactions)
+

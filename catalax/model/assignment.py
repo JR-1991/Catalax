@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING, Dict, List, Set
 
-import copy
 import sympy as sp
-
 from bigtree.node.node import Node
 from sympy import Expr
 
 from .equation import Equation
+from .utils import LOCALS
 
 if TYPE_CHECKING:
     from catalax.model import Model
@@ -290,7 +290,7 @@ def _perform_substitutions(
                         # Replace the string and re-parse
                         new_eq_str = eq_str.replace(dep_symbol, f"({dep_equation})")
                         try:
-                            substituted_eq = sp.sympify(new_eq_str)
+                            substituted_eq = sp.sympify(new_eq_str, locals=LOCALS)
                         except (sp.SympifyError, ValueError, TypeError):
                             # If sympify fails, keep the original
                             if verbose:

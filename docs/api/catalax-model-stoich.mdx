@@ -1,0 +1,33 @@
+---
+title: stoich
+sidebarTitle: stoich
+---
+
+# `catalax.model.stoich`
+
+## Functions
+
+### `derive_stoich_matrix` <sup><a href="https://github.com/JR-1991/Catalax/blob/master/catalax/model/stoich.py#L9" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+derive_stoich_matrix(reactions: List[Reaction], state_order: List[str]) -> jax.Array
+```
+
+
+Derive the stoichiometric matrix from a list of reactions and a list of state.
+
+The stoichiometric matrix S has dimensions (n_state, n_reactions) where:
+- Each row represents a state
+- Each column represents a reaction
+- S[i,j] is the stoichiometric coefficient of state i in reaction j
+- Negative values indicate reactants (consumed)
+- Positive values indicate products (produced)
+- Zero values indicate the state is not involved in the reaction
+
+**Args:**
+- `reactions`: List of reactions to include in the matrix
+- `state_order`: Ordered list of state names defining the row order
+
+**Returns:**
+- JAX array of shape (n_state, n_reactions) containing stoichiometric coefficients
+

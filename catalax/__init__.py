@@ -1,4 +1,5 @@
-import arviz as az  # noqa: F401
+import arviz as az
+from sympy import Symbol  # noqa: F401
 
 from .dataset import Dataset, Measurement
 from .model import InAxes, Model, SimulationConfig

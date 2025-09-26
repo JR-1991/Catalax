@@ -44,7 +44,7 @@ Neural ODEs have demonstrated remarkable success across diverse areas of biochem
 
 Even though Neural ODEs learn dynamics from data, we still need to define the basic structure of our biochemical system. This structure serves several important research purposes:
 
-1. **Species definition**: Specifies which chemical species are involved in the system
+1. **Species definition**: Specifies which states are involved in the system
 2. **Dimensionality**: Establishes the state space dimension for the neural network
 3. **Interpretability**: Provides meaningful labels for model outputs and visualizations
 4. **Integration framework**: Enables compatibility with other Catalax tools and analysis methods
@@ -53,23 +53,23 @@ Even though Neural ODEs learn dynamics from data, we still need to define the ba
 # Create a model instance with descriptive naming
 model = ctx.Model(name="Michaelis-Menten")
 
-# Add species to the model with clear, interpretable names
-model.add_species(s1="Substrate")
+# Add states to the model with clear, interpretable names
+model.add_state(s1="Substrate")
 ```
 
 **Scientific considerations for model setup:**
 
-- **Species selection**: While this example uses a single substrate, real research applications often involve multiple species. Consider all relevant reactants, products, cofactors, and regulatory molecules that might influence system dynamics.
+- **Species selection**: While this example uses a single substrate, real research applications often involve multiple states. Consider all relevant reactants, products, cofactors, and regulatory molecules as well as process variables that might influence system dynamics.
 
-- **Naming conventions**: Use descriptive names that will be meaningful in publications and presentations. Good naming practices become especially important when scaling to larger systems with many species.
+- **Naming conventions**: Use descriptive names that will be meaningful in publications and presentations. Good naming practices become especially important when scaling to larger systems with many states.
 
-- **System boundaries**: Define clear boundaries for your system. What species are you explicitly modeling versus treating as external inputs or boundary conditions?
+- **System boundaries**: Define clear boundaries for your system. What states are you explicitly modeling versus treating as external inputs or boundary conditions?
 
-**Scaling to complex systems**: For more complex biochemical networks, you might define multiple species:
+**Scaling to complex systems**: For more complex biochemical networks, you might define multiple states:
 
 ```python
 # Example for a more complex enzymatic system
-model.add_species(
+model.add_state(
     S="Substrate",
     E="Enzyme",
     P="Product", 
@@ -78,7 +78,7 @@ model.add_species(
 )
 ```
 
-The beauty of the Neural ODE approach is that you don't need to specify the kinetic relationships between these species—the neural network will learn these relationships from your experimental data.
+The beauty of the Neural ODE approach is that you don't need to specify the kinetic relationships between these states, the neural network will learn these relationships from your experimental data.
 
 ## Step 2: Data Management and Experimental Design
 
@@ -92,7 +92,7 @@ dataset = ctx.Dataset.from_croissant("datasets/croissant_dataset.zip")
 
 # Examine the dataset structure
 print(f"Dataset contains {len(dataset.measurements)} measurements")
-print(f"Species measured: {dataset.species}")
+print(f"States measured: {dataset.states}")
 ```
 
 **Understanding experimental data requirements:**

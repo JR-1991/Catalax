@@ -2,28 +2,28 @@
 title: "RateFlow ODE Training"
 ---
 
-RateFlowODE combines neural networks with stoichiometric principles to discover reaction mechanisms from experimental time-series data. Unlike traditional Neural ODEs that learn species dynamics directly, RateFlowODE learns individual reaction rates and combines them through a stoichiometric matrix, enabling the discovery of biochemical reaction networks without prior mechanistic knowledge.
+RateFlowODE combines neural networks with stoichiometric principles to discover reaction mechanisms from experimental time-series data. Unlike traditional Neural ODEs that learn state dynamics directly, RateFlowODE learns individual reaction rates and combines them through a stoichiometric matrix, enabling the discovery of biochemical reaction networks without prior mechanistic knowledge.
 
 ## Understanding the `RateFlowODE` Architecture
 
 ### Stoichiometric Decomposition of Biochemical Systems
 
-The fundamental innovation of RateFlowODE lies in its decomposition of species dynamics into individual reaction contributions. Rather than learning the net rate of change for each species directly, the approach models the system as:
+The fundamental innovation of RateFlowODE lies in its decomposition of state dynamics into individual reaction contributions. Rather than learning the net rate of change for each state directly, the approach models the system as:
 
 $$
 \frac{dy}{dt} = S \cdot r(y, t, \theta)
 $$
 
 where:
-- $y$ represents species concentrations
-- $S$ is the stoichiometric matrix ($n_{species} \times n_{reactions}$)
+- $y$ represents state concentrations
+- $S$ is the stoichiometric matrix ($n_{states} \times n_{reactions}$)
 - $r(y, t, \theta)$ are individual reaction rates predicted by the neural network
 
-This mathematical structure enforces biochemical realism by explicitly representing the relationship between individual reactions and their collective effect on species concentrations.
+This mathematical structure enforces biochemical realism by explicitly representing the relationship between individual reactions and their collective effect on state concentrations.
 
 ### Neural Network Rate Prediction
 
-The neural network component predicts reaction rates based on current species concentrations and time:
+The neural network component predicts reaction rates based on current state concentrations and time:
 
 $$
 r(y, t, \theta) = \text{ReLU}(\text{MLP}(y, t, \theta))
@@ -52,18 +52,18 @@ import catalax as ctx
 import catalax.neural as ctn
 import jax.random as jrandom
 
-# Define system structure (species must be known)
-species_order = ["S", "E", "P", "ES"]  # Substrate, Enzyme, Product, Complex
+# Define system structure (states must be known)
+state_order = ["S", "E", "P", "ES"]  # Substrate, Enzyme, Product, Complex
 observable_indices = [0, 2]  # Only S and P are measurable
 
 # Create RateFlowODE with learnable stoichiometry
 key = jrandom.PRNGKey(42)
 rateflow_ode = ctn.RateFlowODE(
-    data_size=len(species_order),      # Number of species
+    data_size=len(state_order),      # Number of states
     reaction_size=3,                   # Number of reactions to discover
     width_size=64,                     # Neural network width
     depth=3,                           # Neural network depth
-    species_order=species_order,
+    state_order=state_order,
     observable_indices=observable_indices,
     learn_stoich=True,                 # Enable stoichiometry learning
     activation=jax.nn.softplus,        # Smooth activation for rates
@@ -93,7 +93,7 @@ rateflow_ode_fixed = ctn.RateFlowODE(
     reaction_size=2,
     width_size=32,
     depth=2,
-    species_order=species_order,
+    state_order=state_order,
     observable_indices=observable_indices,
     learn_stoich=False,               # Fix stoichiometry
     stoich_matrix=stoich_matrix,      # Provide known structure
@@ -103,7 +103,7 @@ rateflow_ode_fixed = ctn.RateFlowODE(
 
 ### Mass Conservation Constraints
 
-Mass conservation represents a fundamental constraint in biochemical systems where the total amount of certain molecular species remains constant throughout the reaction process. This is particularly important for enzyme systems where the total enzyme concentration should remain unchanged, or in metabolic pathways where specific atomic groups are conserved.
+Mass conservation represents a fundamental constraint in biochemical systems where the total amount of certain molecular states remains constant throughout the reaction process. This is particularly important for enzyme systems where the total enzyme concentration should remain unchanged, or in metabolic pathways where specific atomic groups are conserved.
 
 The mass constraint is mathematically represented as:
 
@@ -126,7 +126,7 @@ rateflow_ode_conserved = ctn.RateFlowODE(
     reaction_size=3,
     width_size=64,
     depth=3,
-    species_order=species_order,
+    state_order=state_order,
     observable_indices=observable_indices,
     learn_stoich=True,
     mass_constraint=mass_constraint,  # Enforce conservation
@@ -144,7 +144,7 @@ Analyze the discovered reaction network using built-in visualization tools:
 # Visualize learned reactions and stoichiometry
 fig = trained_rateflow.plot_learned_rates(
     dataset=experimental_data,
-    model=original_model,  # For species labels
+    model=original_model,  # For state labels
     show=True,
     save_path="./figures/discovered_reactions.png",
     round_stoich=True      # Round coefficients for clarity
@@ -166,7 +166,7 @@ rate_grid_fig = trained_rateflow.plot_rate_grid(
     dataset=experimental_data,
     model=original_model,
     rate_indices=[0, 1, 2],        # Analyze first three reactions
-    species_pairs=[("S", "E"), ("ES", "P")],  # Focus on key species pairs
+    state_pairs=[("S", "E"), ("ES", "P")],  # Focus on key state pairs
     representative_time=0.0,        # Time point for analysis
     grid_resolution=50,            # Resolution of concentration grid
     figsize_per_subplot=(6, 5),

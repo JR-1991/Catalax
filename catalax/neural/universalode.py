@@ -1,24 +1,25 @@
 import json
 from typing import List, Optional, Type
 
-import jax
 import diffrax
-import jax.numpy as jnp
 import equinox as eqx
+import jax
+import jax.numpy as jnp
 import jax.random as jrandom
-from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 from catalax import Model
 from catalax.dataset.dataset import Dataset
-from catalax.tools import Stack
+from catalax.tools import ODEStack
+
 from .neuralbase import NeuralBase
 
 
 class UniversalODE(NeuralBase):
     parameters: jax.Array
-    vector_field: Stack
+    vector_field: ODEStack
     alpha_residual: jax.Array
     gate_matrix: jax.Array
     use_gate: bool = eqx.field(static=True)
@@ -33,8 +34,8 @@ class UniversalODE(NeuralBase):
         observable_indices: List[int],
         solver=diffrax.Tsit5,
         use_final_bias: bool = False,
-        activation=jax.nn.softplus,
-        final_activation=None,
+        activation=jax.nn.celu,
+        final_activation=jax.nn.identity,
         use_gate: bool = True,
         *,
         key,
@@ -46,12 +47,12 @@ class UniversalODE(NeuralBase):
             model = Model.from_dict(model)
 
         mlp_key, alpha_key, gate_key = jrandom.split(key, 3)
-        species_order = model.get_species_order()
+        state_order = model.get_state_order()
         super().__init__(
             data_size=data_size,
             width_size=width_size,
             depth=depth,
-            species_order=species_order,
+            state_order=state_order,
             observable_indices=observable_indices,
             solver=solver,
             activation=activation,
@@ -61,20 +62,22 @@ class UniversalODE(NeuralBase):
             model=model.to_dict(),
         )
 
-        if use_gate and len(species_order) > 1:
+        if use_gate and len(state_order) > 1:
             self.use_gate = use_gate
         else:
             self.use_gate = True
 
-        self.model = model.to_dict()
-        self.parameters = jnp.array(model._get_parameters())
-        self.vector_field = eqx.filter_jit(model._setup_rate_function())  # type: ignore
-        self.alpha_residual = 0.05 * jrandom.normal(alpha_key, (len(species_order),))
+        # Resolve assignments before creating the stack
+        resolved_model = model._replace_assignments()
+        self.model = resolved_model.to_dict()
+        self.parameters = jnp.array(resolved_model._get_parameters())
+        self.vector_field = eqx.filter_jit(resolved_model.stack)  # type: ignore
+        self.alpha_residual = 0.05 * jrandom.normal(alpha_key, (len(state_order),))
         self.gate_matrix = 0.01 * jrandom.normal(
             gate_key,
             (
-                len(species_order),
-                len(species_order),
+                len(state_order),
+                len(state_order),
             ),
         )
 
@@ -128,7 +131,7 @@ class UniversalODE(NeuralBase):
         The corrective term is the neural network contribution to the rates.
         """
 
-        data, times, _ = dataset.to_jax_arrays(species_order=self.species_order)
+        data, times, _ = dataset.to_jax_arrays(state_order=self.state_order)
         y = data.reshape(-1, data.shape[-1])
         t = times.ravel()
 
@@ -146,12 +149,12 @@ class UniversalODE(NeuralBase):
         # Calculate proper number of rows for odd/even measurements
         uode_pred = self.predict(dataset, n_steps=n_steps)
         corrections, times = self.corrective_term(uode_pred)
-        n_meas, _, n_species = corrections.shape
+        n_meas, _, n_state = corrections.shape
 
         width, height = figsize
 
-        if n_species == 1:
-            # If there is only one species, we can plot in a grid of (n_measurements // 2, 2)
+        if n_state == 1:
+            # If there is only one state, we can plot in a grid of (n_measurements // 2, 2)
             fig, ax = plt.subplots(
                 (n_meas + 1) // 2,
                 2,
@@ -160,21 +163,21 @@ class UniversalODE(NeuralBase):
         else:
             fig, ax = plt.subplots(
                 n_meas,
-                n_species,
-                figsize=(width * 0.5 * n_species, height * 0.7 * n_meas),
+                n_state,
+                figsize=(width * 0.5 * n_state, height * 0.7 * n_meas),
             )
 
         ax = ax.flatten()
 
         color_iter = iter(mcolors.TABLEAU_COLORS)
-        species_names = [(species, next(color_iter)) for species in dataset.species]
+        state_names = [(state, next(color_iter)) for state in dataset.states]
 
         ax_index = 0
         for i in range(n_meas):
             corrective_term = corrections[i]
 
-            for j in range(n_species):
-                name, color = species_names[j]
+            for j in range(n_state):
+                name, color = state_names[j]
                 ax[ax_index].plot(
                     times[i],
                     corrective_term[:, j],
@@ -199,7 +202,7 @@ class UniversalODE(NeuralBase):
 
         # Hide unused subplots when odd number of measurements
         total_subplots = len(ax)
-        for i in range(n_meas * n_species, total_subplots):
+        for i in range(n_meas * n_state, total_subplots):
             ax[i].set_visible(False)
 
         plt.tight_layout()
@@ -220,25 +223,25 @@ class UniversalODE(NeuralBase):
         figsize: tuple[float, float] = (10, 3.5),
     ) -> Optional[Figure]:
         uode_pred = self.predict(dataset, use_times=True)
-        data, _, _ = dataset.to_jax_arrays(species_order=self.species_order)
+        data, _, _ = dataset.to_jax_arrays(state_order=self.state_order)
         corrections, _ = self.corrective_term(uode_pred)
 
         # Unravel data and corrections
         data = data.reshape(-1, data.shape[-1])
         corrections = corrections.reshape(-1, corrections.shape[-1])
 
-        # Get number of species and colors
-        n_species = data.shape[-1]
+        # Get number of state and colors
+        n_state = data.shape[-1]
         width, height = figsize
-        fig, ax = plt.subplots(n_species, 1, figsize=(width, height * n_species))
+        fig, ax = plt.subplots(n_state, 1, figsize=(width, height * n_state))
 
-        if n_species == 1:
+        if n_state == 1:
             ax = [ax]
 
         color_iter = iter(mcolors.TABLEAU_COLORS)
-        species_names = [(species, next(color_iter)) for species in dataset.species]
+        state_names = [(state, next(color_iter)) for state in dataset.states]
 
-        for i, (species, color) in enumerate(species_names):
+        for i, (state, color) in enumerate(state_names):
             ax[i].scatter(
                 data[:, i],
                 corrections[:, i],
@@ -246,15 +249,15 @@ class UniversalODE(NeuralBase):
             )
             ax[i].set_xlabel("Concentration", fontsize=10)
             ax[i].set_ylabel("Corrective Term", fontsize=10)
-            ax[i].set_title(f"{species}", fontsize=12)
+            ax[i].set_title(f"{state}", fontsize=12)
             ax[i].grid(True, which="both")
             ax[i].grid(True, which="minor", alpha=0.3, linestyle="--")
             ax[i].minorticks_on()
 
-        # Hide unused subplots when odd number of species
-        if n_species > 1:
+        # Hide unused subplots when odd number of state
+        if n_state > 1:
             total_subplots = len(ax)
-            for i in range(n_species, total_subplots):
+            for i in range(n_state, total_subplots):
                 ax[i].set_visible(False)
 
         plt.tight_layout()
@@ -277,7 +280,7 @@ class UniversalODE(NeuralBase):
         thus cross-talk between states can be controlled.
 
         Args:
-            y: jax.Array of shape (n_species,) or (n_time, n_species)
+            y: jax.Array of shape (n_state,) or (n_time, n_state)
 
         Returns:
             Gate

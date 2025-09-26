@@ -110,7 +110,7 @@ class _AbstractNode(eqx.Module):
 
     # Comparisons based on identity
     __hash__ = object.__hash__
-    __eq__ = object.__eq__
+    __eq__ = object.__eq__  # type: ignore
 
 
 class _Symbol(_AbstractNode):
@@ -120,7 +120,7 @@ class _Symbol(_AbstractNode):
         self,
         expr: sympy.Expr,
     ):
-        self._name = expr.name
+        self._name = expr.name  # type: ignore
 
     def __call__(self, memodict: dict):
         try:
@@ -140,7 +140,7 @@ class _PosSymbol(_Symbol):
     def __init__(
         self, expr: sympy.Expr, index: Optional[int] = None, arr: Optional[str] = None
     ):
-        self._name = expr.name
+        self._name = expr.name  # type: ignore
         self._index = index
         self._arr = arr
 
@@ -171,7 +171,7 @@ class _Integer(_AbstractNode):
 
     def __init__(self, expr: sympy.Expr, make_array: bool):
         assert isinstance(expr, sympy.Integer)
-        self._value = _maybe_array(int(expr), make_array)
+        self._value = _maybe_array(int(expr), make_array)  # type: ignore
 
     def __call__(self, memodict: dict):
         return self._value
@@ -186,7 +186,7 @@ class _Float(_AbstractNode):
 
     def __init__(self, expr: sympy.Expr, make_array: bool):
         assert isinstance(expr, sympy.Float)
-        self._value = _maybe_array(float(expr), make_array)
+        self._value = _maybe_array(float(expr), make_array)  # type: ignore
 
     def __call__(self, memodict: dict):
         return self._value
@@ -209,8 +209,8 @@ class _Rational(_AbstractNode):
             numerator = numerator()
         if callable(denominator):
             denominator = denominator()
-        self._numerator = _maybe_array(int(numerator), make_array)
-        self._denominator = _maybe_array(int(denominator), make_array)
+        self._numerator = _maybe_array(int(numerator), make_array)  # type: ignore
+        self._denominator = _maybe_array(int(denominator), make_array)  # type: ignore
 
     def __call__(self, memodict: dict):
         return self._numerator / self._denominator
@@ -237,7 +237,7 @@ class _Func(_AbstractNode):
         except KeyError as e:
             raise KeyError(f"Unsupported Sympy type {type(expr)}") from e
         self._args = [
-            _sympy_to_node(arg, memodict, func_lookup, make_array, positionals)
+            _sympy_to_node(arg, memodict, func_lookup, make_array, positionals)  # type: ignore
             for arg in expr.args
         ]
 
@@ -294,7 +294,7 @@ def _in_positionals(expr: sympy.Expr, positionals: dict):
     if not positionals:
         return False
 
-    return expr.name in ft.reduce(lambda a, b: a + b, list(positionals.values()))
+    return expr.name in ft.reduce(lambda a, b: a + b, list(positionals.values()))  # type: ignore
 
 
 def _retrieve_index(expr, positionals: dict):
@@ -344,7 +344,7 @@ class SymbolicModule(eqx.Module):
         _convert = ft.partial(
             _sympy_to_node,
             memodict=dict(),
-            func_lookup=lookup,
+            func_lookup=lookup,  # type: ignore
             make_array=make_array,
             positionals=positionals,
         )
@@ -352,9 +352,9 @@ class SymbolicModule(eqx.Module):
 
     @staticmethod
     def _check_positionals(positionals):
-        assert all(isinstance(pos, list) for pos in positionals.values()), (
-            f"Expected lists as positional - Received types {set(type(kw) for kw in positionals.values())}"
-        )
+        assert all(
+            isinstance(pos, list) for pos in positionals.values()
+        ), f"Expected lists as positional - Received types {set(type(kw) for kw in positionals.values())}"
 
         def _has_single_type(ps: list):
             if len(ps) == 0:
@@ -362,9 +362,9 @@ class SymbolicModule(eqx.Module):
                 return True
             return len(set([type(e) for e in ps])) == 1
 
-        assert all(_has_single_type(pos) for pos in positionals.values()), (
-            "Received mixed types within positionals. Please make sure to pass lists of strings."
-        )
+        assert all(
+            _has_single_type(pos) for pos in positionals.values()
+        ), "Received mixed types within positionals. Please make sure to pass lists of strings."
 
     def sympy(self) -> sympy.Expr:
         if self.has_extra_funcs:
