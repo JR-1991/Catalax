@@ -3,6 +3,7 @@ import pyenzyme.equations as peq
 from sympy import sympify
 
 import catalax as ctx
+from catalax.model.utils import LOCALS
 
 
 class TestEnzymemlModel:
@@ -28,7 +29,7 @@ class TestEnzymemlModel:
         # equations
         for idx, (ode_id, ode) in enumerate(model.odes.items()):
             assert ode_id == doc.equations[idx].species_id
-            assert ode.equation == sympify(doc.equations[idx].equation)
+            assert ode.equation == sympify(doc.equations[idx].equation, locals=LOCALS)
 
         ### DATASET CHECKS
         assert len(dataset.states) == len(all_enzymeml_species)
