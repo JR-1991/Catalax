@@ -156,9 +156,9 @@ class Measurement(BaseModel):
         if isinstance(self.time, NoneType) or isinstance(self.data, NoneType):
             return self
 
-        assert all(len(data) == len(self.time) for data in self.data.values()), (
-            "The data and time arrays must have the same length."
-        )
+        assert all(
+            len(data) == len(self.time) for data in self.data.values()
+        ), "The data and time arrays must have the same length."
         return self
 
     @model_validator(mode="after")
