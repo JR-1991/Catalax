@@ -27,7 +27,7 @@ Check out the [documentation](https://catalax.mintlify.app/) for more details.
 
 ### 🔬 **Mechanistic Modeling**
 
-- Intuitive model building with species, reactions, and ODEs
+- Intuitive model building with states, reactions, and ODEs
 - Automatic parameter extraction and constraint handling
 - Support for complex biochemical networks and pathways
 - Integration with experimental data and EnzymeML format
@@ -86,32 +86,34 @@ import catalax as ctx
 # Create a Michaelis-Menten enzyme kinetics model
 model = ctx.Model(name="Enzyme Kinetics")
 
-# Define species
-model.add_species(
-    S="Substrate",
-    E="Enzyme", 
-    ES="Enzyme-Substrate Complex",
-    P="Product"
+# Define states
+model.add_states(S="Substrate", E="Enzyme", P="Product")
+
+# Add reaction kinetics via schemes
+model.add_reaction(
+    "S -> P",
+    symbol="r1",
+    equation="k_cat * E * S / (K_m + S)",
 )
 
-# Add reaction kinetics
-model.add_ode("S", "-k1*E*S + k2*ES")
-model.add_ode("E", "-k1*E*S + k2*ES + k3*ES")
-model.add_ode("ES", "k1*E*S - k2*ES - k3*ES")
-model.add_ode("P", "k3*ES")
+# Or as ODEs
+model.add_odes(
+    S="-k_cat * E * S / (K_m + S)",
+    P="k_cat * E * S / (K_m + S)",
+    E="0",
+)
 
 # Set parameters
-model.parameters.k1.value = 0.1
-model.parameters.k2.value = 0.05
-model.parameters.k3.value = 0.02
+model.parameters.k_cat.value = 0.1
+model.parameters.K_m.value = 0.05
 
 # Create dataset and add initial conditions
 dataset = ctx.Dataset.from_model(model)
-dataset.add_initial(S=100, E=10, ES=0, P=0)
-dataset.add_initial(S=200, E=10, ES=0, P=0)  # Different initial conditions
+dataset.add_initial(S=100, E=10, P=0)
+dataset.add_initial(S=200, E=10, P=0)
 
 # Configure simulation
-config = ctx.SimulationConfig(t0=0, t1=100, nsteps=1000)
+config = ctx.SimulationConfig(t1=100, nsteps=1000)
 
 # Run simulation
 results = model.simulate(dataset=dataset, config=config)
