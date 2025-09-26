@@ -26,24 +26,23 @@ from pydantic import ConfigDict, Field, PrivateAttr, field_validator
 from pyenzyme import EnzymeMLDocument
 from sympy import Expr, Matrix, Symbol, symbols, sympify
 
-from catalax.dataset.dataset import Dataset
-from catalax.mcmc import priors
-from catalax.model.assignment import Assignment, analyze_and_resolve_dependencies
-from catalax.model.base import CatalaxBase
-from catalax.model.enzymeml import from_enzymeml
-from catalax.model.reaction import Reaction, ReactionElement
-from catalax.model.simconfig import SimulationConfig
-from catalax.surrogate import Surrogate
-from catalax.tools.simulation import Simulation, SimulationInput
-from catalax.tools.stack import BaseStack, MixedStack
-
+from ..dataset.dataset import Dataset
+from ..mcmc import priors
 from ..predictor import Predictor
+from ..surrogate import Surrogate
+from ..tools.simulation import Simulation, SimulationInput
+from ..tools.stack import BaseStack, MixedStack
+from .assignment import Assignment, analyze_and_resolve_dependencies
+from .base import CatalaxBase
 from .constant import Constant
+from .enzymeml import from_enzymeml
 from .inaxes import InAxes
 from .ode import ODE
 from .parameter import HDI, Parameter
+from .reaction import Reaction, ReactionElement
+from .simconfig import SimulationConfig
 from .state import State
-from .utils import PrettyDict, check_symbol, eqprint, odeprint
+from .utils import LOCALS, PrettyDict, check_symbol, eqprint, odeprint
 
 Y0_INDEX = 0
 PARAMETERS_INDEX = 1
@@ -187,7 +186,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
             )
 
         if isinstance(equation, str):
-            equation: Expr = sympify(equation)
+            equation: Expr = sympify(equation, locals=LOCALS)
 
         if state not in self.states:
             self.add_state(state)
@@ -199,6 +198,19 @@ class Model(CatalaxBase, Predictor, Surrogate):
         )
 
         self.odes[state]._model = self
+
+    def add_odes(self, **odes):
+        """Adds multiple ODEs to the model.
+
+        This method will add multiple new ODEs to the model and the model's odes attribute,
+        which can be accessed by object dot-notation. For example, if the ODEs are named 's1' and 's2'
+        and the model is named 'model', the ODEs can be accessed by:
+
+        model = Model(name="model")
+        model.add_odes(s1="k1*s1", s2="k2*s2")
+        """
+        for state, equation in odes.items():
+            self.add_ode(state, equation)
 
     def add_reaction(
         self,
@@ -296,6 +308,19 @@ class Model(CatalaxBase, Predictor, Surrogate):
         if symbol in self.states:
             del self.states[symbol]
 
+    def add_assignments(self, **assignments):
+        """Adds multiple assignments to the model.
+
+        This method will add multiple new assignments to the model and the model's assignments attribute,
+        which can be accessed by object dot-notation. For example, if the assignments are named 'a1' and 'a2'
+        and the model is named 'model', the assignments can be accessed by:
+
+        model = Model(name="model")
+        model.add_assignments(a1="k1*a1", a2="k2*a2")
+        """
+        for symbol, equation in assignments.items():
+            self.add_assignment(symbol=symbol, equation=equation)
+
     def add_state(self, state_string: str = "", **state_map) -> List[State]:
         """Adds a single or multiple states to the model, which can later be used in ODEs.
 
@@ -349,6 +374,19 @@ class Model(CatalaxBase, Predictor, Surrogate):
             added_states.append(self.states[symbol])
 
         return added_states
+
+    def add_states(self, **states):
+        """Adds multiple states to the model.
+
+        This method will add multiple new states to the model and the model's states attribute,
+        which can be accessed by object dot-notation. For example, if the states are named 's1' and 's2'
+        and the model is named 'model', the states can be accessed by:
+
+        model = Model(name="model")
+        model.add_states(s1="state1", s2="state2")
+        """
+        for symbol, name in states.items():
+            self.add_state(**{symbol: name})
 
     @deprecated("This method is deprecated. Use add_state instead.")
     def add_species(self, species_string: str = "", **species_map):
@@ -453,6 +491,11 @@ class Model(CatalaxBase, Predictor, Surrogate):
             check_symbol(symbol)
 
             self.constants[symbol] = Constant(name=name, symbol=Symbol(symbol))
+
+    def add_constants(self, **constants):
+        """Adds multiple constants to the model."""
+        for symbol, name in constants.items():
+            self.add_constant(symbol=symbol, name=name)
 
     # ! Simulation methods
     def simulate(
@@ -1167,6 +1210,34 @@ class Model(CatalaxBase, Predictor, Surrogate):
                     **json_kwargs,
                 )
             )
+
+    def to_enzymeml(self, enzmldoc: Optional[pe.EnzymeMLDocument] = None):
+        """Converts the model into an EnzymeML document.
+
+        This method transforms the Catalax model into a PyEnzyme EnzymeMLDocument format,
+        preserving all model components including states, parameters, reactions, ODEs,
+        and assignments. If an existing document is provided, it will be updated with
+        the model's information.
+
+        Args:
+            enzmldoc: Optional existing EnzymeML document to update. If None,
+                     creates a new document with the model's name.
+
+        Returns:
+            pe.EnzymeMLDocument: An EnzymeML document containing all the model's components
+
+        Example:
+            >>> model = Model(name="Michaelis-Menten")
+            >>> model.add_states(S="Substrate", P="Product", E="Enzyme")
+            >>> model.add_reaction("S -> P", symbol="v1", equation="k_cat * E * S / (K_m + S)")
+            >>> doc = model.to_enzymeml()
+            >>> # Or update existing document
+            >>> existing_doc = pe.EnzymeMLDocument(name="existing")
+            >>> updated_doc = model.to_enzymeml(existing_doc)
+        """
+        from catalax.model.enzymeml import to_enzymeml
+
+        return to_enzymeml(self, enzmldoc)
 
     def to_dict(self):
         """Converts the model into a serializable dictionary."""
