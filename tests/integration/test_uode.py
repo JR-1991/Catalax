@@ -19,13 +19,7 @@ class TestUODE:
             l2_gate_alpha=None,
         )
 
-        neural_ode = ctn.UniversalODE.from_model(
-            model,
-            width_size=4,
-            depth=1,
-            use_final_bias=False,
-            final_activation=lambda x: x,
-        )
+        neural_ode = ctn.UniversalODE.from_model(model, width_size=4, depth=1)
 
         strategy = ctn.Strategy()
         strategy.add_step(
@@ -58,13 +52,7 @@ class TestUODE:
     def test_save_load_uode(self):
         model, dataset = self._load_model_and_data()
 
-        neural_ode = ctn.UniversalODE.from_model(
-            model,
-            width_size=4,
-            depth=1,
-            use_final_bias=False,
-            final_activation=lambda x: 0.0,
-        )
+        neural_ode = ctn.UniversalODE.from_model(model, width_size=4, depth=1)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "model.eqx")
