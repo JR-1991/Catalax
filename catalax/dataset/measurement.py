@@ -156,9 +156,9 @@ class Measurement(BaseModel):
         if isinstance(self.time, NoneType) or isinstance(self.data, NoneType):
             return self
 
-        assert all(
-            len(data) == len(self.time) for data in self.data.values()
-        ), "The data and time arrays must have the same length."
+        assert all(len(data) == len(self.time) for data in self.data.values()), (
+            "The data and time arrays must have the same length."
+        )
         return self
 
     @model_validator(mode="after")
@@ -466,44 +466,33 @@ class Measurement(BaseModel):
                 return f"{value:.2f}"
 
         init_conditions_list = [
-            f"{key}: ${format_value(value)}$"
+            f"$\\mathbf{{{self._latexify_key(key)}}}$: ${format_value(value)}$"
             for key, value in initial_conditions.items()
         ]
         num_entries = len(init_conditions_list)
 
-        # Calculate column width for alignment
-        max_width = (
-            max(len(item) for item in init_conditions_list)
-            if init_conditions_list
-            else 0
-        )
-        col_width = max(max_width, 15)  # Minimum width of 15 characters
-
+        # Calculate consistent spacing - use fixed width for better alignment
         if num_entries <= 3:
-            # Few entries: single line, left-aligned
-            formatted_items = [item.ljust(col_width) for item in init_conditions_list]
-            title = "".join(formatted_items).rstrip()
+            # Few entries: single line with generous spacing
+            title = "    ".join(init_conditions_list)
             fontsize = 12
         elif num_entries <= 6:
             # Medium entries: break into 2 lines with 3 columns each
-            # Pad with empty strings if needed
-            padded_list = init_conditions_list + [""] * (6 - num_entries)
-            line1_items = [item.ljust(col_width) for item in padded_list[:3]]
-            line2_items = [item.ljust(col_width) for item in padded_list[3:6]]
-            line1 = "".join(line1_items).rstrip()
-            line2 = "".join(line2_items).rstrip()
+            mid_point = (num_entries + 2) // 2  # Round up for first line
+            line1_items = init_conditions_list[:mid_point]
+            line2_items = init_conditions_list[mid_point:]
+
+            # Ensure consistent spacing within each line
+            line1 = "    ".join(line1_items)
+            line2 = "    ".join(line2_items)
             title = f"{line1}\n{line2}"
             fontsize = 10
         else:
-            # Many entries: break into rows of 3 columns
+            # Many entries: break into rows of 3 columns with consistent spacing
             lines = []
             for i in range(0, num_entries, 3):
-                row = init_conditions_list[i : i + 3]
-                # Pad row to 3 columns if needed
-                while len(row) < 3:
-                    row.append("")
-                formatted_row = [item.ljust(col_width) for item in row]
-                lines.append("".join(formatted_row).rstrip())
+                row_items = init_conditions_list[i : i + 3]
+                lines.append("    ".join(row_items))
             title = "\n".join(lines)
             fontsize = 9
 
@@ -569,7 +558,7 @@ class Measurement(BaseModel):
             plt_kwargs = {
                 "marker": "o",
                 "linestyle": "None",
-                "label": f"{species}",
+                "label": f"${self._latexify_key(species)}$",
                 "c": color,
                 **kwargs,
             }
@@ -585,7 +574,7 @@ class Measurement(BaseModel):
                     sim_meas["time"],
                     sim_meas[species],
                     "-",
-                    label=f"{species} fit",
+                    label=f"${self._latexify_key(species)}$ fit",
                     c=color,
                     **kwargs,
                 )
@@ -706,3 +695,12 @@ class Measurement(BaseModel):
 
         noise = jax.random.normal(key, shape=x.shape, dtype=x.dtype) * sigma
         return x + noise
+
+    @staticmethod
+    def _latexify_key(key: str) -> str:
+        """Convert a key to a LaTeX-friendly string."""
+        # Split on underscore and wrap everything after first underscore in braces
+        parts = key.split("_", 1)
+        if len(parts) > 1:
+            return f"{parts[0]}_{{{parts[1]}}}"
+        return key
