@@ -65,6 +65,11 @@
           }
         ],
         "tab": "Documentation"
+      },
+      {
+        "tab": "Examples",
+        "icon": "github",
+        "href": "https://github.com/JR-1991/Catalax/tree/master/examples"
       }
     ]
   },
