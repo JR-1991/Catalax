@@ -216,27 +216,17 @@ class Dataset(BaseModel):
             ValueError: If states in the measurement are inconsistent with dataset states
         """
         # Check for duplicate measurement ID
-        assert not any(
-            meas.id == measurement.id for meas in self.measurements
-        ), f"Measurement with ID={measurement.id} already exists."
+        assert not any(meas.id == measurement.id for meas in self.measurements), (
+            f"Measurement with ID={measurement.id} already exists."
+        )
 
         # Check for states consistency
         unused_states = [
             state for state in measurement.data.keys() if state not in self.states
         ]
-        missing_states = [
-            state
-            for state in self.states
-            if state not in measurement.initial_conditions.keys()
-        ]
 
         if unused_states:
             warnings.warn(f"States {unused_states} are not used in the dataset.")
-
-        if missing_states:
-            raise ValueError(
-                f"The measurement states are inconsistent with the dataset states. Missing {missing_states}"
-            )
 
         self.measurements.append(measurement)
 
@@ -541,13 +531,13 @@ class Dataset(BaseModel):
             ValueError: If measurement IDs are inconsistent between data and inits
         """
         # Validate required columns
-        assert (
-            "measurementId" in data.columns
-        ), "Missing column in data table: 'measurementId'"
+        assert "measurementId" in data.columns, (
+            "Missing column in data table: 'measurementId'"
+        )
         assert "time" in data.columns, "Missing column in data table: 'time'"
-        assert (
-            "measurementId" in inits.columns
-        ), "Missing column in inits table: 'measurementId'"
+        assert "measurementId" in inits.columns, (
+            "Missing column in inits table: 'measurementId'"
+        )
 
         if meas_id is None:
             meas_id = str(uuid.uuid4())
@@ -658,9 +648,9 @@ class Dataset(BaseModel):
 
             # Process each measurement
             for meas_uuid, rs in meas_rs.items():
-                assert (
-                    meas_uuid in init_rs
-                ), f"Initial conditions not found for {meas_uuid}"
+                assert meas_uuid in init_rs, (
+                    f"Initial conditions not found for {meas_uuid}"
+                )
 
                 # Extract initial conditions
                 inits = {
