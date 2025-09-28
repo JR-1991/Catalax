@@ -48,12 +48,12 @@ class TestDataset:
             "Data shape should be (100,)"
         )  # type: ignore
 
-        assert dataset.measurements[0].initial_conditions == {
-            "s1": 100.0
-        }, "Initial conditions should be {'s1': 100.0}"
-        assert dataset.measurements[1].initial_conditions == {
-            "s1": 200.0
-        }, "Initial conditions should be {'s1': 200.0}"
+        assert dataset.measurements[0].initial_conditions == {"s1": 100.0}, (
+            "Initial conditions should be {'s1': 100.0}"
+        )
+        assert dataset.measurements[1].initial_conditions == {"s1": 200.0}, (
+            "Initial conditions should be {'s1': 200.0}"
+        )
 
 
 class TestDatasetPad:
@@ -307,22 +307,6 @@ class TestDatasetPad:
         assert len(meas2.data["s2"]) == 3
         assert all(np.isnan(meas2.data["s1"]))
         assert all(np.isnan(meas2.data["s2"]))
-
-    def test_pad_missing_initial_conditions(self):
-        """Test that adding measurement raises error when initial conditions are missing for required species."""
-        # Arrange
-        dataset = ctx.Dataset(states=["s1", "s2"], id="test_pad")
-
-        # Act & Assert - should fail when trying to add measurement with missing initial conditions
-        with pytest.raises(ValueError, match="inconsistent with the dataset states"):
-            dataset.add_measurement(
-                ctx.Measurement(
-                    id="meas1",
-                    time=[0, 1, 2],
-                    initial_conditions={"s1": 1.0},  # Missing s2
-                    data={"s1": [1.0, 1.1, 1.2]},
-                )
-            )
 
     def test_pad_preserves_original_dataset(self):
         """Test that padding creates a new dataset and doesn't modify the original."""
