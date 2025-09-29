@@ -33,43 +33,47 @@ class TestSimulation:
         sim_dataset = model.simulate(dataset=dataset, config=config)
 
         # Verify basic structure
-        assert (
-            len(sim_dataset.measurements) == len(dataset.measurements)
-        ), "Simulated dataset should have the same number of measurements as input dataset"
+        assert len(sim_dataset.measurements) == len(dataset.measurements), (
+            "Simulated dataset should have the same number of measurements as input dataset"
+        )
 
         # Test first measurement (e=1.0): exponential growth with rate 1.0
         expected_data_1 = jnp.array([1.0, 4.481674, 20.08544])
         actual_data_1 = sim_dataset.measurements[0].data["s1"]
         assert (
-            jnp.abs(actual_data_1 - expected_data_1).sum() < TOLERANCE
-        ), f"First measurement data mismatch. Expected: {expected_data_1}, Got: {actual_data_1}"
+            jnp.abs(actual_data_1 - expected_data_1).sum() < TOLERANCE  # type: ignore
+        ), (
+            f"First measurement data mismatch. Expected: {expected_data_1}, Got: {actual_data_1}"
+        )
 
         expected_times = [0.0, 1.5, 3.0]
         actual_times = sim_dataset.measurements[0].time.tolist()  # type: ignore
-        assert (
-            actual_times == expected_times
-        ), f"Time points mismatch. Expected: {expected_times}, Got: {actual_times}"
+        assert actual_times == expected_times, (
+            f"Time points mismatch. Expected: {expected_times}, Got: {actual_times}"
+        )
 
         expected_initial_1 = {"s1": 1.0, "e": 1.0}
         actual_initial_1 = sim_dataset.measurements[0].initial_conditions
-        assert (
-            actual_initial_1 == expected_initial_1
-        ), f"First measurement initial conditions mismatch. Expected: {expected_initial_1}, Got: {actual_initial_1}"
+        assert actual_initial_1 == expected_initial_1, (
+            f"First measurement initial conditions mismatch. Expected: {expected_initial_1}, Got: {actual_initial_1}"
+        )
 
         # Test second measurement (e=2.0): exponential growth with rate 2.0
         expected_data_2 = jnp.array([1.0, 20.085447, 403.42603])
         actual_data_2 = sim_dataset.measurements[1].data["s1"]
         assert (
-            jnp.abs(actual_data_2 - expected_data_2).sum() < TOLERANCE
-        ), f"Second measurement data mismatch. Expected: {expected_data_2}, Got: {actual_data_2}"
+            jnp.abs(actual_data_2 - expected_data_2).sum() < TOLERANCE  # type: ignore
+        ), (
+            f"Second measurement data mismatch. Expected: {expected_data_2}, Got: {actual_data_2}"
+        )
 
         actual_times_2 = sim_dataset.measurements[1].time.tolist()  # type: ignore
-        assert (
-            actual_times_2 == expected_times
-        ), f"Time points mismatch for second measurement. Expected: {expected_times}, Got: {actual_times_2}"
+        assert actual_times_2 == expected_times, (
+            f"Time points mismatch for second measurement. Expected: {expected_times}, Got: {actual_times_2}"
+        )
 
         expected_initial_2 = {"s1": 1.0, "e": 2.0}
         actual_initial_2 = sim_dataset.measurements[1].initial_conditions
-        assert (
-            actual_initial_2 == expected_initial_2
-        ), f"Second measurement initial conditions mismatch. Expected: {expected_initial_2}, Got: {actual_initial_2}"
+        assert actual_initial_2 == expected_initial_2, (
+            f"Second measurement initial conditions mismatch. Expected: {expected_initial_2}, Got: {actual_initial_2}"
+        )
