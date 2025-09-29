@@ -42,7 +42,7 @@ license = "MIT"
 name = "catalax"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
-version = "0.5.0"
+version = "0.5.1"
 
 [tool.ruff.lint]
 ignore = ["E741"]
