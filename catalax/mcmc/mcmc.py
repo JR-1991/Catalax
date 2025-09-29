@@ -329,11 +329,7 @@ class BayesianModel:
         ]
 
         self.observables = jnp.array(
-            [
-                i
-                for i, state in enumerate(model.get_state_order())
-                if model.odes[state].observable
-            ]
+            model.get_state_order(as_indices=True, modeled=True)
         )
 
     def __call__(
