@@ -58,10 +58,6 @@ def optimize(
         ]
     )
 
-    assert set(dataset.states) == set(model.get_state_order()), (
-        "States in dataset and model do not match."
-    )
-
     # Extract data arrays for the residual computation
     data, times, _ = dataset.to_jax_arrays(model.get_observable_state_order())
 

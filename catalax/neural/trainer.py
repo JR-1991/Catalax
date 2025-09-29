@@ -42,7 +42,7 @@ def train_neural_ode(
 ) -> T:
     # Extract data from dataset
     data, times, inital_conditions = dataset.to_jax_arrays(
-        state_order=model.state_order,
+        state_order=dataset.get_observable_states_order(),
         inits_to_array=True,
     )
 
@@ -79,9 +79,9 @@ def train_neural_ode(
     print(f"\n🚀 Training {model.__class__.__name__}...\n")
 
     for strat_index, strat in enumerate(strategy):
-        assert (
-            strat.batch_size < data.shape[0]
-        ), f"Batch size of strategy #{strat_index} ({strat.batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
+        assert strat.batch_size < data.shape[0], (
+            f"Batch size of strategy #{strat_index} ({strat.batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
+        )
 
         # Prepare optimizer per strategy
         optim = optimizer(strat.lr)
