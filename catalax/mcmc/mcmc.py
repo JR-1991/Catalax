@@ -398,7 +398,9 @@ class BayesianModel:
         # Compare simulation to observed data
         with numpyro.handlers.mask(mask=mask):
             numpyro.sample(
-                "y", self.likelihood(states[..., self.observables], sigma), obs=data
+                "y",
+                self.likelihood(states[..., self.observables], sigma),  # type: ignore
+                obs=data,
             )
 
 
@@ -541,7 +543,9 @@ def _validate_parameter_priors(model: "Model") -> None:
     missing_priors = [
         param.name for param in model.parameters.values() if param.prior is None
     ]
-    assert not missing_priors, f"Parameters {', '.join(missing_priors)} do not have priors. Please specify priors for all parameters."
+    assert not missing_priors, (
+        f"Parameters {', '.join(missing_priors)} do not have priors. Please specify priors for all parameters."
+    )
 
 
 def _validate_model_functions(
@@ -676,7 +680,7 @@ def _extract_dataset_components(
     """
     # Extract data, times, and initial conditions
     data, times, y0s = dataset.to_jax_arrays(
-        model.get_state_order(),
+        model.get_observable_state_order(),
         inits_to_array=True,
     )
 
