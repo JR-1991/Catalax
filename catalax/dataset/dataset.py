@@ -465,6 +465,24 @@ class Dataset(BaseModel):
             date_published=date_published,
         )
 
+    def to_enzymeml(
+        self, enzmldoc: Optional[pe.EnzymeMLDocument] = None
+    ) -> pe.EnzymeMLDocument:
+        """Convert the dataset to an EnzymeML document.
+
+        This function transforms a Catalax Dataset into an EnzymeML document format,
+        preserving all measurement data, time points, and initial conditions. If an
+        existing EnzymeML document is provided, the dataset measurements are appended
+        to it.
+
+        Args:
+            enzmldoc: Optional existing EnzymeML document to append to. If None,
+                 a new document is created with the dataset name
+        """
+        from catalax.dataset.enzymeml import to_enzymeml
+
+        return to_enzymeml(self, enzmldoc)
+
     # =====================
     # Data Import Methods
     # =====================
@@ -483,11 +501,19 @@ class Dataset(BaseModel):
             A new Dataset object with measurements extracted from the EnzymeML document
         """
 
-        measurements = [
-            Measurement.from_enzymeml(meas)
-            for meas in enzmldoc.measurements
-            if any(sp.data is not None and len(sp.data) > 0 for sp in meas.species_data)
-        ]
+        missing_initial_conditions = []
+        measurements = []
+
+        for meas in enzmldoc.measurements:
+            if any(sp.initial is not None for sp in meas.species_data):
+                measurements.append(Measurement.from_enzymeml(meas))
+            else:
+                missing_initial_conditions.append(meas.id)
+
+        if missing_initial_conditions:
+            raise ValueError(
+                f"Missing initial conditions for measurements: {missing_initial_conditions}"
+            )
 
         small_molecules = [sp.id for sp in enzmldoc.small_molecules]
         proteins = [sp.id for sp in enzmldoc.proteins]

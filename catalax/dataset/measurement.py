@@ -414,7 +414,8 @@ class Measurement(BaseModel):
                     for data in measurement.species_data
                     if data.time is not None and len(data.time) > 0
                 ]
-            )
+            ),
+            None,
         )
 
         if measurement.id is None:
