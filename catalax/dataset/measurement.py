@@ -295,6 +295,11 @@ class Measurement(BaseModel):
         Raises:
             ValueError: If any state in state_order is missing from the measurement data.
         """
+        if len(self.data) == 0:
+            raise ValueError(
+                f"The measurement data is empty. Please add data to the measurement {self.id}"
+            )
+
         unused_states = [
             state for state in self.data.keys() if state not in state_order
         ]
@@ -307,7 +312,7 @@ class Measurement(BaseModel):
 
         if missing_states:
             raise ValueError(
-                f"The measurement state are inconsistent with the dataset state. "
+                f"The measurement states are inconsistent with the dataset states."
                 f"Missing {missing_states} in measurement {self.id}"
             )
 
