@@ -50,16 +50,15 @@ def optimize(
     """
 
     params = _initialize_params(model, global_upper_bound, global_lower_bound)
-    observables = jnp.array(
-        [
-            index
-            for index, ode in enumerate(model.odes.values())
-            if ode.observable is True
-        ]
-    )
+    dataset_observables = dataset.get_observable_states_order()
+    observables = [
+        index
+        for index, state in enumerate(model.get_state_order())
+        if state in dataset_observables
+    ]
 
     # Extract data arrays for the residual computation
-    data, times, _ = dataset.to_jax_arrays(model.get_observable_state_order())
+    data, times, _ = dataset.to_jax_arrays(model.get_state_order())
 
     # Create simulation config from dataset
     config = dataset.to_config()
