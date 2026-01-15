@@ -22,7 +22,7 @@ __all__ = [
     "from_enzymeml",
 ]
 
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 
 PARAMETERS = InAxes.PARAMETERS
 TIME = InAxes.TIME
