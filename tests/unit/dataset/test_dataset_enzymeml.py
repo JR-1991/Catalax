@@ -89,3 +89,44 @@ class TestDatasetFromEnzymeML:
         assert len(ds.measurements) == len(doc.measurements)
         assert len(ds.states) == len(doc.small_molecules) + len(doc.proteins)
         assert len(ds.measurements) == len(doc.measurements)
+
+    def test_inhomogeneous_species_no_error(self):
+        """Different-length species arrays within one measurement must not raise ValidationError."""
+        doc = pe.EnzymeMLDocument(name="test")
+        s1 = doc.add_to_small_molecules(id="s1", name="s1")
+        s2 = doc.add_to_small_molecules(id="s2", name="s2")
+
+        meas = doc.add_to_measurements(id="m1", name="m1")
+        meas.add_to_species_data(
+            species_id=s1.id, name="s1", initial=10.0,
+            data=[10, 8, 6, 4, 2], time=[0, 1, 2, 3, 4],
+        )
+        meas.add_to_species_data(
+            species_id=s2.id, name="s2", initial=0.0,
+            data=[0, 4, 8], time=[0, 2, 4],
+        )
+
+        ds = ctx.Dataset.from_enzymeml(doc)  # must not raise
+        m = ds.measurements[0]
+        assert len(m.time) == 5
+        assert len(m.data["s1"]) == len(m.data["s2"]) == 5
+
+    def test_multiple_measurements_uniform_length(self):
+        """Measurements of different lengths must be padded to global_max_len."""
+        doc = pe.EnzymeMLDocument(name="test")
+        s1 = doc.add_to_small_molecules(id="s1", name="s1")
+
+        m_short = doc.add_to_measurements(id="m_short", name="m_short")
+        m_short.add_to_species_data(
+            species_id=s1.id, name="s1", initial=10.0,
+            data=[10, 8, 6], time=[0, 1, 2],
+        )
+        m_long = doc.add_to_measurements(id="m_long", name="m_long")
+        m_long.add_to_species_data(
+            species_id=s1.id, name="s1", initial=5.0,
+            data=[5, 4, 3, 2, 1], time=[0, 1, 2, 3, 4],
+        )
+
+        ds = ctx.Dataset.from_enzymeml(doc)
+        lengths = {len(m.time) for m in ds.measurements}
+        assert lengths == {5}, f"Expected uniform length 5, got {lengths}"

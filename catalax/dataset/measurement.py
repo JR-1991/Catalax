@@ -390,41 +390,135 @@ class Measurement(BaseModel):
             **kwargs,
         )
 
+    @staticmethod
+    def _pad_species_arrays(
+        measurement: pe.Measurement,
+        global_max_len: int,
+    ) -> tuple[jax.Array, dict[str, jax.Array]]:
+        """Normalize species data onto a single canonical time axis.
+
+        EnzymeML species within the same measurement may be sampled at different
+        time points (different lengths and/or different values).  This method:
+
+        1. Selects the **longest** species time array as the canonical (unified)
+           time axis for this measurement.
+        2. **Validates** that every shorter species time array is a subset of the
+           canonical axis (all their time points appear in the canonical array,
+           within floating-point tolerance ``atol=1e-10``).
+        3. **Position-aligns** each species' data onto the canonical axis, placing
+           ``NaN`` at canonical time positions where that species was not sampled.
+        4. **Extends** the canonical time axis to ``global_max_len`` using
+           monotonic continuation (``+1.0`` per step) and pads all data arrays
+           with ``NaN``.  This cross-measurement normalisation ensures all
+           ``ctx.Measurement`` objects in a ``Dataset`` share the same array
+           length.
+
+        Args:
+            measurement: A pyenzyme ``Measurement`` whose species may have
+                heterogeneous time/data array lengths.
+            global_max_len: Target length for all output arrays.  Determined by
+                ``Dataset.from_enzymeml()`` across all measurements in the
+                document.
+
+        Returns:
+            ``(time, data_dict)`` where ``time`` is a 1-D JAX array of length
+            ``global_max_len`` and every value in ``data_dict`` is a 1-D JAX
+            array of the same length.
+
+        Raises:
+            ValueError: If any species' time array contains values not present
+                in the canonical time array (i.e., it is not a subset).
+        """
+        non_empty = [
+            sp for sp in measurement.species_data
+            if sp.data is not None and len(sp.data) > 0
+        ]
+
+        # 1. Select canonical time array (longest).
+        time_candidates = [
+            sp.time for sp in non_empty if sp.time is not None and len(sp.time) > 0
+        ]
+        if time_candidates:
+            canonical_list: list[float] = max(time_candidates, key=len)
+        else:
+            # No species has time data; synthesise a zero-based integer axis.
+            max_data_len = max((len(sp.data) for sp in non_empty), default=0)
+            canonical_list = list(range(max_data_len))
+
+        canonical_np = np.array(canonical_list, dtype=float)
+
+        # 2 & 3. Validate subset + position-align each species.
+        data_dict: dict[str, jax.Array] = {}
+        for sp in non_empty:
+            sp_data_np = np.array(sp.data, dtype=float)
+
+            if sp.time is None or len(sp.time) == 0:
+                # No time info — align to the start of the canonical axis.
+                aligned = np.full(len(canonical_np), np.nan)
+                aligned[: len(sp_data_np)] = sp_data_np
+            elif len(sp.time) == len(canonical_np) and np.allclose(
+                sp.time, canonical_np, atol=1e-10
+            ):
+                # Same axis as canonical — no alignment needed.
+                aligned = sp_data_np
+            else:
+                sp_time_np = np.array(sp.time, dtype=float)
+                aligned = np.full(len(canonical_np), np.nan)
+                for j, (t, v) in enumerate(zip(sp_time_np, sp_data_np)):
+                    idx = np.where(np.isclose(canonical_np, t, atol=1e-10))[0]
+                    if idx.size == 0:
+                        raise ValueError(
+                            f"Time point {t!r} of species '{sp.species_id}' "
+                            f"(measurement '{measurement.id}') not found in the "
+                            f"canonical time array {canonical_list!r}. All species "
+                            "time arrays must be subsets of the longest time array "
+                            "within the same measurement."
+                        )
+                    aligned[idx[0]] = v
+
+            data_dict[sp.species_id] = jnp.array(aligned)
+
+        # 4. Extend canonical time to global_max_len.
+        pad_len = global_max_len - len(canonical_np)
+        if pad_len > 0:
+            start = canonical_np[-1] + 1.0 if canonical_np.size > 0 else 0.0
+            extension = np.arange(start, start + pad_len, 1.0)
+            canonical_np = np.concatenate([canonical_np, extension])
+            data_dict = {
+                sid: jnp.concatenate([arr, jnp.full(pad_len, jnp.nan)])
+                for sid, arr in data_dict.items()
+            }
+
+        return jnp.array(canonical_np), data_dict
+
     @classmethod
-    def from_enzymeml(cls, measurement: pe.Measurement) -> "Measurement":
-        """Create a Measurement object from a pyenzyme Measurement object.
+    def from_enzymeml(
+        cls,
+        measurement: pe.Measurement,
+        global_max_len: int,
+    ) -> "Measurement":
+        """Create a Measurement from a pyenzyme Measurement object.
+
+        Delegates array normalisation to ``_pad_species_arrays``, which selects
+        the longest species time array as the unified time axis, validates that
+        shorter species time arrays are subsets of it, position-aligns their data
+        (``NaN`` at unsampled positions), and pads all arrays to ``global_max_len``.
 
         Args:
             measurement (pe.Measurement): PyEnzyme measurement object.
+            global_max_len (int): Common length for all output arrays; determined
+                by ``Dataset.from_enzymeml()`` across the entire document.
 
         Returns:
-            Measurement: New Measurement object with data from the PyEnzyme measurement.
+            Measurement: New Measurement with a single unified time axis and
+            NaN-padded data arrays.
         """
         initials = {
-            species.species_id: species.initial
-            for species in measurement.species_data
-            if species.initial is not None
+            sp.species_id: sp.initial
+            for sp in measurement.species_data
+            if sp.initial is not None
         }
-
-        data = {
-            species.species_id: jnp.array(species.data)
-            for species in measurement.species_data
-            if species.data is not None and len(species.data) > 0
-        }
-
-        time = next(
-            iter(
-                [
-                    jnp.array(data.time)
-                    for data in measurement.species_data
-                    if data.time is not None and len(data.time) > 0
-                ]
-            ),
-            None,
-        )
-
-        if measurement.id is None:
-            measurement.id = str(uuid4())
+        time, data = cls._pad_species_arrays(measurement, global_max_len)
 
         return cls(
             initial_conditions=initials,
