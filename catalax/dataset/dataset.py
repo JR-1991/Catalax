@@ -494,19 +494,36 @@ class Dataset(BaseModel):
     ) -> Dataset:
         """Create a dataset from an EnzymeML document.
 
+        First scans all measurements to determine the global maximum data-array
+        length (``global_max_len``), then constructs each ``Measurement`` with
+        arrays padded to that common length.  Within each measurement, species
+        with shorter time arrays are position-aligned onto the canonical (longest)
+        time axis with ``NaN`` at unsampled positions.  Across measurements,
+        shorter time arrays are extended with monotonic continuation and data
+        padded with ``NaN``.
+
         Args:
-            enzmldoc: EnzymeML document containing experimental data
+            enzmldoc: EnzymeML document containing experimental data.
 
         Returns:
-            A new Dataset object with measurements extracted from the EnzymeML document
+            Dataset with uniformly-shaped measurements ready for JAX operations.
         """
+        global_max_len = max(
+            (
+                len(sp.data)
+                for meas in enzmldoc.measurements
+                for sp in meas.species_data
+                if sp.data is not None
+            ),
+            default=0,
+        )
 
-        missing_initial_conditions = []
-        measurements = []
+        missing_initial_conditions: list[str] = []
+        measurements: list[Measurement] = []
 
         for meas in enzmldoc.measurements:
             if any(sp.initial is not None for sp in meas.species_data):
-                measurements.append(Measurement.from_enzymeml(meas))
+                measurements.append(Measurement.from_enzymeml(meas, global_max_len))
             else:
                 missing_initial_conditions.append(meas.id)
 
@@ -518,16 +535,13 @@ class Dataset(BaseModel):
         small_molecules = [sp.id for sp in enzmldoc.small_molecules]
         proteins = [sp.id for sp in enzmldoc.proteins]
         complexes = [sp.id for sp in enzmldoc.complexes]
-        all_states = small_molecules + proteins + complexes
 
-        dataset = cls(
+        return cls(
             id=enzmldoc.name,
             name=enzmldoc.name,
-            states=all_states,
+            states=small_molecules + proteins + complexes,
             measurements=measurements,
         )
-
-        return dataset
 
     @classmethod
     def from_dataframe(
