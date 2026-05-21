@@ -33,6 +33,7 @@ from deprecated import deprecated
 from jax import Array
 from matplotlib.figure import Figure
 from pydantic import BaseModel, Field
+from rich.table import Table
 
 from catalax.dataset.metrics import FitMetrics
 from catalax.objectives import l1_loss
@@ -333,6 +334,30 @@ class Dataset(BaseModel):
     # Data Export Methods
     # =====================
 
+    @property
+    def shape(
+        self,
+    ) -> tuple[
+        tuple[int, ...],
+        tuple[int, ...],
+        tuple[int, ...],
+    ]:
+        """Get the shape of the dataset.
+
+        Returns:
+            Tuple containing:
+            - Number of measurements
+            - Number of time points
+            - Number of states
+        """
+        assert self.measurements, "The dataset is empty."
+
+        data, time, inits = self.to_jax_arrays(
+            state_order=self.states,
+            inits_to_array=True,
+        )
+        return data.shape, time.shape, inits.shape
+
     def to_dataframe(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Export dataset as two pandas DataFrames for data and initial conditions.
 
@@ -348,6 +373,20 @@ class Dataset(BaseModel):
         )
 
         return data, inits
+
+    @overload
+    def to_jax_arrays(
+        self,
+        state_order: List[str],
+        inits_to_array: Literal[True],
+    ) -> tuple[Array, Array, Array]: ...
+
+    @overload
+    def to_jax_arrays(
+        self,
+        state_order: List[str],
+        inits_to_array: Literal[False] = False,
+    ) -> tuple[Array, Array, List[Union[Array, Dict[str, float]]]]: ...
 
     def to_jax_arrays(
         self,
@@ -935,6 +974,11 @@ class Dataset(BaseModel):
             upper_95 = self._simulate_model_data(predictor, n_steps, "upper")
             lower_50 = self._simulate_model_data(predictor, n_steps, "lower_50")
             upper_50 = self._simulate_model_data(predictor, n_steps, "upper_50")
+        elif predictor and isinstance(predictor, Predictor) and predictor.has_hdi():
+            lower_95 = self._predict_model_data(predictor, n_steps, "lower")
+            upper_95 = self._predict_model_data(predictor, n_steps, "upper")
+            lower_50 = self._predict_model_data(predictor, n_steps, "lower_50")
+            upper_50 = self._predict_model_data(predictor, n_steps, "upper_50")
         else:
             lower_95 = None
             upper_95 = None
@@ -1020,6 +1064,19 @@ class Dataset(BaseModel):
                 t1=t1,
                 nsteps=n_steps,
             ),
+        )
+
+    def _predict_model_data(
+        self,
+        model: Predictor,
+        n_steps: int,
+        hdi: Optional[HDIOptions] = None,
+    ) -> Dataset:
+        """Simulate model data for plotting."""
+        return model.predict(
+            dataset=self,
+            n_steps=n_steps,
+            hdi=hdi,
         )
 
     def _plot_measurements(
@@ -1284,3 +1341,16 @@ class Dataset(BaseModel):
             t1=jnp.array(t1),
             nsteps=nsteps,
         )
+
+    @property
+    def df_inits(self) -> pd.DataFrame:
+        """DataFrame of initial conditions for the dataset."""
+        inits = [meas.initial_conditions for meas in self.measurements]
+        return pd.DataFrame(inits, index=[meas.id for meas in self.measurements])
+
+    # =====================
+    # Magic Methods
+    # =====================
+
+    def __len__(self) -> int:
+        return len(self.measurements)
