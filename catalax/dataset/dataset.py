@@ -33,7 +33,6 @@ from deprecated import deprecated
 from jax import Array
 from matplotlib.figure import Figure
 from pydantic import BaseModel, Field
-from rich.table import Table
 
 from catalax.dataset.metrics import FitMetrics
 from catalax.objectives import l1_loss
