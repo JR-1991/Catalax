@@ -1,0 +1,529 @@
+---
+title: "Neural ODE Ensembles"
+---
+
+This guide demonstrates how to create and use Neural ODE Ensembles in Catalax for robust predictions and uncertainty quantification. Ensembles combine multiple independently trained Neural ODE models to provide more reliable predictions and quantify epistemic uncertainty—the uncertainty arising from limited data and model structure rather than measurement noise.
+
+## Introduction and Research Context
+
+### The Challenge of Uncertainty in Biochemical Modeling
+
+When modeling biochemical systems with Neural ODEs, researchers face a fundamental challenge: how can we quantify our confidence in model predictions? Traditional single-model approaches provide point estimates but offer limited insight into prediction reliability. This limitation becomes particularly critical when:
+
+1. **Limited experimental data**: Small datasets provide insufficient information to uniquely determine model parameters, leading to multiple plausible solutions
+2. **Model structure uncertainty**: Different neural architectures or training strategies may capture different aspects of the underlying biochemical dynamics
+3. **Generalization concerns**: A model that fits training data well may still make unreliable predictions for new experimental conditions
+4. **Decision-making under uncertainty**: Many research applications require understanding prediction confidence, such as experimental design, parameter estimation, or model selection
+
+### Ensembles: A Bayesian-Inspired Approach to Uncertainty
+
+Neural ODE Ensembles address these challenges by training multiple models independently and aggregating their predictions. This approach, inspired by Bayesian methods and ensemble learning, provides several key advantages:
+
+**Epistemic Uncertainty Quantification**: Ensembles naturally capture epistemic uncertainty—the uncertainty about which model best represents the true biochemical dynamics. When ensemble members disagree, this indicates regions where the model is less certain due to limited data or ambiguous patterns.
+
+**Robust Predictions**: By averaging predictions across multiple models, ensembles typically provide more stable and reliable predictions than individual models, reducing sensitivity to initialization and training variations.
+
+**Model-Agnostic Framework**: The ensemble approach works with any Neural ODE architecture, allowing researchers to combine different model types, architectures, or training strategies.
+
+**Computational Efficiency**: While training multiple models requires more computation, prediction and uncertainty quantification remain efficient, making ensembles practical for real-world applications.
+
+## Overview and Research Applications
+
+Neural ODE Ensembles have proven valuable across diverse biochemical research applications:
+
+- **Uncertainty-aware predictions**: Providing confidence intervals for concentration trajectories, enabling researchers to identify regions where predictions are reliable versus uncertain
+- **Bayesian surrogate modeling**: Using ensembles as surrogate models in MCMC sampling, where uncertainty quantification is essential for proper posterior exploration
+- **Experimental design**: Identifying experimental conditions where model uncertainty is high, guiding data collection strategies
+- **Model comparison**: Comparing ensemble predictions across different model architectures or training strategies
+- **Robust parameter estimation**: Using ensemble-averaged rates for downstream parameter estimation, reducing sensitivity to individual model artifacts
+
+## Step 1: Creating Individual Neural ODE Models
+
+Before creating an ensemble, you need multiple trained Neural ODE models. These models should be trained independently to ensure diversity:
+
+```python
+import catalax as ctx
+import catalax.neural as ctn
+import jax.nn as jnn
+
+# Create model structure
+model = ctx.Model(name="Enzymatic System")
+model.add_state(S="Substrate", E="Enzyme", P="Product")
+
+# Load dataset
+dataset = ctx.Dataset.from_croissant("datasets/croissant_dataset.zip")
+dataset = dataset.augment(n_augmentations=10, sigma=0.01)
+
+# Create training strategy
+strategy = ctn.Strategy()
+strategy.add_step(lr=1e-3, length=0.1, steps=1000, batch_size=20, alpha=0.1)
+strategy.add_step(lr=1e-3, steps=2000, batch_size=20, alpha=0.01)
+strategy.add_step(lr=1e-4, steps=3000, batch_size=20, alpha=0.01)
+
+# Train multiple models with different random initializations
+models = []
+for i in range(5):  # Create 5 ensemble members
+    neural_ode = ctn.NeuralODE.from_model(
+        model,
+        width_size=16,
+        depth=1,
+        activation=jnn.selu,
+    )
+    
+    trained = neural_ode.train(
+        dataset=dataset,
+        strategy=strategy,
+        print_every=100,
+        weight_scale=1e-3,
+        temporal_dropout_p=0.1,  # Optional temporal regularization per member
+    )
+    
+    models.append(trained)
+```
+
+**Scientific considerations for ensemble creation:**
+
+**Ensemble size**: The number of models in an ensemble affects both computational cost and uncertainty quantification quality. Typical ensemble sizes range from 5-20 models:
+- **Small ensembles (3-5 models)**: Sufficient for basic uncertainty quantification and robust predictions
+- **Medium ensembles (5-10 models)**: Good balance between computational cost and uncertainty resolution
+- **Large ensembles (10-20+ models)**: Provide finer-grained uncertainty estimates but with diminishing returns
+
+**Model diversity**: To effectively capture uncertainty, ensemble members should be diverse. Common strategies include:
+- **Different random initializations**: Each model starts from different random weights
+- **Different architectures**: Varying network width, depth, or activation functions
+- **Different training strategies**: Using different learning rates, regularization strengths, or training durations
+- **Different temporal dropout levels**: Vary `temporal_dropout_p` across members to diversify temporal sensitivity (see [Temporal Dropout for Irregular-Time Robustness](./neural-regularization#temporal-dropout-for-irregular-time-robustness))
+- **Data subsampling**: Training each model on different subsets of the data (bootstrap aggregating)
+
+**Computational considerations**: Training multiple models requires more computational resources, but predictions remain efficient since they can be parallelized across ensemble members.
+
+## Step 2: Creating the Ensemble
+
+Once you have multiple trained models, creating the ensemble is straightforward:
+
+```python
+# Create ensemble from trained models
+ensemble = ctn.NeuralODEEnsemble(models)
+
+# Verify ensemble properties
+print(f"Ensemble contains {len(ensemble.models)} models")
+print(f"State order: {ensemble.state_order}")
+print(f"Total parameters: {ensemble.n_parameters()}")
+```
+
+**Ensemble validation:**
+
+The `NeuralODEEnsemble` class automatically validates that all models have consistent state orders. This ensures that predictions can be properly aggregated:
+
+```python
+# This will raise an error if models have inconsistent state orders
+try:
+    ensemble = ctn.NeuralODEEnsemble(models)
+except AssertionError as e:
+    print(f"Models are incompatible: {e}")
+```
+
+**State order consistency**: All models in an ensemble must operate on the same state variables in the same order. This requirement ensures that predictions can be meaningfully aggregated across ensemble members.
+
+## Step 3: Making Predictions with Ensembles
+
+Ensembles provide several prediction modes, from simple mean predictions to detailed uncertainty quantification:
+
+### Mean Predictions
+
+The simplest use case is obtaining ensemble-averaged predictions:
+
+```python
+# Get mean predictions (default behavior)
+predictions = ensemble.predict(
+    dataset=dataset,
+    n_steps=100,
+)
+
+# Visualize ensemble predictions
+f = dataset.plot(
+    predictor=ensemble,
+    measurement_ids=[m.id for m in dataset.measurements[:4]],
+)
+```
+
+**Scientific interpretation**: Mean predictions represent the ensemble's consensus view of system dynamics. These predictions are typically more robust than individual model predictions, as they average out model-specific artifacts and training variations.
+
+### Uncertainty Quantification with HDI
+
+Ensembles enable uncertainty quantification through Highest Density Intervals (HDI), which provide probabilistic bounds on predictions:
+
+```python
+# Get lower and upper bounds of 95% HDI
+lower_95 = ensemble.predict(
+    dataset=dataset,
+    n_steps=100,
+    hdi="lower",  # 2.5th percentile
+)
+
+upper_95 = ensemble.predict(
+    dataset=dataset,
+    n_steps=100,
+    hdi="upper",  # 97.5th percentile
+)
+
+# Get 50% HDI bounds
+lower_50 = ensemble.predict(dataset=dataset, n_steps=100, hdi="lower_50")
+upper_50 = ensemble.predict(dataset=dataset, n_steps=100, hdi="upper_50")
+```
+
+**Understanding HDI options:**
+
+- **`hdi="lower"`**: Returns the 2.5th percentile (lower bound of 95% HDI)
+- **`hdi="upper"`**: Returns the 97.5th percentile (upper bound of 95% HDI)
+- **`hdi="lower_50"`**: Returns the 25th percentile (lower bound of 50% HDI)
+- **`hdi="upper_50"`**: Returns the 75th percentile (upper bound of 50% HDI)
+- **`hdi=None`**: Returns mean predictions (default)
+
+**Scientific interpretation of HDI:**
+
+The HDI represents the range within which a specified percentage of ensemble predictions fall. For example, the 95% HDI contains 95% of all ensemble member predictions:
+- **Narrow HDI**: Indicates high model agreement and confident predictions
+- **Wide HDI**: Indicates model disagreement and uncertain predictions, often corresponding to regions with limited training data or complex dynamics
+
+**Visualizing uncertainty:**
+
+```python
+import matplotlib.pyplot as plt
+
+# Get predictions with uncertainty bounds
+mean_pred = ensemble.predict(dataset=dataset, n_steps=100)
+lower = ensemble.predict(dataset=dataset, n_steps=100, hdi="lower")
+upper = ensemble.predict(dataset=dataset, n_steps=100, hdi="upper")
+
+# Plot with uncertainty bands
+# (Implementation depends on your plotting preferences)
+```
+
+### Individual Model Predictions
+
+For detailed analysis, you can access predictions from individual ensemble members:
+
+```python
+# Get individual predictions from all models
+all_predictions, times, y0s = ensemble.predict(
+    dataset=dataset,
+    n_steps=100,
+    return_individual=True,
+)
+
+# all_predictions shape: (n_models, n_measurements, n_timepoints, n_states)
+print(f"Shape: {all_predictions.shape}")
+
+# Access predictions from specific model
+model_0_predictions = all_predictions[0]  # First model's predictions
+```
+
+**Use cases for individual predictions:**
+
+- **Model comparison**: Analyzing how different ensemble members behave
+- **Outlier detection**: Identifying ensemble members that produce unusual predictions
+- **Custom aggregation**: Implementing alternative aggregation strategies beyond mean/percentiles
+- **Sensitivity analysis**: Understanding how individual model characteristics affect ensemble behavior
+
+## Step 4: Using Ensembles as Surrogate Models
+
+Ensembles implement the `Surrogate` interface, making them compatible with MCMC sampling and other Bayesian inference methods:
+
+```python
+# Ensemble can be used as a surrogate model
+from catalax.mcmc import MCMC
+
+# Create MCMC sampler with ensemble as surrogate
+mcmc = MCMC(
+    surrogate=ensemble,  # Ensemble provides mean rates
+    dataset=dataset,
+    # ... other MCMC parameters
+)
+```
+
+**Ensemble-averaged rates:**
+
+When used as a surrogate, the ensemble computes mean rates across all models:
+
+```python
+# Get ensemble-averaged rates at specific time-state pairs
+import jax.numpy as jnp
+
+t = jnp.array([0.0, 1.0, 2.0])
+y = jnp.array([[1.0, 0.5], [0.8, 0.6], [0.6, 0.7]])  # (n_points, n_states)
+
+rates = ensemble.rates(t, y)
+# Returns mean rates across all ensemble members
+```
+
+**Scientific rationale for ensemble surrogates:**
+
+Using ensembles as surrogates provides several advantages in Bayesian inference:
+- **Robustness**: Ensemble-averaged rates are less sensitive to individual model artifacts
+- **Uncertainty propagation**: The ensemble naturally captures uncertainty in rate estimates
+- **Computational efficiency**: Mean rate computation is fast, enabling efficient MCMC sampling
+
+**Predicting rates from datasets:**
+
+```python
+# Get ensemble-averaged rates for all time-state pairs in a dataset
+rates = ensemble.predict_rates(dataset)
+# Shape: (dataset_size * time_size, n_states)
+```
+
+## Step 5: Saving and Loading Ensembles
+
+Ensembles are saved as zip archives containing individual model files and a manifest:
+
+### Saving Ensembles
+
+```python
+from pathlib import Path
+
+# Save ensemble to zip archive
+ensemble.save_to_eqx(
+    name="my_ensemble",
+    path=Path("./trained/"),
+)
+
+# The archive contains:
+# - 0.eqx, 1.eqx, ..., N.eqx: Individual model files
+# - manifest.json: Metadata mapping files to model classes
+```
+
+**Archive structure:**
+
+The ensemble archive uses a structured format:
+- **Individual model files**: Each model is serialized as `{index}.eqx`
+- **Manifest file**: `manifest.json` contains metadata mapping each model file to its class name and module path, enabling proper deserialization
+
+**Scientific benefits of structured archives:**
+
+- **Reproducibility**: Complete ensemble state is preserved
+- **Sharing**: Ensembles can be easily shared with collaborators
+- **Version control**: Archive format enables tracking ensemble evolution
+- **Modularity**: Individual models can be extracted if needed
+
+### Loading Ensembles
+
+```python
+# Load ensemble from archive
+loaded_ensemble = ctn.NeuralODEEnsemble.from_eqx(
+    "./trained/my_ensemble.zip"
+)
+
+# Verify loaded ensemble
+print(f"Loaded {len(loaded_ensemble.models)} models")
+```
+
+**Loading requirements:**
+
+The loading process automatically:
+- Validates archive structure (checks for manifest.json)
+- Verifies model class compatibility (ensures models inherit from `NeuralBase`)
+- Reconstructs the ensemble with proper model instances
+
+**Error handling:**
+
+The loader provides informative error messages for common issues:
+- Missing manifest files
+- Incompatible model classes
+- Missing model files in archive
+- Import errors for model classes
+
+## Step 6: Best Practices and Research Applications
+
+### Ensemble Design Strategies
+
+**Diversity through initialization:**
+
+```python
+# Train models with different random seeds
+import jax.random as jrandom
+
+models = []
+for i in range(5):
+    key = jrandom.PRNGKey(i)  # Different seed for each model
+    neural_ode = ctn.NeuralODE.from_model(
+        model,
+        width_size=16,
+        depth=1,
+        activation=jnn.selu,
+        key=key,  # Pass different key
+    )
+    trained = neural_ode.train(dataset=dataset, strategy=strategy)
+    models.append(trained)
+```
+
+**Diversity through architecture:**
+
+```python
+# Train models with different architectures
+architectures = [
+    {"width_size": 16, "depth": 1},
+    {"width_size": 32, "depth": 1},
+    {"width_size": 16, "depth": 2},
+]
+
+models = []
+for arch in architectures:
+    neural_ode = ctn.NeuralODE.from_model(model, **arch)
+    trained = neural_ode.train(dataset=dataset, strategy=strategy)
+    models.append(trained)
+```
+
+**Diversity through training:**
+
+```python
+# Train models with different strategies
+strategies = [
+    ctn.Strategy().add_step(lr=1e-3, steps=3000, alpha=0.1),
+    ctn.Strategy().add_step(lr=5e-4, steps=3000, alpha=0.05),
+    ctn.Strategy().add_step(lr=1e-3, steps=2000, alpha=0.01),
+]
+
+models = []
+for strategy in strategies:
+    neural_ode = ctn.NeuralODE.from_model(model, width_size=16, depth=1)
+    trained = neural_ode.train(dataset=dataset, strategy=strategy)
+    models.append(trained)
+```
+
+### Uncertainty Quantification Workflows
+
+**Identifying uncertain regions:**
+
+```python
+# Compare mean predictions to uncertainty bounds
+mean = ensemble.predict(dataset=dataset, n_steps=100)
+lower = ensemble.predict(dataset=dataset, n_steps=100, hdi="lower")
+upper = ensemble.predict(dataset=dataset, n_steps=100, hdi="upper")
+
+# Compute prediction intervals
+uncertainty = upper - lower
+
+# Identify regions with high uncertainty
+high_uncertainty_regions = uncertainty > threshold
+```
+
+**Experimental design:**
+
+Ensembles can guide experimental design by identifying conditions where model uncertainty is high:
+
+```python
+# Evaluate uncertainty across different initial conditions
+test_dataset = create_test_conditions(...)
+
+mean = ensemble.predict(dataset=test_dataset, n_steps=100)
+lower = ensemble.predict(dataset=test_dataset, n_steps=100, hdi="lower")
+upper = ensemble.predict(dataset=test_dataset, n_steps=100, hdi="upper")
+
+uncertainty = upper - lower
+
+# Prioritize experiments in high-uncertainty regions
+experimental_priorities = rank_by_uncertainty(uncertainty)
+```
+
+### Model Comparison and Selection
+
+**Comparing ensemble predictions:**
+
+```python
+# Compare different ensembles
+ensemble_1 = ctn.NeuralODEEnsemble(models_architecture_1)
+ensemble_2 = ctn.NeuralODEEnsemble(models_architecture_2)
+
+# Evaluate on validation dataset
+val_dataset = dataset.train_test_split(test_size=0.2)[1]
+
+metrics_1 = val_dataset.metrics(ensemble_1)
+metrics_2 = val_dataset.metrics(ensemble_2)
+
+print(f"Ensemble 1 metrics: {metrics_1}")
+print(f"Ensemble 2 metrics: {metrics_2}")
+```
+
+**Ensemble size analysis:**
+
+```python
+# Analyze how ensemble size affects predictions
+ensemble_sizes = [3, 5, 10, 20]
+results = {}
+
+for size in ensemble_sizes:
+    sub_ensemble = ctn.NeuralODEEnsemble(models[:size])
+    mean = sub_ensemble.predict(dataset=dataset, n_steps=100)
+    lower = sub_ensemble.predict(dataset=dataset, n_steps=100, hdi="lower")
+    upper = sub_ensemble.predict(dataset=dataset, n_steps=100, hdi="upper")
+    
+    results[size] = {
+        "mean": mean,
+        "uncertainty": upper - lower,
+    }
+```
+
+## Troubleshooting Common Issues
+
+### Inconsistent State Orders
+
+**Problem**: Models have different state orders
+
+```python
+# Error: "All models must have the same state order"
+```
+
+**Solution**: Ensure all models are created from the same base model structure:
+
+```python
+# Correct: Use same model structure
+base_model = ctx.Model(name="System")
+base_model.add_state(S="Substrate", E="Enzyme", P="Product")
+
+models = []
+for i in range(5):
+    neural_ode = ctn.NeuralODE.from_model(base_model, ...)
+    models.append(neural_ode.train(...))
+```
+
+### Poor Ensemble Diversity
+
+**Problem**: Ensemble members produce nearly identical predictions
+
+**Solutions**:
+- Use different random initializations (different PRNG keys)
+- Vary network architectures (width, depth, activation)
+- Use different training strategies (learning rates, regularization)
+- Train on different data subsets (bootstrap aggregating)
+
+### Computational Cost
+
+**Problem**: Training multiple models is computationally expensive
+
+**Solutions**:
+- Start with smaller ensembles (3-5 models) and scale up if needed
+- Use parallel training across multiple GPUs/CPUs
+- Consider simpler architectures for ensemble members
+- Use transfer learning: fine-tune pre-trained models with different strategies
+
+### Uncertainty Interpretation
+
+**Problem**: Uncertainty bounds seem unrealistic
+
+**Solutions**:
+- Verify ensemble diversity (models should produce different predictions)
+- Check training quality (all models should fit data reasonably well)
+- Consider ensemble size (too few models may give unreliable uncertainty estimates)
+- Validate against known ground truth or experimental replicates
+
+## Summary
+
+Neural ODE Ensembles provide a powerful framework for uncertainty quantification and robust predictions in biochemical modeling:
+
+- **Uncertainty quantification**: HDI-based uncertainty bounds capture epistemic uncertainty
+- **Robust predictions**: Ensemble-averaged predictions are more reliable than individual models
+- **Surrogate compatibility**: Ensembles work seamlessly with MCMC and other Bayesian methods
+- **Flexible aggregation**: Support for mean predictions, HDI bounds, and individual model access
+- **Reproducible persistence**: Structured archive format for saving and sharing ensembles
+
+By combining multiple independently trained models, ensembles enable researchers to make more informed decisions under uncertainty, guiding experimental design and providing confidence estimates for predictions.
