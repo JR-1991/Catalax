@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import numpyro
 import numpyro.distributions as dist
-from catalax.mcmc.protocols import PreModel, pre_model, PreModelContext
+
+from catalax.mcmc.protocols import PreModel, PreModelContext, pre_model
 
 
 def estimate_initials(
@@ -53,7 +54,7 @@ def estimate_initials(
         with numpyro.plate("y0s", ctx.y0s.shape[0]):
             ctx.y0s = numpyro.sample(  # type: ignore
                 "estimated_y0s",
-                dist.Normal(ctx.y0s, estimated_y0s_sigma),  # type: ignore
+                dist.TruncatedNormal(ctx.y0s, estimated_y0s_sigma, low=0.0),  # type: ignore
             )
 
     return _estimate_initials
