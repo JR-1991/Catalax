@@ -216,10 +216,28 @@ class HMC:
         else:
             mode = Modes.MECHANISTIC
 
+        if surrogate is not None and surrogate.has_uncertainty:
+            sigma_surr = surrogate.rate_uncertainty(dataset=dataset)
+            rate_sigma = surrogate.rate_sigma(dataset=dataset)
+        else:
+            sigma_surr = None
+            rate_sigma = None
+
+        if isinstance(yerrs, float):
+            # If yerrs is a scalar, we broadcast it to the shape of the data
+            yerrs_ = jnp.broadcast_to(
+                yerrs,
+                data_prep.data.shape,
+            )
+        elif isinstance(yerrs, Array):
+            yerrs_ = yerrs
+        else:
+            raise ValueError(f"Invalid type for yerrs: {type(yerrs)}")
+
         # Create Bayesian model
         bayes_model = BayesianModel(
             model=model,
-            yerrs=yerrs,
+            yerrs=yerrs_,
             likelihood=self.config.likelihood,
             sim_func=data_prep.sim_func,
             pre_model=pre_model,
@@ -227,6 +245,8 @@ class HMC:
             shapes=data_prep.shapes,
             mode=mode,
             config=config,
+            sigma_surr=sigma_surr,
+            rate_sigma=rate_sigma,
         )
 
         # Initialize and run MCMC
@@ -285,12 +305,14 @@ class BayesianModel:
     def __init__(
         self,
         model: "Model",
-        yerrs: Union[float, Array],
+        yerrs: Array,
         likelihood: Type[dist.Distribution],
         sim_func: Callable,
         shapes: Shapes,
         mode: Modes,
         config: SimulationConfig,
+        sigma_surr: Optional[Array] = None,
+        rate_sigma: Optional[Array] = None,
         pre_model: Optional[PreModel] = None,
         post_model: Optional[PostModel] = None,
     ):
@@ -318,6 +340,8 @@ class BayesianModel:
         self.mode = mode
         self.solver = config.solver
         self.dt0 = config.dt0
+        self.sigma_surr = sigma_surr
+        self.rate_sigma = rate_sigma
 
         # Pre-compute priors and observables
         self.priors = [
@@ -389,13 +413,25 @@ class BayesianModel:
             )
 
         # Sample noise parameter
-        sigma = numpyro.sample("sigma", dist.Normal(0, self.yerrs))  # type: ignore
+        # Expand yerrs to match shape of states
+        sigma_disc = numpyro.sample(
+            "sigma",
+            dist.Normal(0.0, jnp.mean(self.yerrs[..., self.observables])),
+        )  # type: ignore
+
+        sigma_total = sigma_disc**2
+
+        if self.sigma_surr is not None:
+            sigma_total = self.sigma_surr[..., self.observables] ** 2 + sigma_total
+
+        if self.rate_sigma is not None:
+            sigma_total = self.rate_sigma[None, self.observables] ** 2 + sigma_total
 
         # Compare simulation to observed data
         with numpyro.handlers.mask(mask=mask):
             numpyro.sample(
                 "y",
-                self.likelihood(states[..., self.observables], sigma),  # type: ignore
+                self.likelihood(states[..., self.observables], jnp.sqrt(sigma_total)),  # type: ignore
                 obs=data,
             )
 
@@ -502,7 +538,9 @@ def _prepare_mcmc_data(
 
 
 def _run_mcmc_simulation(
-    mcmc: MCMC, data_prep: DataPreparation, config: MCMCConfig
+    mcmc: MCMC,
+    data_prep: DataPreparation,
+    config: MCMCConfig,
 ) -> None:
     """Execute the MCMC simulation.
 
