@@ -4,7 +4,17 @@ import json
 import os
 import warnings
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Type
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Type,
+)
 
 try:
     from typing import Self  # Python 3.11+
@@ -132,6 +142,42 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
     ) -> jax.Array:
         raise NotImplementedError("This method is not implemented")
 
+    @property
+    def has_uncertainty(self) -> bool:
+        """Check if the model has uncertainty.
+
+        Returns:
+            True if the model has uncertainty, False otherwise
+        """
+        return False
+
+    def rate_uncertainty(self, dataset: Dataset) -> jax.Array:
+        """Get the variance of the rates of the model.
+
+        Returns:
+            Variance of the rates
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support uncertainty analysis. Use `NeuralODEEnsemble` instead."
+        )
+
+    def rate_sigma(self, dataset: Dataset) -> jax.Array:
+        """Get the standard deviation of the rates of the model.
+
+        Returns:
+            Standard deviation of the rates
+        """
+        prediction = self.predict(dataset, use_times=True)
+        predicted_rates = self.predict_rates(prediction).reshape(
+            -1,
+            len(self.state_order),
+        )
+        dataset_rates = self.predict_rates(dataset).reshape(
+            -1,
+            len(self.state_order),
+        )
+        return jnp.abs(predicted_rates - dataset_rates)
+
     def train(
         self,
         dataset: Dataset,
@@ -145,6 +191,8 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         milestone_dir: str = "./milestones",
         log: Optional[str] = None,
         seed: int = 420,
+        progress_bar: bool = True,
+        temporal_dropout_p: float = 0.0,
     ) -> Self:
         """Train the model on the given dataset.
 
@@ -159,6 +207,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         - Execute the training loop following the provided strategy
         - Optionally save model checkpoints at specified milestones
         - Log training progress if a log file is specified
+        - Optionally apply temporal dropout to the training data
 
         The training uses JAX for automatic differentiation and JIT compilation to ensure
         efficient computation. The model parameters are updated using the specified optimizer
@@ -174,7 +223,7 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             weight_scale: Weight scale for the optimizer
             save_milestones: Save model checkpoints
             log: Log file to save progress
-
+            temporal_dropout_p: Temporal dropout probability
         Returns:
             NeuralODE: The trained neural ODE model with updated parameters.
                 The model will have learned to approximate the dynamics from the provided
@@ -196,6 +245,8 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
             milestone_dir=milestone_dir,
             log=log,
             seed=seed,
+            progress_bar=progress_bar,
+            temporal_dropout_p=temporal_dropout_p,
         )
 
     def predict(
@@ -411,31 +462,35 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         """
 
         with open(path, "rb") as f:
-            hyperparams = json.loads(f.readline().decode())["hyperparameters"]
+            return cls._deserialize(f)
 
-            if "observable_indices" not in hyperparams:
-                hyperparams["observable_indices"] = [0]
-            if hyperparams["rbf"] is True:
-                hyperparams["activation"] = RBFLayer(0.4)
+    @classmethod
+    def _deserialize(cls, f: BinaryIO) -> Self:
+        """Deserializes a NeuralODE from an eqx file"""
+        hyperparams = json.loads(f.readline().decode())["hyperparameters"]
 
-            if "final_activation" in hyperparams:
-                hyperparams["final_activation"] = ACTIVATION_MAP[
-                    hyperparams["final_activation"]
-                ]
-            else:
-                warnings.warn("No final activation function found. Using identity.")
+        if "observable_indices" not in hyperparams:
+            hyperparams["observable_indices"] = [0]
+        if hyperparams["rbf"] is True:
+            hyperparams["activation"] = RBFLayer(0.4)
 
-            if "activation" in hyperparams:
-                hyperparams["activation"] = ACTIVATION_MAP[hyperparams["activation"]]
-            else:
-                warnings.warn("No activation function found. Using tanh.")
+        if "final_activation" in hyperparams:
+            hyperparams["final_activation"] = ACTIVATION_MAP[
+                hyperparams["final_activation"]
+            ]
+        else:
+            warnings.warn("No final activation function found. Using identity.")
 
-            # Remove rbf from hyperparams
-            del hyperparams["rbf"]
+        if "activation" in hyperparams:
+            hyperparams["activation"] = ACTIVATION_MAP[hyperparams["activation"]]
+        else:
+            warnings.warn("No activation function found. Using tanh.")
 
-            neuralode = cls(**hyperparams, key=jrandom.PRNGKey(0))
-            neuralode = eqx.tree_deserialise_leaves(f, neuralode)
+        # Remove rbf from hyperparams
+        del hyperparams["rbf"]
 
+        neuralode = cls(**hyperparams, key=jrandom.PRNGKey(0))
+        neuralode = eqx.tree_deserialise_leaves(f, neuralode)
         return neuralode
 
     def save_to_eqx(self, path: str, name: str, **kwargs):
@@ -448,6 +503,18 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
 
         if name.endswith(".eqx"):
             name = name.rstrip(".eqx")
+
+        filename = os.path.join(path, name + ".eqx")
+        with open(filename, "wb") as f:
+            self._serialize(f, **kwargs)
+
+    def _serialize(self, f: BinaryIO, **kwargs) -> None:
+        """Saves a NeuralODE to an eqx file
+
+        Args:
+            path (str): Path to the directory to save the eqx file
+            name (str): Name of the eqx file
+        """
 
         if "activation" not in self.hyperparams:
             try:
@@ -466,17 +533,15 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
                 # Custom activation function - skip storing in hyperparams
                 pass
 
-        filename = os.path.join(path, name + ".eqx")
-        with open(filename, "wb") as f:
-            hyperparam_str = json.dumps(
-                {
-                    "hyperparameters": self.hyperparams,
-                    **kwargs,
-                },
-                default=str,
-            )
-            f.write((hyperparam_str + "\n").encode())
-            eqx.tree_serialise_leaves(f, self)
+        hyperparam_str = json.dumps(
+            {
+                "hyperparameters": self.hyperparams,
+                **kwargs,
+            },
+            default=str,
+        )
+        f.write((hyperparam_str + "\n").encode())
+        eqx.tree_serialise_leaves(f, self)
 
     def save_to_onnx(self):
         return eqxi.to_onnx(self.func)
@@ -551,6 +616,14 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
                 rtol=rtol if rtol is not None else 1e-3,
                 atol=atol if atol is not None else 1e-6,
             )
+
+    def has_hdi(self) -> bool:
+        """Check if the model has HDI.
+
+        Returns:
+            True if the model has HDI, False otherwise
+        """
+        return False
 
     def _instantiate_solver(
         self,
