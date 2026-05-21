@@ -21,7 +21,7 @@ MakeStep = Callable[
     Tuple[jax.Array, T, optax.OptState],
 ]
 GradLoss = Callable[
-    [T, T, jax.Array, jax.Array, jax.Array, Penalties],
+    [T, T, jax.Array, jax.Array, jax.Array, Penalties, jax.Array],
     jax.Array,
 ]
 
@@ -39,7 +39,37 @@ def train_neural_ode(
     weight_scale: float = 1e-2,
     solver: Optional[Type[diffrax.AbstractSolver]] = None,
     seed: int = 420,
+    progress_bar: bool = True,
+    temporal_dropout_p: float = 0.0,
 ) -> T:
+    """Train a neural ODE.
+
+    Args:
+        model: NeuralBase model to train.
+        dataset: Training dataset.
+        strategy: Multi-stage training strategy.
+        optimizer: Optax optimizer constructor.
+        validation_dataset: Optional validation dataset.
+        print_every: Print metrics every N steps.
+        log: Optional path to a log file.
+        save_milestones: Whether to save per-stage model checkpoints.
+        milestone_dir: Directory for milestone checkpoints.
+        weight_scale: Initial weight rescaling factor.
+        solver: Optional diffrax solver override.
+        seed: PRNG seed.
+        progress_bar: Whether to show a tqdm progress bar.
+        temporal_dropout_p: Probability of *dropping* an interior time point
+            from the loss at each step. The initial condition (t=0) is never
+            dropped. Default is 0.0 (no dropout). A value of 0.2 means each
+            interior time point has a 20% chance of being masked out of the
+            training loss for that step.
+
+    Returns:
+        The trained model.
+    """
+    # Set whether to print progress bar
+    strategy._print = progress_bar
+
     # Extract data from dataset
     data, times, inital_conditions = dataset.to_jax_arrays(
         state_order=dataset.get_observable_states_order(),
@@ -76,16 +106,20 @@ def train_neural_ode(
     if save_milestones:
         os.makedirs(milestone_dir, exist_ok=True)
 
-    print(f"\n🚀 Training {model.__class__.__name__}...\n")
+    if progress_bar:
+        print(f"\n🚀 Training {model.__class__.__name__}...\n")
 
     for strat_index, strat in enumerate(strategy):
         assert strat.batch_size < data.shape[0], (
             f"Batch size of strategy #{strat_index} ({strat.batch_size}) is larger than the dataset size ({data.shape[0]}). Please reduce the batch size to be < {data.shape[0]}."
         )
 
+        # Partition model to get the differentiable part for optimizer initialization
+        diff_model, static_model = strat._partition_model(model)
+
         # Prepare optimizer per strategy
-        optim = optimizer(strat.lr)
-        opt_state = optim.init(eqx.filter(model, eqx.is_inexact_array))
+        optim = optimizer(learning_rate=strat.lr)
+        opt_state = optim.init(eqx.filter(diff_model, eqx.is_inexact_array))
 
         # Prepare step and loss function per strategy
         make_step, grad_loss = _prepare_step_and_loss(strat.loss)
@@ -113,11 +147,25 @@ def train_neural_ode(
             val_times = val_times[:, :max_time]
 
         # Set up progress bar
-        pbar = tqdm.tqdm(total=strat.steps, desc="╰── startup")
+        pbar = tqdm.tqdm(
+            total=strat.steps,
+            desc="╰── startup",
+            disable=not progress_bar,
+        )
 
         for step, (yi, y0i, ti) in zip(range(strat.steps), batches):
             # Generate new keys for each batch
             batch_key = jrandom.fold_in(batch_key, step)
+            mask_key, batch_key = jrandom.split(batch_key)
+
+            # Build per-step temporal dropout mask. Shared across the batch
+            # so all trajectories see the same dropped time indices, which
+            # enforces consistency. The IC (t=0) is always kept.
+            mask = temporal_dropout_mask(
+                mask_key,
+                n_times=ti.shape[1],
+                temporal_dropout_p=temporal_dropout_p,
+            )
 
             loss, model, opt_state = make_step(
                 ti=ti,
@@ -128,10 +176,11 @@ def train_neural_ode(
                 optimizer=optim,
                 partitioned_model=strat._partition_model(model),
                 penalties=strat.penalties,
+                mask=mask,
             )
 
             if (step % print_every) == 0 or step == strat.steps - 1:
-                # Calculate mean loss over data
+                # Calculate mean loss over data (no dropout for metrics)
                 loss, mae = _calculate_metrics(
                     strat,
                     model,
@@ -162,7 +211,9 @@ def train_neural_ode(
                 _log_progress(strat_index, step, loss, mae, log)
 
         pbar.close()
-        print("\n")
+
+        if progress_bar:
+            print("\n")
 
         if save_milestones:
             # Save milestone
@@ -174,6 +225,33 @@ def train_neural_ode(
             )
 
     return model
+
+
+def temporal_dropout_mask(
+    key: jax.Array,
+    n_times: int,
+    temporal_dropout_p: float,
+) -> jax.Array:
+    """Build a Bernoulli mask over interior time points; t=0 is always kept.
+
+    Semantics match standard dropout: ``temporal_dropout_p`` is the probability
+    of *dropping* a point. ``temporal_dropout_p=0.0`` keeps everything (no
+    dropout); ``temporal_dropout_p=1.0`` would drop every interior point.
+
+    Args:
+        key: PRNG key.
+        n_times: Number of time points in the trajectory (including the IC).
+        temporal_dropout_p: Probability of dropping each interior time point.
+
+    Returns:
+        Float mask of shape ``(n_times,)`` with ``mask[0] == 1.0`` always,
+        and ``mask[1:]`` independently 1.0 with probability ``1 -
+        temporal_dropout_p`` else 0.0.
+    """
+    p_keep = 1.0 - temporal_dropout_p
+    interior = jrandom.bernoulli(key, p=p_keep, shape=(n_times - 1,))
+    interior = interior.astype(jnp.float32)
+    return jnp.concatenate([jnp.ones((1,), dtype=jnp.float32), interior])
 
 
 def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
@@ -197,25 +275,40 @@ def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
         yi: jax.Array,
         y0i: jax.Array,
         penalties: Penalties,
+        mask: jax.Array,
     ):
-        """Calculates the L2 loss of the model.
+        """Calculates the masked loss of the model.
 
         Args:
-            model (NeuralODE): NeuralODE model to train.
+            diff_model: Differentiable part of the model.
+            static_model: Static part of the model.
             ti (jax.Array): Batch of times.
             yi (jax.Array): Batch of data.
             y0i (jax.Array): Batch of initial conditions.
+            penalties (Penalties): Regularization penalties.
+            mask (jax.Array): Float mask of shape ``(n_times,)`` weighting
+                each time point's contribution to the loss. Use all-ones for
+                no dropout (e.g., during validation).
 
         Returns:
-            float: Average L2 loss.
+            Scalar loss value.
         """
 
         model = eqx.combine(diff_model, static_model)
         y_pred = jax.vmap(model, in_axes=(0, 0))(ti, y0i)
 
-        loss_value = jnp.mean(loss(y_pred, yi))
+        # Per-point loss; broadcast mask across batch and state dims.
+        # Expected shape of `loss(y_pred, yi)` is (batch, time, n_states).
+        per_point_loss = loss(y_pred, yi)
+        broadcast_mask = mask[None, :, None]
+        masked = per_point_loss * broadcast_mask
 
-        return jnp.mean(loss_value + penalties(model))
+        # Normalize by kept points so the gradient scale is invariant in
+        # `temporal_dropout_p`.
+        denom = broadcast_mask.sum() * per_point_loss.shape[0] * per_point_loss.shape[2]
+        loss_value = masked.sum() / denom
+
+        return loss_value + penalties(model)
 
     @eqx.filter_jit
     def make_step(
@@ -227,6 +320,7 @@ def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
         optimizer,
         partitioned_model,
         penalties,
+        mask,
     ):
         """Calculates the loss, gradient and updates the model.
 
@@ -235,9 +329,11 @@ def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
             yi (jax.Array): Batch of data.
             y0i (jax.Array): Batch of initial conditions.
             model (NeuralODE): NeuralODE model to train.
-            opt_state (...): State of the optimizer.
-            optimizer (...): Optimizer of this session.
-            keys (jax.Array): Keys for the batch.
+            opt_state: State of the optimizer.
+            optimizer: Optimizer of this session.
+            partitioned_model: Tuple of (diff_model, static_model).
+            penalties: Regularization penalties.
+            mask (jax.Array): Temporal dropout mask of shape ``(n_times,)``.
         """
 
         diff_model, static_model = partitioned_model
@@ -248,10 +344,15 @@ def _prepare_step_and_loss(loss) -> Tuple[Callable, Callable]:
             yi,
             y0i,
             penalties,
+            mask,
         )
 
-        updates, opt_state = optimizer.update(grads, opt_state)
-        model = eqx.apply_updates(model, updates)
+        # Pass params to optimizer.update() for optimizers that require it (e.g., weight decay)
+        diff_params = eqx.filter(diff_model, eqx.is_inexact_array)
+        updates, opt_state = optimizer.update(grads, opt_state, diff_params)
+        # Apply updates to diff_model, then combine back with static_model
+        diff_model = eqx.apply_updates(diff_model, updates)
+        model = eqx.combine(diff_model, static_model)
 
         return loss, model, opt_state
 
@@ -272,14 +373,13 @@ def _calculate_metrics(
     inital_conditions: jax.Array,
     grad_loss,
 ) -> Tuple[jax.Array, jax.Array]:
-    """
-    Calculates the loss and mean absolute error (MAE) of a neural model on a given dataset.
+    """Calculates the loss and MAE of a model on a dataset (no dropout).
 
     Args:
         strat (Step): The differentiation strategy to use.
         model (NeuralBase): The neural model to evaluate.
         times (jax.Array): The time points of the dataset.
-        _data (jax.Array): The data points of the dataset.
+        data (jax.Array): The data points of the dataset.
         inital_conditions (jax.Array): The initial conditions of the model.
         grad_loss: The gradient of the loss function to use.
 
@@ -287,13 +387,16 @@ def _calculate_metrics(
         Tuple[jax.Array, jax.Array]: The loss and MAE of the model on the dataset.
     """
     diff_model, static_model = strat._partition_model(model)
+    # Validation/metrics use an all-ones mask: every time point counted.
+    full_mask = jnp.ones((times.shape[1],), dtype=jnp.float32)
     loss, _ = grad_loss(
         diff_model,
         static_model,
         times,
         data,
         inital_conditions,
-        penalties=Penalties(),
+        Penalties(),
+        full_mask,
     )
 
     preds = jax.vmap(model, in_axes=(0, 0))(times, inital_conditions)  # type: ignore
