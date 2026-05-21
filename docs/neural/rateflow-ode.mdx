@@ -136,6 +136,22 @@ rateflow_ode_conserved = ctn.RateFlowODE(
 
 ## Analysis and Visualization
 
+## Training Considerations and Temporal Regularization
+
+RateFlowODE training uses the same core neural training loop as other Catalax neural architectures. This means temporal dropout is available to improve robustness against noisy or irregularly sampled time points. See [Temporal Dropout for Irregular-Time Robustness](./neural-regularization#temporal-dropout-for-irregular-time-robustness) for detailed behavior, mathematics, and tuning recommendations.
+
+```python
+# Example: train RateFlowODE with temporal dropout
+strategy = ctn.Strategy()
+strategy.add_step(lr=1e-3, steps=3000, batch_size=16, alpha=0.05)
+
+trained_rateflow = rateflow_ode.train(
+    dataset=experimental_data,
+    strategy=strategy,
+    temporal_dropout_p=0.1,  # Drop interior time points stochastically
+)
+```
+
 ### Learned Reaction Visualization
 
 Analyze the discovered reaction network using built-in visualization tools:

@@ -258,6 +258,7 @@ Batch training provides several research advantages:
 - **Progressive refinement**: Start with exploration, end with precision
 - **Regularization scheduling**: Reduce regularization as training progresses to allow increasing model flexibility
 - **Multi-scale learning**: Use different integration lengths to capture both local and global dynamics
+- **Temporal robustness**: Consider temporal dropout for noisy trajectories (see [Temporal Dropout for Irregular-Time Robustness](./neural-regularization#temporal-dropout-for-irregular-time-robustness))
 
 ## Step 5: Neural ODE Training and Monitoring
 
@@ -271,6 +272,7 @@ trained = neural_ode.train(
     strategy=strategy,
     print_every=10,           # Monitor progress regularly
     weight_scale=1e-3,        # Initialize with small weights
+    temporal_dropout_p=0.1,   # Optional: regularize supervision across time points
     save_milestones=False,    # Disable checkpointing for this example
     log="progress.log",     # Optional: log detailed training metrics
 )
@@ -413,6 +415,7 @@ trained_loaded = ctn.NeuralODE.load_from_eqx("./trained/menten_trained.eqx")
 
 - **Multi-step approach**: Use progressive refinement strategies
 - **Regularization scheduling**: Start high, reduce gradually
+- **Temporal dropout**: For noisy or irregular time series, use `temporal_dropout_p` and tune with validation (see [Temporal Dropout for Irregular-Time Robustness](./neural-regularization#temporal-dropout-for-irregular-time-robustness))
 - **Monitor convergence**: Watch loss curves for signs of overfitting
 
 ### Data Preparation

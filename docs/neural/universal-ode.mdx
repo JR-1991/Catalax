@@ -181,6 +181,8 @@ strategy.add_step(
 2. **Joint training**: Enables fine-tuning of both components for optimal integration
 3. **Extended fine-tuning**: Ensures convergence and stability of the hybrid model
 
+For datasets with noisy or irregular temporal sampling, you can additionally regularize training with temporal dropout (`temporal_dropout_p`) as described in [Temporal Dropout for Irregular-Time Robustness](./neural-regularization#temporal-dropout-for-irregular-time-robustness).
+
 #### Execute Training
 
 ```python
@@ -188,6 +190,7 @@ strategy.add_step(
 trained = universal_ode.train(
     dataset=simulated,
     strategy=strategy,
+    temporal_dropout_p=0.1,  # Optional temporal regularization
 )
 ```
 
@@ -380,6 +383,7 @@ plt.grid(True, alpha=0.3)
 
 - **Progressive complexity**: Train neural components before joint optimization
 - **Regularization**: Use L1/L2 regularization to encourage sparse, interpretable corrections
+- **Temporal dropout**: For noisy trajectories, add `temporal_dropout_p` and calibrate against validation behavior
 - **Multiple runs**: Train multiple models with different initializations to assess consistency
 
 ### Validation Protocols

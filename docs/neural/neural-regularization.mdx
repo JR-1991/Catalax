@@ -76,6 +76,59 @@ trained_neural_ode = neural_ode.train(dataset=data, strategy=strategy)
 
 These penalties prevent overfitting and encourage smooth, generalizable solutions.
 
+### Temporal Dropout for Irregular-Time Robustness
+
+Beyond parameter penalties, Catalax supports temporal dropout during Neural ODE training. Temporal dropout randomly masks interior time points in each optimization step while always keeping the initial condition (`t=0`) in the loss.
+
+This is particularly useful when:
+- experiments are sparse or irregularly sampled
+- individual time points contain high measurement noise
+- you want to reduce over-reliance on a fixed sampling grid
+
+Unlike standard feature dropout, this mechanism regularizes the temporal supervision signal directly. In practice, each interior time point is dropped independently with probability `temporal_dropout_p`, and the loss is normalized by the number of kept points to keep gradient scales stable.
+
+**Mathematical formulation**:
+
+For a trajectory with time index $t \in \{0, \dots, T-1\}$ and dropout probability $p_{drop}$:
+
+$$
+m_0 = 1, \quad m_t \sim \text{Bernoulli}(1 - p_{drop}) \ \text{for} \ t \ge 1
+$$
+
+where $m_t \in \{0,1\}$ is the temporal mask and the initial condition is always preserved.
+
+Given per-point loss tensor $\ell_{b,t,s}$ over batch index $b$ and state index $s$, Catalax optimizes:
+
+$$
+\mathcal{L}_{temp} = \frac{
+\sum_{b,t,s} m_t \cdot \ell_{b,t,s}
+}{
+\left(\sum_t m_t\right)\cdot B \cdot S
+}
+$$
+
+where $B$ is the batch size and $S$ is the number of states. This normalization keeps the effective loss scale approximately invariant as `temporal_dropout_p` changes.
+
+```python
+# Train with temporal dropout
+trained = neural_ode.train(
+    dataset=data,
+    strategy=strategy,
+    temporal_dropout_p=0.2,  # Drop each interior time point with 20% probability
+)
+```
+
+**Interpretation of `temporal_dropout_p`:**
+
+- `0.0`: No temporal dropout (all points contribute)
+- `0.1` to `0.3`: Mild regularization
+- `>= 0.5`: Strong regularization
+
+**Practical guidance:**
+
+- Start with `temporal_dropout_p=0.1` and increase only if validation metrics suggest overfitting.
+- Combine temporal dropout with penalty terms (L1/L2, conservation, sparsity) rather than replacing them.
+
 ## RateFlowODE Biological Constraints
 
 ### Stoichiometric Matrix Penalties
