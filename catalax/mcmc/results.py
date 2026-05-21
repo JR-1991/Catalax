@@ -13,7 +13,7 @@ from catalax.mcmc.mcmc import MCMC
 from catalax.mcmc.plotting import plot_corner, plot_ess, plot_mcse, plot_posterior
 
 if TYPE_CHECKING:
-    from catalax.mcmc.mcmc import BayesianModel
+    from catalax.mcmc import BayesianModel
     from catalax.model.model import Model
 
 try:
