@@ -82,7 +82,6 @@ class RateFlowODE(NeuralBase):
         if stoich_matrix is None:
             self.stoich_matrix = jrandom.normal(key, (data_size, reaction_size))
         else:
-            self.learn_stoich = False
             self.stoich_matrix = stoich_matrix
 
     def stoich_func(self, t, y, args):
