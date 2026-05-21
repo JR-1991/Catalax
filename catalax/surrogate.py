@@ -34,6 +34,7 @@ class Surrogate(abc.ABC):
     def predict_rates(
         self,
         dataset: Dataset,
+        return_individual: bool = False,
     ) -> jax.Array:
         """
         Make predictions using the predictor.
@@ -49,6 +50,28 @@ class Surrogate(abc.ABC):
         """
         pass
 
+    @property
+    @abc.abstractmethod
+    def has_uncertainty(self) -> bool:
+        """
+        Check if the surrogate has uncertainty.
+        """
+        pass
+
+    @abc.abstractmethod
+    def rate_uncertainty(self, dataset: Dataset) -> jax.Array:
+        """
+        Get the variance of the rates of the surrogate.
+        """
+        pass
+
+    @abc.abstractmethod
+    def rate_sigma(self, dataset: Dataset) -> jax.Array:
+        """
+        Get the standard deviation of the rates of the surrogate.
+        """
+        pass
+
     def _validate_rate_input(
         self,
         t: jax.Array,
@@ -59,15 +82,15 @@ class Surrogate(abc.ABC):
         y = y.reshape(-1, 1) if y.ndim == 1 else y
 
         # Validate shapes
-        assert (
-            t.shape[0] == y.shape[0]
-        ), "Time and state must have the same number of rows"
+        assert t.shape[0] == y.shape[0], (
+            "Time and state must have the same number of rows"
+        )
 
         if constants is not None:
             constants = constants.reshape(-1, 1) if constants.ndim == 1 else constants
-            assert (
-                constants.shape[0] == y.shape[0]
-            ), "Constants must have the same number of rows as time and state"
+            assert constants.shape[0] == y.shape[0], (
+                "Constants must have the same number of rows as time and state"
+            )
         else:
             constants = jnp.array([])
 

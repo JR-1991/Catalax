@@ -125,6 +125,16 @@ class Model(CatalaxBase, Predictor, Surrogate):
         """Get the states of the model."""
         return self.states
 
+    @property
+    def has_uncertainty(self) -> bool:
+        return False
+
+    def rate_uncertainty(self, dataset: Dataset) -> jax.Array:
+        raise NotImplementedError("Rate uncertainty is not implemented for this model")
+
+    def rate_sigma(self, dataset: Dataset) -> jax.Array:
+        raise NotImplementedError("Rate sigma is not implemented for this model")
+
     def __call__(
         self,
         t: jax.Array,

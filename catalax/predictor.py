@@ -122,3 +122,10 @@ class Predictor(abc.ABC):
         Get the number of parameters of the predictor.
         """
         pass
+
+    @abc.abstractmethod
+    def has_hdi(self) -> bool:
+        """
+        Check if the predictor has HDI.
+        """
+        pass
