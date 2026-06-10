@@ -1,3 +1,4 @@
+import matplotlib as _mpl
 from sympy import Symbol  # noqa: F401
 
 from .dataset import Dataset, Measurement
@@ -5,6 +6,9 @@ from .model import InAxes, Model, SimulationConfig
 from .objectives import l1_loss, mean_absolute_error
 from .tools.enzymeml import dataset_and_model_from_enzymeml as from_enzymeml
 from .tools.optimization import optimize
+
+_mpl.rcParams["figure.dpi"] = 300
+_mpl.rcParams["savefig.dpi"] = 300
 
 __all__ = [
     "SimulationConfig",

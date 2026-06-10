@@ -146,43 +146,43 @@ class HMCResults:
     # Visualization methods from plotting.py
     def plot_corner(
         self,
-        quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
+        hdi_prob: float = 0.94,
         figsize: Optional[Tuple[float, float]] = None,
         backend: Optional[str] = None,
         show: bool = False,
         path: Optional[str] = None,
     ):
-        """Plot corner plot of parameter correlations and marginal distributions.
+        """Plot a pair plot of the posterior parameters.
 
-        Creates a matrix plot showing pairwise parameter correlations in the
-        lower triangle, marginal posterior distributions on the diagonal, and
-        optionally scatter plots in the upper triangle. This is essential for
-        understanding parameter dependencies and posterior structure.
+        Wraps :func:`arviz.plot_pair` with KDE marginals on the diagonal that
+        show the posterior median and HDI interval, scatter joint plots on the
+        lower triangle, and divergent transitions overlaid on the scatter
+        plots.
 
         Args:
-            quantiles: Three quantiles to display in marginal distributions,
-                typically representing lower bound, median, and upper bound.
-                Default (0.16, 0.5, 0.84) corresponds to 68% credible intervals.
+            hdi_prob: Probability mass of the HDI marked on each marginal.
+                Default is 0.94.
             figsize: Figure size as (width, height) in inches. If None, uses default size.
-            backend: Backend to use ('matplotlib' or 'bokeh'). If None, uses default.
+            backend: Backend to use ('matplotlib', 'bokeh', or 'plotly'). If None,
+                uses arviz default.
             show: Whether to display the plot immediately using plt.show().
                 If False, the figure is returned without displaying.
             path: Optional file path to save the plot. If provided, the figure
                 will be saved to this location.
 
         Returns:
-            matplotlib.figure.Figure or bokeh plot: The corner plot figure, or None if show=True.
-                Can be used for further customization or saving.
+            matplotlib.figure.Figure or backend-specific figure: The pair plot
+            figure, or None if show=True.
         """
 
-        f = plot_corner(self.mcmc, quantiles, figsize, backend)
+        f = plot_corner(self.mcmc, hdi_prob, figsize, backend)
         if path is not None:
             f.savefig(path)
         if show:
             plt.show()
             return None
 
-        return plt.gcf()
+        return f
 
     def plot_posterior(
         self,

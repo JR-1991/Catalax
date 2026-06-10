@@ -1,11 +1,11 @@
 from typing import Dict, Optional, Tuple, Union
 
 import arviz as az
-import corner
 import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
 
@@ -15,45 +15,101 @@ BackendType = Union[str, None]
 
 def plot_corner(
     mcmc: MCMC,
-    quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
+    hdi_prob: float = 0.94,
     figsize: Optional[Tuple[float, float]] = None,
     backend: BackendType = None,
 ):
-    """Plots the correlation between the parameters.
+    """Plots a pair plot of the posterior parameters.
+
+    Builds an ArviZ ``plot_pair`` with KDE marginals on the diagonal showing the
+    posterior median and the HDI interval, scatter joint plots on the lower
+    triangle, and divergent transitions highlighted on top of the scatter
+    plots.
 
     Args:
         mcmc (MCMC): The MCMC object to plot.
-        quantiles (Tuple[float, float, float]): Quantiles to display in the corner plot.
-            Default is (0.16, 0.5, 0.84).
+        hdi_prob (float): Probability mass of the HDI marked on each marginal.
+            Default is 0.94.
         figsize (Tuple[float, float], optional): Figure size as (width, height) in inches.
             If None, uses default size.
-        backend (str, optional): Plotting backend ('matplotlib' or 'bokeh').
-            If None, uses default backend.
+        backend (str, optional): Plotting backend ('matplotlib', 'bokeh', or
+            'plotly'). If None, uses arviz default backend.
 
     Returns:
-        matplotlib.figure.Figure or bokeh plot: The corner plot figure.
+        matplotlib.figure.Figure or backend-specific figure: The pair plot figure.
     """
+    inf_data = az.from_numpyro(mcmc)
     samples = mcmc.get_samples()
     var_names = [name for name in samples.keys() if name != "sigma"]
-    data = np.column_stack([np.asarray(samples[name]).reshape(-1) for name in var_names])
 
-    fig = None
+    plot_kwargs = {}
+    if backend is not None:
+        plot_kwargs["backend"] = backend
+
+    with az.rc_context(
+        {
+            "stats.ci_kind": "hdi",
+            "stats.ci_prob": hdi_prob,
+            "stats.point_estimate": "median",
+        }
+    ):
+        plot_matrix = az.plot_pair(
+            inf_data,
+            var_names=var_names,
+            marginal=True,
+            marginal_kind="kde",
+            triangle="lower",
+            visuals={
+                "scatter": False,
+                "divergence": True,
+                "credible_interval": True,
+                "point_estimate": True,
+                "point_estimate_text": True,
+            },
+            **plot_kwargs,
+        )
+
+    if backend == "bokeh" or backend == "plotly":
+        return plot_matrix
+
+    flat = {k: np.asarray(samples[k]).reshape(-1) for k in var_names}
+    for r in range(len(var_names)):
+        for c in range(r):
+            ax = plot_matrix.iget_target(r, c)
+            ax.scatter(
+                flat[var_names[c]],
+                flat[var_names[r]],
+                s=2,
+                alpha=0.25,
+                color="0.55",
+                linewidths=0,
+                zorder=1,
+            )
+            sns.kdeplot(
+                x=flat[var_names[c]],
+                y=flat[var_names[r]],
+                ax=ax,
+                levels=6,
+                fill=True,
+                cmap="Blues",
+                thresh=0.05,
+                zorder=2,
+            )
+            sns.kdeplot(
+                x=flat[var_names[c]],
+                y=flat[var_names[r]],
+                ax=ax,
+                levels=6,
+                fill=False,
+                cmap="Blues",
+                thresh=0.05,
+                linewidths=0.6,
+                zorder=3,
+            )
+
+    fig = plt.gcf()
     if figsize is not None:
-        fig = plt.figure(figsize=figsize)
-
-    fig = corner.corner(
-        data,
-        labels=var_names,
-        fig=fig,
-        plot_contours=False,
-        quantiles=list(quantiles),
-        bins=20,
-        show_titles=True,
-        title_kwargs={"fontsize": 12},
-        use_math_text=False,
-    )
-
-    fig.tight_layout()
+        fig.set_size_inches(figsize)
     return fig
 
 
