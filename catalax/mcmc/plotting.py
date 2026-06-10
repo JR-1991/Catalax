@@ -4,6 +4,7 @@ import arviz as az
 import corner
 import jax
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
@@ -32,24 +33,24 @@ def plot_corner(
     Returns:
         matplotlib.figure.Figure or bokeh plot: The corner plot figure.
     """
-    data = az.from_numpyro(mcmc)
+    samples = mcmc.get_samples()
+    var_names = [name for name in samples.keys() if name != "sigma"]
+    data = np.column_stack([np.asarray(samples[name]).reshape(-1) for name in var_names])
 
-    # Create figure with specified size if provided
     fig = None
     if figsize is not None:
         fig = plt.figure(figsize=figsize)
 
     fig = corner.corner(
         data,
+        labels=var_names,
         fig=fig,
         plot_contours=False,
         quantiles=list(quantiles),
         bins=20,
         show_titles=True,
         title_kwargs={"fontsize": 12},
-        divergences=True,
         use_math_text=False,
-        var_names=[var for var in mcmc.get_samples().keys() if var != "sigma"],
     )
 
     fig.tight_layout()
