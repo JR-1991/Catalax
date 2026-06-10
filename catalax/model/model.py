@@ -1293,8 +1293,12 @@ class Model(CatalaxBase, Predictor, Surrogate):
         """
 
         new_model = copy.deepcopy(self)
-        hdi = az.hdi(samples, prob=hdi_prob, skipna=True)
-        hdi_50 = az.hdi(samples, prob=0.5, skipna=True)
+        # az.hdi in ArviZ v1 needs at least (chain, draw)-shaped input. The dict
+        # we receive from MCMC.get_samples() is 1-D per parameter; add a leading
+        # singleton chain dim so the v1 API sees a valid shape.
+        samples_2d = {k: jnp.asarray(v).reshape(1, -1) for k, v in samples.items()}
+        hdi = az.hdi(samples_2d, prob=hdi_prob, skipna=True)
+        hdi_50 = az.hdi(samples_2d, prob=0.5, skipna=True)
 
         for name, parameter in new_model.parameters.items():
             parameter.value = float(jnp.median(samples[name]))
