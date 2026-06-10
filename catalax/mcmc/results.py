@@ -451,17 +451,16 @@ class HMCResults:
         return plt.gcf()
 
     def to_arviz(self):
-        """Convert MCMC results to ArviZ InferenceData format.
+        """Convert MCMC results to ArviZ's DataTree format.
 
-        Transforms the numpyro MCMC results into ArviZ's standardized format,
-        enabling access to advanced diagnostic tools, visualization methods,
-        and interoperability with other Bayesian analysis packages.
+        Transforms the numpyro MCMC results into ArviZ's standardized format
+        (an xarray.DataTree as of ArviZ v1), enabling access to advanced
+        diagnostic tools, visualization methods, and interoperability with
+        other Bayesian analysis packages.
 
         Returns:
-            arviz.InferenceData: MCMC results in ArviZ format containing
-                posterior samples, sample statistics, and metadata. This format
-                provides access to comprehensive Bayesian analysis tools and
-                standardized visualization methods.
+            xarray.DataTree: MCMC results in ArviZ format containing
+                posterior samples, sample statistics, and metadata.
         """
         return az.from_numpyro(self.mcmc)
 
@@ -482,7 +481,7 @@ class HMCResults:
             None: Results are saved to the specified path. The file can later
                 be loaded using arviz.from_netcdf() or similar tools.
         """
-        return az.from_numpyro(self.mcmc).to_netcdf(path)
+        return az.from_numpyro(self.mcmc).to_netcdf(path, engine="h5netcdf")
 
     def _is_jupyter_environment(self) -> bool:
         """Check if running in Jupyter environment.
