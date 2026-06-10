@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arviz as az
 import matplotlib.pyplot as plt
 import numpyro
 import pandas as pd
-import xarray
 from jax import Array
 
 from catalax.mcmc.mcmc import MCMC
@@ -206,10 +205,9 @@ class HMCResults:
                 If False, the figure is returned without displaying.
             path: Optional file path to save the plot. If provided, the figure
                 will be saved to this location.
-            **kwargs: Additional keyword arguments passed to arviz.plot_posterior.
-                Common options include 'hdi_prob' for credible interval probability,
-                'point_estimate' for central tendency measure, and 'ref_val' for
-                reference values.
+            **kwargs: Additional keyword arguments passed to arviz.plot_dist
+                (the ArviZ v1 replacement for plot_posterior). Common options
+                include 'kind' ("kde", "hist", or "ecdf") and 'point_estimate'.
 
         Returns:
             matplotlib.figure.Figure or bokeh plot: The posterior plot figure, or None if show=True.
@@ -334,9 +332,8 @@ class HMCResults:
             path: Optional file path to save the plot. If provided, the figure
                 will be saved to this location.
             **kwargs: Additional keyword arguments passed to arviz.plot_forest.
-                Common options include 'hdi_prob' for credible interval probability,
-                'combined' for pooling chains, and 'ess' for showing effective
-                sample size.
+                Common options include 'ci_probs' (list of credible interval
+                widths, e.g. [0.94]) and 'combined' for pooling chains.
 
         Returns:
             matplotlib.figure.Figure or bokeh plot: The forest plot figure, or None if show=True.
@@ -354,7 +351,7 @@ class HMCResults:
 
         return plt.gcf()
 
-    def summary(self, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]:
+    def summary(self, hdi_prob: float = 0.95) -> pd.DataFrame:
         """Generate comprehensive summary statistics for posterior samples.
 
         Computes and returns detailed summary statistics including central
@@ -368,10 +365,9 @@ class HMCResults:
                 Default 0.95 corresponds to 95% credible intervals.
 
         Returns:
-            Union[pd.DataFrame, xarray.Dataset]: Summary statistics table
-                containing means, standard deviations, credible intervals,
-                effective sample sizes, and R-hat diagnostics for each parameter.
-                Format depends on the underlying implementation.
+            pd.DataFrame: Summary statistics table containing means, standard
+                deviations, HDI credible intervals, effective sample sizes,
+                and R-hat diagnostics for each parameter.
         """
         from catalax.mcmc.plotting import summary
 

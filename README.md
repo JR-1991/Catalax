@@ -4,7 +4,7 @@
 
 **A High-Performance JAX Framework for Biochemical Modeling, Neural ODEs, and Bayesian Inference**
 
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://python.org)
 [![Documentation](https://img.shields.io/badge/documentation-blue)](https://catalax.mintlify.app/welcome)
 [![JAX](https://img.shields.io/badge/JAX-powered-orange.svg)](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -256,7 +256,7 @@ Explore comprehensive examples in the `examples/` directory:
 
 ### Prerequisites
 
-- Python 3.11+ 
+- Python 3.12+ 
 - [uv](https://docs.astral.sh/uv/) for dependency management
 - Git for version control
 
@@ -370,7 +370,7 @@ equation = henri_michaelis_menten_rate_law(
 ### Continuous Integration
 
 GitHub Actions automatically run on push/PR:
-- **Tests**: Run on Python 3.11, 3.12, 3.13 
+- **Tests**: Run on Python 3.12, 3.13 
 - **Linting**: Ruff code quality checks
 - **Type checking**: Pyright static analysis
 
