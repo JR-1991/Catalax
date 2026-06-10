@@ -1,6 +1,6 @@
 [project]
 name = "catalax"
-version = "0.5.5"
+version = "0.6.0"
 description = "A JAX-based framework for (neural) ODE modelling in biocatalysis."
 authors = [{ email = "jan.range@simtech.uni-stuttgart.de", name = "Jan Range" }]
 license = "MIT"
