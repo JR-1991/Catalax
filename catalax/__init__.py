@@ -1,4 +1,3 @@
-import arviz as az
 from sympy import Symbol  # noqa: F401
 
 from .dataset import Dataset, Measurement
@@ -6,9 +5,6 @@ from .model import InAxes, Model, SimulationConfig
 from .objectives import l1_loss, mean_absolute_error
 from .tools.enzymeml import dataset_and_model_from_enzymeml as from_enzymeml
 from .tools.optimization import optimize
-
-# Set plotting style
-az.style.use("arviz-doc")  # type: ignore
 
 __all__ = [
     "SimulationConfig",
