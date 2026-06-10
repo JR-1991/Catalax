@@ -5,7 +5,6 @@ import corner
 import jax
 import matplotlib.pyplot as plt
 import pandas as pd
-import xarray
 from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
 
@@ -73,7 +72,7 @@ def plot_posterior(
             If None, uses default size.
         backend (str, optional): Plotting backend ('matplotlib' or 'bokeh').
             If None, uses default backend.
-        **kwargs: Additional keyword arguments to pass to arviz.plot_posterior.
+        **kwargs: Additional keyword arguments to pass to arviz.plot_dist.
 
     Returns:
         matplotlib.figure.Figure or bokeh plot: The posterior plot figure.
@@ -88,7 +87,7 @@ def plot_posterior(
     if backend is not None:
         kwargs["backend"] = backend
 
-    plot_result = az.plot_posterior(inf_data, **kwargs)
+    plot_result = az.plot_dist(inf_data, **kwargs)
 
     # Return appropriate object based on backend
     if backend == "bokeh":
@@ -308,20 +307,11 @@ def plot_ess(
     if figsize is not None and (backend is None or backend == "matplotlib"):
         plt.figure(figsize=figsize)
 
-    extra_kwargs = {"color": "lightsteelblue"}
-
-    # Prepare kwargs for plot_ess
-    ess_kwargs = {
-        "kind": "evolution",
-        "color": "royalblue",
-        "extra_kwargs": extra_kwargs,
-    }
-
-    # Add backend if specified
+    plot_kwargs = {}
     if backend is not None:
-        ess_kwargs["backend"] = backend
+        plot_kwargs["backend"] = backend
 
-    plot_result = az.plot_ess(inf_data, **ess_kwargs)
+    plot_result = az.plot_ess_evolution(inf_data, **plot_kwargs)
 
     # Return appropriate object based on backend
     if backend == "bokeh":
@@ -330,7 +320,7 @@ def plot_ess(
         return plt.gcf()
 
 
-def summary(mcmc: MCMC, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]:
+def summary(mcmc: MCMC, hdi_prob: float = 0.95) -> pd.DataFrame:
     """Generates a summary of the MCMC results.
 
     Args:
@@ -339,7 +329,7 @@ def summary(mcmc: MCMC, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Da
             Default is 0.95.
 
     Returns:
-        Union[pd.DataFrame, az.Dataset]: Summary statistics of the posterior distributions.
+        pd.DataFrame: Summary statistics of the posterior distributions.
     """
     inf_data = az.from_numpyro(mcmc)
-    return az.summary(inf_data, hdi_prob=hdi_prob)
+    return az.summary(inf_data, ci_prob=hdi_prob, ci_kind="hdi")
