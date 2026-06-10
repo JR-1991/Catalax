@@ -17,6 +17,7 @@ from typing import (
 import arviz as az
 import jax
 import jax.numpy as jnp
+import xarray
 import pyenzyme as pe
 import rich
 from deprecated import deprecated
@@ -1292,8 +1293,8 @@ class Model(CatalaxBase, Predictor, Surrogate):
         """
 
         new_model = copy.deepcopy(self)
-        hdi = az.hdi(samples, hdi_prob=hdi_prob, skipna=True)
-        hdi_50 = az.hdi(samples, hdi_prob=0.5, skipna=True)
+        hdi = az.hdi(samples, prob=hdi_prob, skipna=True)
+        hdi_50 = az.hdi(samples, prob=0.5, skipna=True)
 
         for name, parameter in new_model.parameters.items():
             parameter.value = float(jnp.median(samples[name]))
@@ -1335,14 +1336,14 @@ class Model(CatalaxBase, Predictor, Surrogate):
 
     def from_arviz(
         self,
-        samples: az.InferenceData,
+        samples: xarray.DataTree,
         hdi_prob: float = 0.95,
         set_bounds: bool = False,
     ) -> "Model":
         """Create a new model from samples drawn from the posterior distribution.
 
         Args:
-            samples (az.InferenceData): The ArviZ InferenceData object containing posterior samples.
+            samples (xarray.DataTree): The ArviZ DataTree containing posterior samples.
             hdi_prob (float): Probability for the highest density interval. Default is 0.95.
             set_bounds (bool): Whether to set parameter bounds based on HDI. Default is False.
 
@@ -1350,8 +1351,8 @@ class Model(CatalaxBase, Predictor, Surrogate):
             Model: A new model instance with parameters updated from the posterior samples.
         """
         new_model = copy.deepcopy(self)
-        hdi = az.hdi(samples, hdi_prob=hdi_prob, skipna=True)
-        hdi_50 = az.hdi(samples, hdi_prob=0.5, skipna=True)
+        hdi = az.hdi(samples, prob=hdi_prob, skipna=True)
+        hdi_50 = az.hdi(samples, prob=0.5, skipna=True)
 
         median_posterior = samples.median().posterior  # type: ignore
 
