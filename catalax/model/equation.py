@@ -23,6 +23,7 @@ class Equation(CatalaxBase):
     )
 
     equation: AnnotatedExpr
+    inits: set[str] = Field(default_factory=set)
     parameters: Dict[Union[str, Expr], Parameter] = Field(
         default_factory=DottedDict,
         exclude=True,
@@ -58,6 +59,17 @@ class Equation(CatalaxBase):
         for symbol in self.equation.free_symbols:
             if str(symbol) in self._model.states or str(symbol) == "t":
                 # Skip state and time symbol
+                continue
+            elif str(symbol).endswith("_init"):
+                # Save inits for the ODE
+                state, *_ = str(symbol).split("_init")
+
+                if state not in self._model.states:
+                    raise ValueError(
+                        f"State '{state}' not found in the model for initial value statement '{symbol}'"
+                    )
+
+                self.inits.add(state)
                 continue
             elif str(symbol) in self._model.constants:
                 # Skip constants

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Self
+from typing import TYPE_CHECKING, List, Optional, Self
 
 import equinox as eqx
 import jax
@@ -50,6 +50,10 @@ class BaseStack(eqx.Module):
             "parameters": sim_input.parameters,
             "constants": sim_input.constants,
             "states": sim_input.states,
+            # Initial-value symbols "{state}_init" are looked up positionally
+            # against the y0 array (which is ordered by state order), allowing
+            # an equation to reuse the initial value of a state.
+            "inits": [f"{state}_init" for state in sim_input.states],
         }
 
         self.modules = [
@@ -63,6 +67,7 @@ class BaseStack(eqx.Module):
         y: jax.Array,
         parameters: jax.Array,
         constants: jax.Array,
+        inits: Optional[jax.Array] = None,
     ):
         """
         Evaluate all modules in the stack.
@@ -76,10 +81,14 @@ class BaseStack(eqx.Module):
             y: Current state vector
             parameters: Parameter values array
             constants: Constant values array
+            inits: Optional initial-value array (y0) ordered by state order,
+                used to resolve "{state}_init" symbols. When ``None`` (e.g. when
+                evaluating rates outside of a simulation) no inits are exposed.
 
         Returns:
             jax.Array: Stacked results from all module evaluations
         """
+        extra = {} if inits is None else {"inits": inits}
         return jnp.stack(
             [
                 module(  # type: ignore
@@ -87,6 +96,7 @@ class BaseStack(eqx.Module):
                     parameters=parameters,
                     states=y,
                     constants=constants,
+                    **extra,
                 )
                 for module in self.modules
             ],
@@ -158,8 +168,9 @@ class ODEStack(BaseStack):
         Returns:
             jax.Array: Stack of evaluated rates for all ODE equations
         """
-        parameters, constants = args
-        return self._evaluate_modules(t, y, parameters, constants)
+        parameters, constants, *rest = args
+        inits = rest[0] if rest else None
+        return self._evaluate_modules(t, y, parameters, constants, inits)
 
     def fill_zero_modules(self, used_states: List[str], all_states: List[str]) -> Self:
         """
@@ -233,8 +244,9 @@ class ReactionStack(BaseStack):
         Returns:
             jax.Array: Net rates of change for each state
         """
-        parameters, constants = args
-        rates = self._evaluate_modules(t, y, parameters, constants)
+        parameters, constants, *rest = args
+        inits = rest[0] if rest else None
+        rates = self._evaluate_modules(t, y, parameters, constants, inits)
         return self.stoich_mat @ rates
 
     def fill_zero_modules(self, used_states: List[str], all_states: List[str]) -> Self:

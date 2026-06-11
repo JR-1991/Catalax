@@ -263,7 +263,9 @@ class Simulation(BaseModel):
                 t1=time[-1],
                 dt0=self.config.dt0,
                 y0=y0,
-                args=(parameters, constants),
+                # y0 is forwarded as a third arg so equations can reference the
+                # initial value of a state via "{state}_init" symbols.
+                args=(parameters, constants, y0),
                 saveat=SaveAt(ts=time),
                 stepsize_controller=controller,
                 max_steps=self.config.max_steps,
