@@ -1,5 +1,22 @@
 from .mcmc import run_mcmc, MCMCConfig, BayesianModel, HMC, HMCResults
-from .plotting import plot_corner, plot_posterior, plot_trace, plot_forest, summary
+from .loo import (
+    loo,
+    compare,
+    consistency_check,
+    build_loo_idata,
+    reconstruct_log_likelihood,
+    loo_pointwise,
+    LooPointwise,
+)
+from .plotting import (
+    plot_corner,
+    plot_posterior,
+    plot_trace,
+    plot_forest,
+    summary,
+    plot_loo_influence,
+    plot_loo_heatmap,
+)
 from .protocols import (
     PreModel,
     PostModel,
@@ -35,4 +52,13 @@ __all__ = [
     "PostModelContext",
     "pre_model",
     "post_model",
+    "loo",
+    "compare",
+    "consistency_check",
+    "build_loo_idata",
+    "reconstruct_log_likelihood",
+    "loo_pointwise",
+    "LooPointwise",
+    "plot_loo_influence",
+    "plot_loo_heatmap",
 ]

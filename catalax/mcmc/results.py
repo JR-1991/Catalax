@@ -13,8 +13,11 @@ from catalax.mcmc.mcmc import MCMC
 from catalax.mcmc.plotting import plot_corner, plot_ess, plot_mcse, plot_posterior
 
 if TYPE_CHECKING:
+    from catalax.dataset.dataset import Dataset
     from catalax.mcmc import BayesianModel
+    from catalax.mcmc.loo import Integration, LeaveOut, SigmaSource
     from catalax.model.model import Model
+    from catalax.model.simconfig import SimulationConfig
 
 try:
     import ipywidgets as widgets
@@ -449,6 +452,320 @@ class HMCResults:
             plt.show()
             return None
         return plt.gcf()
+
+    def loo(
+        self,
+        dataset: "Dataset",
+        *,
+        yerrs: Optional[Union[float, Array]] = None,
+        sigma_source: "SigmaSource" = "yerrs",
+        leave_out: "LeaveOut" = "point",
+        integration: "Integration" = "euler",
+        pointwise: bool = True,
+        reloo: bool = False,
+        max_draws: Optional[int] = None,
+        config: Optional["SimulationConfig"] = None,
+        scale: str = "log",
+    ):
+        """Concentration-space leave-one-out cross-validation (LOO-CV).
+
+        Computes LOO whose held-out unit is a *real concentration measurement*,
+        scored against the integrated trajectory -- valid whether the posterior
+        came from mechanistic integration or from a rate-space surrogate
+        (RM-NLL) fit. It reuses the fit's own likelihood: for surrogate fits the
+        sampled rates ``v(yi; theta)`` are Euler-integrated along the measurement
+        times and the reused rate noise is pushed forward to concentration space;
+        for mechanistic fits the integrated states are scored directly
+        (reproducing the native ArviZ statistic).
+
+        Because ``HMCResults`` does not store the training data, the measured
+        ``dataset`` (and, where relevant, ``yerrs``) must be supplied here.
+
+        Args:
+            dataset: Real concentration measurements to validate against.
+            sigma_source: ``"yerrs"`` (default) scores the held-out concentration
+                against the supplied measurement error (the prediction still
+                comes from the sampled rates); ``"reuse"`` instead takes the noise
+                from the sampled ``sigma`` (pushed forward through the
+                integration in surrogate mode).
+            yerrs: Concentration-space measurement error; used when
+                ``sigma_source="yerrs"`` (ignored under ``"reuse"``). ``None``
+                falls back to the error stored on the fit (mechanistic only).
+            leave_out: ``"point"`` (one species/timepoint) or ``"curve"``
+                (a whole measurement series -- "predict a new experiment").
+            integration: Surrogate-mode integration scheme -- ``"euler"`` (global
+                forward Euler) or ``"euler_onestep"`` (one-step-ahead from each
+                measured state).
+            pointwise: Return per-observation Pareto-k diagnostics, which flag
+                high-influence observations.
+            reloo: Not supported; passing ``True`` raises ``NotImplementedError``.
+            max_draws: Optional posterior draw subsampling for speed.
+            config: Override the integrator ``SimulationConfig``.
+            scale: ArviZ ELPD scale (``"log"``, ``"negative_log"``, ``"deviance"``).
+
+        Returns:
+            arviz.ELPDData: LOO result with ``elpd_loo``, ``p_loo`` and pointwise
+            Pareto-k diagnostics.
+        """
+        from catalax.mcmc.loo import loo as _loo
+
+        return _loo(
+            self,
+            dataset,
+            yerrs=yerrs,
+            sigma_source=sigma_source,
+            leave_out=leave_out,
+            integration=integration,
+            pointwise=pointwise,
+            reloo=reloo,
+            max_draws=max_draws,
+            config=config,
+            scale=scale,
+        )
+
+    def compare(
+        self,
+        others: Dict[str, "HMCResults"],
+        dataset: "Union[Dataset, Dict[str, Dataset]]",
+        *,
+        yerrs: Optional[Union[float, Array]] = None,
+        sigma_source: "SigmaSource" = "yerrs",
+        leave_out: "LeaveOut" = "point",
+        integration: "Integration" = "euler",
+        max_draws: Optional[int] = None,
+        scale: str = "log",
+        **compare_kwargs,
+    ):
+        """Compare this fit against others by concentration-space LOO.
+
+        Thin wrapper over ``arviz.compare`` that scores every fit with its own
+        integrator-based ``log_likelihood`` group, so models trained in
+        different modes are compared on the same concentration-space footing.
+
+        Args:
+            others: Mapping ``name -> HMCResults`` for the competing fits. This
+                fit is added automatically under the name ``"self"``.
+            dataset: A single :class:`Dataset` used for all fits, or a mapping
+                ``name -> Dataset`` (must include ``"self"``).
+            yerrs, sigma_source, leave_out, integration, max_draws, scale:
+                Forwarded to the LOO reconstruction / ``arviz.compare``.
+            **compare_kwargs: Extra keyword arguments for ``arviz.compare``.
+
+        Returns:
+            pandas.DataFrame: The ArviZ comparison table.
+        """
+        from catalax.mcmc.loo import compare as _compare
+
+        results_map: Dict[str, "HMCResults"] = {"self": self, **others}
+        return _compare(
+            results_map,
+            dataset,
+            yerrs=yerrs,
+            sigma_source=sigma_source,
+            leave_out=leave_out,
+            integration=integration,
+            max_draws=max_draws,
+            scale=scale,
+            **compare_kwargs,
+        )
+
+    def loo_consistency_check(
+        self,
+        dataset: "Dataset",
+        *,
+        yerrs: Optional[Union[float, Array]] = None,
+        max_draws: Optional[int] = None,
+        rtol: float = 1e-2,
+        atol: float = 1e-1,
+    ) -> dict:
+        """Check the eval-model reconstruction against ArviZ's native LOO.
+
+        For a mechanistic fit, native ``az.loo(az.from_numpyro(mcmc))`` and the
+        eval-model reconstruction should agree on ``elpd_loo``. Agreement here
+        validates the surrogate-mode reconstruction, which has no native
+        counterpart. Raises if called on a surrogate-mode fit.
+
+        Args:
+            dataset: The dataset that was fit.
+            yerrs: Measurement error (used for the noise prior scale).
+            max_draws: Optional draw subsampling for the reconstruction.
+            rtol, atol: Tolerances for the ``elpd_loo`` agreement check.
+
+        Returns:
+            dict with ``native_elpd``, ``reconstructed_elpd``, ``abs_diff`` and
+            ``agree``.
+        """
+        from catalax.mcmc.loo import consistency_check
+
+        return consistency_check(
+            self,
+            dataset,
+            yerrs=yerrs,
+            leave_out="point",
+            max_draws=max_draws,
+            rtol=rtol,
+            atol=atol,
+        )
+
+    def loo_pointwise(
+        self,
+        dataset: "Dataset",
+        *,
+        yerrs: Optional[Union[float, Array]] = None,
+        sigma_source: "SigmaSource" = "yerrs",
+        integration: "Integration" = "euler",
+        max_draws: Optional[int] = None,
+        config: Optional["SimulationConfig"] = None,
+        scale: str = "log",
+    ):
+        """Per-(species, timepoint) LOO diagnostics mapped onto the data grid.
+
+        Returns a :class:`~catalax.mcmc.loo.LooPointwise` holding ``elpd`` and
+        ``pareto_k`` arrays shaped ``(n_measurements, n_timepoints,
+        n_observables)`` (``NaN`` where a point was not scored), together with the
+        measured data, times and species. This is the structure the LOO plots
+        consume; see :meth:`loo` for the argument semantics.
+        """
+        from catalax.mcmc.loo import loo_pointwise
+
+        return loo_pointwise(
+            self,
+            dataset,
+            yerrs=yerrs,
+            sigma_source=sigma_source,
+            integration=integration,
+            max_draws=max_draws,
+            config=config,
+            scale=scale,
+        )
+
+    def plot_loo_influence(
+        self,
+        dataset: "Dataset",
+        *,
+        influence: str = "pareto_k",
+        k_threshold: float = 0.7,
+        measurements: Optional[List[int]] = None,
+        ncols: int = 2,
+        figsize: Tuple[float, float] = (5.0, 3.5),
+        yerrs: Optional[Union[float, Array]] = None,
+        sigma_source: "SigmaSource" = "yerrs",
+        integration: "Integration" = "euler",
+        max_draws: Optional[int] = None,
+        show: bool = False,
+        path: Optional[str] = None,
+    ):
+        """Plot the data with each observation sized by its LOO influence.
+
+        Draws the measured trajectories as usual and overlays every point with a
+        marker whose area grows with its influence (Pareto-k by default), ringing
+        the points above ``k_threshold`` so the high-leverage observations -- the
+        ones a naive split would discard -- are obvious.
+
+        Args:
+            dataset: The measured dataset to score and plot.
+            influence: ``"pareto_k"`` (default) or ``"elpd"`` (per-point penalty).
+            k_threshold: Pareto-k above which a point is ringed.
+            measurements: Indices of measurements to plot (default: all).
+            ncols: Subplot columns.
+            figsize: Per-panel size.
+            yerrs, sigma_source, integration, max_draws: Forwarded to the LOO
+                computation (see :meth:`loo`).
+            show: Display the figure and return ``None``.
+            path: Save the figure to this path.
+
+        Returns:
+            matplotlib.figure.Figure (or ``None`` if ``show=True``).
+        """
+        from catalax.mcmc.plotting import plot_loo_influence
+
+        pointwise = self.loo_pointwise(
+            dataset,
+            yerrs=yerrs,
+            sigma_source=sigma_source,
+            integration=integration,
+            max_draws=max_draws,
+        )
+        f = plot_loo_influence(
+            pointwise,
+            self.model,
+            influence=influence,
+            k_threshold=k_threshold,
+            measurements=measurements,
+            ncols=ncols,
+            figsize=figsize,
+        )
+        if path is not None:
+            f.savefig(path, bbox_inches="tight")
+        if show:
+            plt.show()
+            return None
+        return f
+
+    def plot_loo_heatmap(
+        self,
+        dataset: "Dataset",
+        *,
+        metric: str = "elpd",
+        k_threshold: float = 0.7,
+        measurements: Optional[List[int]] = None,
+        ncols: int = 1,
+        figsize: Tuple[float, float] = (6.0, 2.6),
+        cmap: Optional[str] = None,
+        yerrs: Optional[Union[float, Array]] = None,
+        sigma_source: "SigmaSource" = "yerrs",
+        integration: "Integration" = "euler",
+        max_draws: Optional[int] = None,
+        show: bool = False,
+        path: Optional[str] = None,
+    ):
+        """Species x time heatmap of the LOO penalty (or Pareto-k) per measurement.
+
+        Each cell is a measured observation coloured by its penalty
+        (``-elpd_loo``, darker = worse) or PSIS reliability (``pareto_k``); cells
+        with ``pareto_k > k_threshold`` are dotted.
+
+        Args:
+            dataset: The measured dataset to score and plot.
+            metric: ``"elpd"`` (default) or ``"pareto_k"``.
+            k_threshold: Pareto-k above which a cell is dotted.
+            measurements: Indices of measurements to plot (default: all).
+            ncols: Measurement panels per row.
+            figsize: Per-panel size.
+            cmap: Override the colormap.
+            yerrs, sigma_source, integration, max_draws: Forwarded to the LOO
+                computation (see :meth:`loo`).
+            show: Display the figure and return ``None``.
+            path: Save the figure to this path.
+
+        Returns:
+            matplotlib.figure.Figure (or ``None`` if ``show=True``).
+        """
+        from catalax.mcmc.plotting import plot_loo_heatmap
+
+        pointwise = self.loo_pointwise(
+            dataset,
+            yerrs=yerrs,
+            sigma_source=sigma_source,
+            integration=integration,
+            max_draws=max_draws,
+        )
+        f = plot_loo_heatmap(
+            pointwise,
+            self.model,
+            metric=metric,
+            k_threshold=k_threshold,
+            measurements=measurements,
+            ncols=ncols,
+            figsize=figsize,
+            cmap=cmap,
+        )
+        if path is not None:
+            f.savefig(path, bbox_inches="tight")
+        if show:
+            plt.show()
+            return None
+        return f
 
     def to_arviz(self):
         """Convert MCMC results to ArviZ InferenceData format.

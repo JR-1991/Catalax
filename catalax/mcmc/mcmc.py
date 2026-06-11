@@ -416,10 +416,10 @@ class BayesianModel:
         # Expand yerrs to match shape of states
         sigma_disc = numpyro.sample(
             "sigma",
-            dist.Normal(0.0, jnp.mean(self.yerrs[..., self.observables])),
+            dist.HalfNormal(jnp.mean(self.yerrs[..., self.observables])),
         )  # type: ignore
 
-        sigma_total = sigma_disc**2
+        sigma_total = sigma_disc
 
         if self.sigma_surr is not None:
             sigma_total = self.sigma_surr[..., self.observables] ** 2 + sigma_total
