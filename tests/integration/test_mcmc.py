@@ -147,7 +147,6 @@ class TestMCMC:
         transformed (e.g. via ``estimate_initials``) the inits reflect those new
         values rather than the static dataset values.
         """
-        import jax
         from catalax.mcmc.mcmc import (
             _configure_simulation_function,
             _extract_dataset_components,
