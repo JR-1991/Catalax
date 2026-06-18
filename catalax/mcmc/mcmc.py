@@ -66,6 +66,7 @@ class MCMCConfig:
     verbose: int = 1
     max_steps: int = 64**4
     solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5
+    target_accept_prob: float = 0.8
 
     def to_simulation_config(self) -> SimulationConfig:
         return SimulationConfig(
@@ -254,6 +255,7 @@ class HMC:
             bayes_model,
             dense_mass=self.config.dense_mass,
             max_tree_depth=self.config.max_tree_depth,
+            target_accept_prob=self.config.target_accept_prob,
         )
         mcmc = MCMC(
             nuts,
@@ -762,16 +764,30 @@ def _configure_simulation_function(
 
     if surrogate is not None:
         print("Using surrogate model for rate prediction")
-        # Use surrogate model for rate prediction
+        # Use surrogate model for rate prediction. Here y0s is repurposed as the
+        # flattened state points at which rates are evaluated, grouped per
+        # measurement (n_measurements * n_time, n_states).
         data, times, _ = dataset.to_jax_arrays(model.get_state_order())
         constants = dataset.to_y0_matrix(state_order=model.get_constants_order())
         rate_fun = model._setup_rate_function(in_axes=None)
+        n_time = data.shape[1]
         y0s = data.reshape(-1, data.shape[-1])
 
-        def sim_func(y0s, theta, constants, times):
-            return rate_fun(times, y0s, (theta, constants))
+        def _rate_at_point(y0s, theta, constants, times, inits):
+            return rate_fun(times, y0s, (theta, constants, inits))
 
-        sim_func = jax.jit(jax.vmap(sim_func, in_axes=(0, None, 0, 0)))
+        vmapped_rate = jax.jit(jax.vmap(_rate_at_point, in_axes=(0, None, 0, 0, 0)))
+
+        def sim_func(y0s, theta, constants, times):
+            # Resolve "{state}_init" symbols from the t=0 state of each
+            # measurement, broadcast across its time points. Deriving the inits
+            # from y0s (rather than capturing the dataset values) ensures that
+            # sampled/transformed initial conditions are reflected here too.
+            n_states = y0s.shape[-1]
+            init_per_meas = y0s.reshape(-1, n_time, n_states)[:, 0, :]
+            inits = jnp.repeat(init_per_meas, n_time, axis=0)
+            return vmapped_rate(y0s, theta, constants, times, inits)
+
         times = times.ravel()
         constants = jnp.repeat(constants, data.shape[1], axis=0)
         data = surrogate.predict_rates(dataset=dataset)

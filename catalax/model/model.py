@@ -301,7 +301,7 @@ class Model(CatalaxBase, Predictor, Surrogate):
         )
         self.reactions[symbol]._model = self
 
-    def add_assignment(self, symbol: str, equation: str):
+    def add_assignment(self, symbol: str, equation: str, **kwargs):
         """Adds an assignment to the model and converts the equation to a SymPy expression."""
 
         if symbol in self.assignments:
@@ -982,8 +982,21 @@ class Model(CatalaxBase, Predictor, Surrogate):
         return sorted(observable_states)
 
     def get_constants_order(self) -> List[str]:
-        """Returns the order of the constants in the model"""
-        return sorted(list(self.constants.keys()))
+        """Returns the order of the constants in the model.
+
+        Initial-value symbols of the form "{state}_init" are excluded even if
+        declared as constants: their values are resolved from the initial
+        conditions (y0) at simulation time rather than from the constants
+        matrix, so they must not be requested from the dataset.
+        """
+        return sorted(
+            name for name in self.constants.keys() if not self._is_init_symbol(name)
+        )
+
+    def _is_init_symbol(self, name: str) -> bool:
+        """Whether `name` is an initial-value reference of the form "{state}_init"."""
+        suffix = "_init"
+        return name.endswith(suffix) and name[: -len(suffix)] in self.states
 
     def _warmup_simulation(
         self,
