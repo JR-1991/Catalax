@@ -133,6 +133,24 @@ model.add_odes(
 - **Observable states**: By default, all states are observable; use `observable=False` for hidden states
 - **Validation**: The system checks for invalid states not yet added to the model.
 
+#### Referencing Initial Values with `_init`
+
+Equations can reference the **initial value** of any state using the `{state}_init` suffix. While a bare state symbol (e.g. `S`) refers to the current, time-varying value, `S_init` resolves to the concentration the state was initialized with at the start of the simulation.
+
+```python
+# `S` is the current value; `S_init` is the initial value of S
+model.add_ode("S", "-k * S")        # S decays exponentially
+model.add_ode("P", "k * S_init")    # P grows at a rate set by the initial S
+```
+
+This is useful whenever a rate should depend on a starting concentration rather than the current one — for example, normalizing against a total initial pool or driving a term by an initial loading.
+
+**Key points:**
+
+- The referenced state must already exist in the model, otherwise a `ValueError` is raised.
+- `_init` symbols are **not** registered as parameters; they are resolved from the simulation's initial conditions per measurement.
+- The same equation can mix current values and initial values freely (e.g. `S / S_init`).
+
 ### Step 4: Parameter Configuration
 
 Configure model parameters with values, bounds, and constraints:
