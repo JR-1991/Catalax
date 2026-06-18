@@ -141,3 +141,55 @@ class TestSimulation:
         assert jnp.abs(actual_s_1 - expected_s_1).sum() < TOLERANCE, (  # type: ignore
             f"s should decay exponentially. Expected: {expected_s_1}, Got: {actual_s_1}"
         )
+
+    def test_init_symbol_declared_as_constant(self):
+        """Test "{state}_init" when declared as a constant and used in an assignment.
+
+        Models loaded from JSON often declare the init symbol explicitly as a
+        constant (so the parser accepts it) and reference it from an assignment.
+        Such init symbols must be excluded from ``get_constants_order`` so they
+        are NOT requested from the dataset's initial conditions (which only hold
+        real states/constants) and do NOT collide with the positional "inits"
+        array. Their value still resolves from y0 at runtime.
+        """
+        model = ctx.Model(name="InitConstantModel")
+        model.add_state(s="Substrate", p="Product")
+        # Declared as a constant, exactly like a loaded model JSON would.
+        model.add_constant(s_init="Initial substrate")
+        # The init symbol is consumed via an assignment, not directly in an ODE.
+        model.add_assignment(symbol="rate", equation="k * s_init")
+        model.add_ode("s", "-rate")
+        model.add_ode("p", "rate")
+        model.parameters["k"].value = 0.5
+
+        # The init symbol must not leak into the constants order...
+        assert "s_init" not in model.get_constants_order(), (
+            "'s_init' must be excluded from the constants order"
+        )
+        assert model.get_constants_order() == [], (
+            f"Expected no real constants, got {model.get_constants_order()}"
+        )
+
+        dataset = ctx.Dataset.from_model(model)
+        dataset.add_initial(s=2.0, p=0.0)
+        dataset.add_initial(s=4.0, p=0.0)
+
+        # ...so extracting the constants matrix no longer raises KeyError.
+        constants = dataset.to_y0_matrix(state_order=model.get_constants_order())
+        assert constants.shape == (2, 0), (
+            f"Expected an empty (n_meas, 0) constants matrix, got {constants.shape}"
+        )
+
+        config = ctx.SimulationConfig(nsteps=4, t0=0, t1=2)
+        sim_dataset = model.simulate(dataset=dataset, config=config)
+
+        # p accumulates at the constant rate k * s_init, so it is linear with
+        # slope k * s_init, using each measurement's own initial value of s.
+        times = jnp.linspace(0, 2, 4)
+        for i, s_init in enumerate([2.0, 4.0]):
+            expected_p = 0.5 * s_init * times
+            actual_p = sim_dataset.measurements[i].data["p"]
+            assert jnp.abs(actual_p - expected_p).sum() < TOLERANCE, (  # type: ignore
+                f"p should grow with slope k*s_init={0.5 * s_init} for "
+                f"measurement {i}. Expected: {expected_p}, Got: {actual_p}"
+            )
