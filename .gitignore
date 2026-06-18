@@ -166,3 +166,6 @@ cython_debug/
 
 # Ignore Mac-specific files
 .DS_Store
+
+# Ignore specs directory
+specs/

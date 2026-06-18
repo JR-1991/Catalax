@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import arviz as az
 import matplotlib.pyplot as plt
 import numpyro
 import pandas as pd
-import xarray
 from jax import Array
 
 from catalax.mcmc.mcmc import MCMC
@@ -147,43 +146,43 @@ class HMCResults:
     # Visualization methods from plotting.py
     def plot_corner(
         self,
-        quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
+        hdi_prob: float = 0.94,
         figsize: Optional[Tuple[float, float]] = None,
         backend: Optional[str] = None,
         show: bool = False,
         path: Optional[str] = None,
     ):
-        """Plot corner plot of parameter correlations and marginal distributions.
+        """Plot a pair plot of the posterior parameters.
 
-        Creates a matrix plot showing pairwise parameter correlations in the
-        lower triangle, marginal posterior distributions on the diagonal, and
-        optionally scatter plots in the upper triangle. This is essential for
-        understanding parameter dependencies and posterior structure.
+        Wraps :func:`arviz.plot_pair` with KDE marginals on the diagonal that
+        show the posterior median and HDI interval, scatter joint plots on the
+        lower triangle, and divergent transitions overlaid on the scatter
+        plots.
 
         Args:
-            quantiles: Three quantiles to display in marginal distributions,
-                typically representing lower bound, median, and upper bound.
-                Default (0.16, 0.5, 0.84) corresponds to 68% credible intervals.
+            hdi_prob: Probability mass of the HDI marked on each marginal.
+                Default is 0.94.
             figsize: Figure size as (width, height) in inches. If None, uses default size.
-            backend: Backend to use ('matplotlib' or 'bokeh'). If None, uses default.
+            backend: Backend to use ('matplotlib', 'bokeh', or 'plotly'). If None,
+                uses arviz default.
             show: Whether to display the plot immediately using plt.show().
                 If False, the figure is returned without displaying.
             path: Optional file path to save the plot. If provided, the figure
                 will be saved to this location.
 
         Returns:
-            matplotlib.figure.Figure or bokeh plot: The corner plot figure, or None if show=True.
-                Can be used for further customization or saving.
+            matplotlib.figure.Figure or backend-specific figure: The pair plot
+            figure, or None if show=True.
         """
 
-        f = plot_corner(self.mcmc, quantiles, figsize, backend)
+        f = plot_corner(self.mcmc, hdi_prob, figsize, backend)
         if path is not None:
             f.savefig(path)
         if show:
             plt.show()
             return None
 
-        return plt.gcf()
+        return f
 
     def plot_posterior(
         self,
@@ -206,10 +205,9 @@ class HMCResults:
                 If False, the figure is returned without displaying.
             path: Optional file path to save the plot. If provided, the figure
                 will be saved to this location.
-            **kwargs: Additional keyword arguments passed to arviz.plot_posterior.
-                Common options include 'hdi_prob' for credible interval probability,
-                'point_estimate' for central tendency measure, and 'ref_val' for
-                reference values.
+            **kwargs: Additional keyword arguments passed to arviz.plot_dist
+                (the ArviZ v1 replacement for plot_posterior). Common options
+                include 'kind' ("kde", "hist", or "ecdf") and 'point_estimate'.
 
         Returns:
             matplotlib.figure.Figure or bokeh plot: The posterior plot figure, or None if show=True.
@@ -334,9 +332,8 @@ class HMCResults:
             path: Optional file path to save the plot. If provided, the figure
                 will be saved to this location.
             **kwargs: Additional keyword arguments passed to arviz.plot_forest.
-                Common options include 'hdi_prob' for credible interval probability,
-                'combined' for pooling chains, and 'ess' for showing effective
-                sample size.
+                Common options include 'ci_probs' (list of credible interval
+                widths, e.g. [0.94]) and 'combined' for pooling chains.
 
         Returns:
             matplotlib.figure.Figure or bokeh plot: The forest plot figure, or None if show=True.
@@ -354,7 +351,7 @@ class HMCResults:
 
         return plt.gcf()
 
-    def summary(self, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]:
+    def summary(self, hdi_prob: float = 0.95) -> pd.DataFrame:
         """Generate comprehensive summary statistics for posterior samples.
 
         Computes and returns detailed summary statistics including central
@@ -368,10 +365,9 @@ class HMCResults:
                 Default 0.95 corresponds to 95% credible intervals.
 
         Returns:
-            Union[pd.DataFrame, xarray.Dataset]: Summary statistics table
-                containing means, standard deviations, credible intervals,
-                effective sample sizes, and R-hat diagnostics for each parameter.
-                Format depends on the underlying implementation.
+            pd.DataFrame: Summary statistics table containing means, standard
+                deviations, HDI credible intervals, effective sample sizes,
+                and R-hat diagnostics for each parameter.
         """
         from catalax.mcmc.plotting import summary
 
@@ -451,17 +447,16 @@ class HMCResults:
         return plt.gcf()
 
     def to_arviz(self):
-        """Convert MCMC results to ArviZ InferenceData format.
+        """Convert MCMC results to ArviZ's DataTree format.
 
-        Transforms the numpyro MCMC results into ArviZ's standardized format,
-        enabling access to advanced diagnostic tools, visualization methods,
-        and interoperability with other Bayesian analysis packages.
+        Transforms the numpyro MCMC results into ArviZ's standardized format
+        (an xarray.DataTree as of ArviZ v1), enabling access to advanced
+        diagnostic tools, visualization methods, and interoperability with
+        other Bayesian analysis packages.
 
         Returns:
-            arviz.InferenceData: MCMC results in ArviZ format containing
-                posterior samples, sample statistics, and metadata. This format
-                provides access to comprehensive Bayesian analysis tools and
-                standardized visualization methods.
+            xarray.DataTree: MCMC results in ArviZ format containing
+                posterior samples, sample statistics, and metadata.
         """
         return az.from_numpyro(self.mcmc)
 
@@ -482,7 +477,7 @@ class HMCResults:
             None: Results are saved to the specified path. The file can later
                 be loaded using arviz.from_netcdf() or similar tools.
         """
-        return az.from_numpyro(self.mcmc).to_netcdf(path)
+        return az.from_numpyro(self.mcmc).to_netcdf(path, engine="h5netcdf")
 
     def _is_jupyter_environment(self) -> bool:
         """Check if running in Jupyter environment.

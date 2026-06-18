@@ -1,11 +1,11 @@
 from typing import Dict, Optional, Tuple, Union
 
 import arviz as az
-import corner
 import jax
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-import xarray
+import seaborn as sns
 from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
 
@@ -15,45 +15,101 @@ BackendType = Union[str, None]
 
 def plot_corner(
     mcmc: MCMC,
-    quantiles: Tuple[float, float, float] = (0.16, 0.5, 0.84),
+    hdi_prob: float = 0.94,
     figsize: Optional[Tuple[float, float]] = None,
     backend: BackendType = None,
 ):
-    """Plots the correlation between the parameters.
+    """Plots a pair plot of the posterior parameters.
+
+    Builds an ArviZ ``plot_pair`` with KDE marginals on the diagonal showing the
+    posterior median and the HDI interval, scatter joint plots on the lower
+    triangle, and divergent transitions highlighted on top of the scatter
+    plots.
 
     Args:
         mcmc (MCMC): The MCMC object to plot.
-        quantiles (Tuple[float, float, float]): Quantiles to display in the corner plot.
-            Default is (0.16, 0.5, 0.84).
+        hdi_prob (float): Probability mass of the HDI marked on each marginal.
+            Default is 0.94.
         figsize (Tuple[float, float], optional): Figure size as (width, height) in inches.
             If None, uses default size.
-        backend (str, optional): Plotting backend ('matplotlib' or 'bokeh').
-            If None, uses default backend.
+        backend (str, optional): Plotting backend ('matplotlib', 'bokeh', or
+            'plotly'). If None, uses arviz default backend.
 
     Returns:
-        matplotlib.figure.Figure or bokeh plot: The corner plot figure.
+        matplotlib.figure.Figure or backend-specific figure: The pair plot figure.
     """
-    data = az.from_numpyro(mcmc)
+    inf_data = az.from_numpyro(mcmc)
+    samples = mcmc.get_samples()
+    var_names = [name for name in samples.keys() if name != "sigma"]
 
-    # Create figure with specified size if provided
-    fig = None
+    plot_kwargs = {}
+    if backend is not None:
+        plot_kwargs["backend"] = backend
+
+    with az.rc_context(
+        {
+            "stats.ci_kind": "hdi",
+            "stats.ci_prob": hdi_prob,
+            "stats.point_estimate": "median",
+        }
+    ):
+        plot_matrix = az.plot_pair(
+            inf_data,
+            var_names=var_names,
+            marginal=True,
+            marginal_kind="kde",
+            triangle="lower",
+            visuals={
+                "scatter": False,
+                "divergence": True,
+                "credible_interval": True,
+                "point_estimate": True,
+                "point_estimate_text": True,
+            },
+            **plot_kwargs,
+        )
+
+    if backend == "bokeh" or backend == "plotly":
+        return plot_matrix
+
+    flat = {k: np.asarray(samples[k]).reshape(-1) for k in var_names}
+    for r in range(len(var_names)):
+        for c in range(r):
+            ax = plot_matrix.iget_target(r, c)
+            ax.scatter(
+                flat[var_names[c]],
+                flat[var_names[r]],
+                s=2,
+                alpha=0.25,
+                color="0.55",
+                linewidths=0,
+                zorder=1,
+            )
+            sns.kdeplot(
+                x=flat[var_names[c]],
+                y=flat[var_names[r]],
+                ax=ax,
+                levels=6,
+                fill=True,
+                cmap="Blues",
+                thresh=0.05,
+                zorder=2,
+            )
+            sns.kdeplot(
+                x=flat[var_names[c]],
+                y=flat[var_names[r]],
+                ax=ax,
+                levels=6,
+                fill=False,
+                cmap="Blues",
+                thresh=0.05,
+                linewidths=0.6,
+                zorder=3,
+            )
+
+    fig = plt.gcf()
     if figsize is not None:
-        fig = plt.figure(figsize=figsize)
-
-    fig = corner.corner(
-        data,
-        fig=fig,
-        plot_contours=False,
-        quantiles=list(quantiles),
-        bins=20,
-        show_titles=True,
-        title_kwargs={"fontsize": 12},
-        divergences=True,
-        use_math_text=False,
-        var_names=[var for var in mcmc.get_samples().keys() if var != "sigma"],
-    )
-
-    fig.tight_layout()
+        fig.set_size_inches(figsize)
     return fig
 
 
@@ -73,7 +129,7 @@ def plot_posterior(
             If None, uses default size.
         backend (str, optional): Plotting backend ('matplotlib' or 'bokeh').
             If None, uses default backend.
-        **kwargs: Additional keyword arguments to pass to arviz.plot_posterior.
+        **kwargs: Additional keyword arguments to pass to arviz.plot_dist.
 
     Returns:
         matplotlib.figure.Figure or bokeh plot: The posterior plot figure.
@@ -88,7 +144,7 @@ def plot_posterior(
     if backend is not None:
         kwargs["backend"] = backend
 
-    plot_result = az.plot_posterior(inf_data, **kwargs)
+    plot_result = az.plot_dist(inf_data, **kwargs)
 
     # Return appropriate object based on backend
     if backend == "bokeh":
@@ -308,20 +364,11 @@ def plot_ess(
     if figsize is not None and (backend is None or backend == "matplotlib"):
         plt.figure(figsize=figsize)
 
-    extra_kwargs = {"color": "lightsteelblue"}
-
-    # Prepare kwargs for plot_ess
-    ess_kwargs = {
-        "kind": "evolution",
-        "color": "royalblue",
-        "extra_kwargs": extra_kwargs,
-    }
-
-    # Add backend if specified
+    plot_kwargs = {}
     if backend is not None:
-        ess_kwargs["backend"] = backend
+        plot_kwargs["backend"] = backend
 
-    plot_result = az.plot_ess(inf_data, **ess_kwargs)
+    plot_result = az.plot_ess_evolution(inf_data, **plot_kwargs)
 
     # Return appropriate object based on backend
     if backend == "bokeh":
@@ -330,7 +377,7 @@ def plot_ess(
         return plt.gcf()
 
 
-def summary(mcmc: MCMC, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Dataset]:
+def summary(mcmc: MCMC, hdi_prob: float = 0.95) -> pd.DataFrame:
     """Generates a summary of the MCMC results.
 
     Args:
@@ -339,7 +386,7 @@ def summary(mcmc: MCMC, hdi_prob: float = 0.95) -> Union[pd.DataFrame, xarray.Da
             Default is 0.95.
 
     Returns:
-        Union[pd.DataFrame, az.Dataset]: Summary statistics of the posterior distributions.
+        pd.DataFrame: Summary statistics of the posterior distributions.
     """
     inf_data = az.from_numpyro(mcmc)
-    return az.summary(inf_data, hdi_prob=hdi_prob)
+    return az.summary(inf_data, ci_prob=hdi_prob, ci_kind="hdi")

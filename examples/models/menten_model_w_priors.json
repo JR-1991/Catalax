@@ -1,6 +1,6 @@
 {
   "name": "Simple menten model",
-  "species": [
+  "states": [
     {
       "name": "s1",
       "symbol": "s1"
@@ -10,29 +10,29 @@
     {
       "equation": "-s1*v_max/(K_m + s1)",
       "observable": true,
-      "species": "s1"
+      "state": "s1"
     }
   ],
   "parameters": [
-    {
-      "name": "v_max",
-      "symbol": "v_max",
-      "value": 7.0,
-      "constant": false,
-      "prior": {
-        "low": 4.0,
-        "high": 13.0,
-        "type": "Uniform"
-      }
-    },
     {
       "name": "K_m",
       "symbol": "K_m",
       "value": 100.0,
       "constant": false,
       "prior": {
-        "low": 30.0,
-        "high": 500.0,
+        "low": 1e-06,
+        "high": 1000.0,
+        "type": "Uniform"
+      }
+    },
+    {
+      "name": "v_max",
+      "symbol": "v_max",
+      "value": 7.0,
+      "constant": false,
+      "prior": {
+        "low": 1e-06,
+        "high": 200.0,
         "type": "Uniform"
       }
     }
