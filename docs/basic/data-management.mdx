@@ -373,6 +373,10 @@ for single_measurement, remaining_dataset in dataset.leave_one_out():
 
 This approach provides comprehensive validation by testing the model's ability to predict each measurement when trained on all others.
 
+<Note>
+This `leave_one_out()` helper is a **dataset-splitting** utility: it yields train/test folds for you to refit and evaluate yourself. If you have already fit a model with HMC and want a one-shot predictive score (without refitting), use the **PSIS-LOO** diagnostic on the results object instead — `results.loo(dataset)`. See [Leave-One-Out Cross-Validation (PSIS-LOO)](../hmc/loo.mdx) for details.
+</Note>
+
 ## Advanced Data Operations
 
 ### Working with Observable States

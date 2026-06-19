@@ -50,7 +50,9 @@
             "pages": [
               "hmc/mcmc-basic",
               "hmc/pre-post-models",
-              "hmc/surrogate-hmc"
+              "hmc/surrogate-hmc",
+              "hmc/error-models",
+              "hmc/loo"
             ]
           },
           {

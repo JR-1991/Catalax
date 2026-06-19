@@ -1,0 +1,125 @@
+---
+title: "Observation Noise Models"
+---
+
+Every Bayesian fit needs a model for the measurement noise. This is the spread Catalax expects between the model prediction and your data, and it controls the width of the posterior and the credible bands. Catalax lets you set this noise model explicitly through an error model, and it uses the same object whether you run a standard integrated fit or a surrogate rate-matching fit.
+
+## The error model
+
+The error model describes the aleatoric noise on your measured concentrations. You set it once on the configuration, and Catalax samples it during inference as the `sigma_y` parameter.
+
+```python
+import catalax.mcmc as cmc
+
+hmc = cmc.HMC(
+    num_warmup=1000,
+    num_samples=2000,
+    num_chains=4,
+    error_model=cmc.error.LogNormal(sigma=0.7),
+)
+```
+
+If you do not set one, Catalax uses a half-normal noise model with a scale taken from `yerrs`. This matches the behaviour of earlier versions, so existing scripts keep working unchanged.
+
+## Available noise models
+
+All error models live under `cmc.error` and describe the noise standard deviation in concentration space.
+
+```python
+# Half-normal. The historical default. Its density peaks at zero.
+cmc.error.HalfNormal(scale=None, shared=False)
+
+# Log-normal. Zero density at zero, sampled in log space. Safe against
+# boundary collapse for poorly constrained components.
+cmc.error.LogNormal(median=None, sigma=0.7, shared=False)
+
+# Gamma. Zero density at zero for concentration greater than one.
+cmc.error.Gamma(concentration=2.0, rate=None, shared=False)
+
+# Fixed. A non-sampled noise level, for example one estimated from
+# leave-one-out residuals.
+cmc.error.Fixed(sigma_y=0.1)
+```
+
+A few shared conventions:
+
+- **Default scale**: `scale`, `median`, and `rate` default to `mean(yerrs)`, so in the common case you only set the spread.
+- **Per species by default**: each observable state gets its own noise level. Pass `shared=True` to tie them all to a single scalar.
+- **Direct values**: the sampled `sigma_y` is the actual noise standard deviation. You read it straight from `results.get_samples()["sigma_y"]` with no back transform.
+
+## Concentration space and the surrogate pushforward
+
+You always describe the noise in concentration space, because that is where you have a feel for measurement error. Catalax handles the rest.
+
+- In an **integrated fit**, the concentration noise is the likelihood scale directly.
+- In a **surrogate rate-matching fit**, the likelihood compares rates, not concentrations. Catalax pushes your concentration noise forward into rate space through the surrogate Jacobian. This forward map is well behaved and needs no inverse. The result is that `sigma_y` stays a concentration-space quantity you can interpret and reuse for predictions.
+
+You never write the pushforward yourself. The same `error_model` object works in both modes.
+
+## Choosing a noise model
+
+The main choice is between the half-normal default and a log-normal.
+
+A **half-normal** places its highest density at zero. When a species is fit very well, its noise level wants to be small, and the half-normal lets it slide all the way to the zero boundary. A scale parameter pinned at zero creates a funnel geometry that the sampler cannot navigate, which shows up as divergences.
+
+A **log-normal** has zero density at zero and is sampled in log space, which has no boundary. A weakly constrained noise level settles at the prior median instead of collapsing. This keeps per-species noise while removing the funnel.
+
+```python
+# Per-species noise that cannot collapse onto zero
+error_model = cmc.error.LogNormal(median=0.3, sigma=1.5)
+```
+
+Two practical points when species have very different noise levels:
+
+- Set `median` near the typical noise across your species rather than the largest one.
+- Use a wider `sigma` in log space so a single prior covers small and large noise levels at the same time. A value around `1.5` spans roughly two orders of magnitude.
+
+If you do not want any noise floor baked in, `cmc.error.HalfNormal(shared=True)` gives a single scalar noise level, which is far less prone to collapse than a per-species half-normal.
+
+## Diagnosing divergences
+
+Divergences mark places where the sampler could not follow the posterior geometry. Catalax records them on every run and exposes three views on the result.
+
+```python
+# How many divergences in total
+print(results.num_divergences)
+
+# Boolean mask of shape (n_chains, n_draws)
+mask = results.divergences
+
+# The actual parameter values at the diverging draws, as a DataFrame
+df = results.diverging_samples
+```
+
+The `diverging_samples` frame has one row per diverging draw, with a `chain` and `draw` index and a column for every parameter. Vector parameters such as a per-species `sigma_y` expand to `sigma_y[0]`, `sigma_y[1]`, and so on. This tells you where in parameter space the divergences happen.
+
+```python
+# Are the divergences clustered at small noise levels?
+print(df["sigma_y[0]"].describe())
+
+# Or along a particular kinetic parameter?
+print(df.sort_values("K_p").tail())
+```
+
+A noise component that is small at the divergences points to a funnel, which the log-normal model fixes. A kinetic parameter sitting in a long tail points to a correlation ridge between parameters, which the next section addresses.
+
+## Reducing divergences
+
+Work through these in order.
+
+1. **Match the noise model to the data**. If the diverging samples cluster at small `sigma_y`, switch that fit to `cmc.error.LogNormal` and set a sensible median.
+2. **Raise the target acceptance probability**. A higher value forces smaller steps, which helps the sampler follow curved correlation ridges between kinetic parameters.
+
+   ```python
+   hmc = cmc.HMC(
+       num_warmup=2000,
+       num_samples=4000,
+       num_chains=4,
+       error_model=cmc.error.LogNormal(median=0.3, sigma=1.5),
+       target_accept_prob=0.95,
+   )
+   ```
+
+3. **Use log-scale priors for parameters that span orders of magnitude**. A `cmc.priors.LogUniform` prior gives a scale-free prior over a positive range. When you switch a parameter from `Uniform` to `LogUniform`, raise its lower bound to a physically plausible floor, because the log-uniform prior places equal weight on each decade and a very small lower bound concentrates prior mass at implausibly small values.
+
+A divergence rate of a fraction of a percent with clean R-hat and effective sample size is usually acceptable. The diagnostics above tell you whether the remaining divergences sit in a part of the posterior you care about.

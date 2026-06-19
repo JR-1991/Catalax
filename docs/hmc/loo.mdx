@@ -1,0 +1,128 @@
+---
+title: "Leave-One-Out Cross-Validation (PSIS-LOO)"
+---
+
+Once you have fit a model with HMC, you usually want to know how well it predicts data it has not seen. Catalax answers this with **PSIS-LOO** — Pareto-smoothed importance-sampling leave-one-out cross-validation — computed directly from the posterior on the results object. You do **not** refit the model; LOO reuses the fit's own likelihood to estimate the held-out predictive accuracy for every measured point at once.
+
+<Note>
+This is different from `dataset.leave_one_out()`, which is a **dataset-splitting** helper that yields train/test folds for you to refit and score yourself (see [Data Management](../basic/data-management.mdx)). PSIS-LOO here scores an *already-fitted* model in one pass, with no refitting.
+</Note>
+
+## What LOO measures
+
+The held-out unit is a **real concentration measurement**, scored against the model's integrated trajectory. This works the same way regardless of how the posterior was obtained:
+
+- **Integrated (mechanistic) fit** — the measured concentrations are scored directly against the ODE solution, reproducing the native ArviZ statistic.
+- **Surrogate (rate-matching) fit** — the sampled rates are Euler-integrated along the measurement times and scored in concentration space, so a surrogate fit is validated on the same concentration-level footing as a mechanistic one.
+
+Because `HMCResults` does not store the training data, you pass the measured `dataset` back in.
+
+## Basic usage
+
+```python
+results = hmc.run(model=model, dataset=dataset, yerrs=0.1)
+
+# Concentration-space LOO over every (species, timepoint) observation
+elpd = results.loo(dataset)
+
+print(elpd)              # ArviZ ELPDData: elpd_loo, p_loo, Pareto-k summary
+print(elpd.elpd_loo)     # expected log predictive density (higher is better)
+```
+
+The return value is an [`arviz.ELPDData`](https://python.arviz.org/en/stable/api/generated/arviz.loo.html) object, so anything you already do with ArviZ LOO results applies.
+
+### Choosing the held-out unit
+
+```python
+# Leave one observation out (one species at one timepoint) -- the default
+results.loo(dataset, leave_out="point")
+
+# Leave a whole measurement series out -- "predict an unseen experiment"
+results.loo(dataset, leave_out="curve")
+```
+
+### Where the noise comes from
+
+By default LOO reuses the fit's own inferred observation noise `sigma_y` (the [error model](error-models.mdx)), which makes it a proper posterior predictive statistic.
+
+```python
+# Default: reuse the fit's inferred sigma_y
+results.loo(dataset, sigma_source="reuse")
+
+# Alternatively, score against a supplied instrument error. For a surrogate
+# fit this MUST be a concentration-space value, since the stored yerrs is
+# rate-shaped.
+results.loo(dataset, sigma_source="yerrs", yerrs=0.5)
+```
+
+For surrogate fits you can also choose how the rates are integrated:
+
+```python
+# Global forward Euler from the measured initial condition (default)
+results.loo(dataset, integration="euler")
+
+# One-step-ahead from each measured state (no error accumulation)
+results.loo(dataset, integration="euler_onestep")
+```
+
+## Reading the Pareto-k diagnostic
+
+The headline diagnostic is the per-observation **Pareto-k**. It flags high-influence points — the ones whose removal would most change the fit, and exactly the points a naive train/test split would wrongly discard.
+
+| Pareto-k | Interpretation |
+| --- | --- |
+| `k ≤ 0.7` | Reliable LOO estimate for that point |
+| `0.7 < k ≤ 1` | High influence; the estimate is shaky |
+| `k > 1` | Unreliable; the point dominates the fit |
+
+## Comparing models
+
+`compare()` ranks several fits on the same concentration-space footing, even when they were trained in different modes (mechanistic vs. surrogate). The current fit is added automatically under the name `"self"`.
+
+```python
+table = results.compare({"alternative": other_results}, dataset)
+print(table)   # pandas DataFrame: the ArviZ comparison ranking
+```
+
+Pass a single `dataset` for all fits, or a `{name: dataset}` mapping (which must include `"self"`) if the fits were trained on different data.
+
+## Pointwise diagnostics and plots
+
+`loo_pointwise()` scatters the per-point `elpd` and `pareto_k` back onto the data grid, shaped `(n_measurements, n_timepoints, n_observables)` with `NaN` where a point was not scored.
+
+```python
+pw = results.loo_pointwise(dataset)
+pw.elpd          # (n_meas, n_time, n_obs) per-point predictive density
+pw.pareto_k      # (n_meas, n_time, n_obs) per-point influence
+pw.species       # observable state symbols
+```
+
+Two plots consume that structure directly:
+
+```python
+# Overlay the data with each point sized by its influence; points above the
+# Pareto-k threshold are ringed.
+results.plot_loo_influence(dataset, k_threshold=0.7, show=True)
+
+# Species x time heatmap of the per-point penalty (or Pareto-k) per measurement
+results.plot_loo_heatmap(dataset, metric="elpd", show=True)
+results.plot_loo_heatmap(dataset, metric="pareto_k", show=True)
+```
+
+Both accept `yerrs`, `sigma_source`, `integration`, and `max_draws` with the same meaning as `loo()`, plus `measurements=[...]` to restrict the panels and `path=...` to save the figure.
+
+## Validating the reconstruction
+
+For a mechanistic fit you can confirm that Catalax's reconstruction matches ArviZ's native LOO. This is mostly useful as a sanity check on the machinery that the surrogate path relies on (the surrogate path has no native counterpart).
+
+```python
+check = results.loo_consistency_check(dataset, yerrs=0.1)
+assert check["agree"], check
+# {'native_elpd': ..., 'reconstructed_elpd': ..., 'abs_diff': ..., 'agree': True}
+```
+
+This raises if called on a surrogate-mode fit.
+
+<Note>
+LOO answers "does the fit generalize", not "is each parameter individually identifiable". Pair it with posterior-correlation and prior-sensitivity analysis for structurally traded-off parameters (for example an `E0`–`kcat` trade-off), which LOO will not flag.
+</Note>

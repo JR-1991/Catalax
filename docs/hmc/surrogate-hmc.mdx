@@ -197,6 +197,23 @@ print(f"Effective sample size: {large_scale_results.ess():.0f}")
 
 ## Integration with Standard MCMC Features
 
+### Observation Noise in Rate Space
+
+The likelihood in a surrogate fit compares rates rather than concentrations, but you still set the measurement noise in concentration space through an [error model](error-models.mdx). Catalax pushes that concentration noise forward into rate space through the surrogate Jacobian, so you never work with rate-space noise directly.
+
+```python
+# The error model is set in concentration space and works the same way
+# whether the fit is integrated or surrogate accelerated
+results = hmc.run(
+    model=model,
+    dataset=dataset,
+    yerrs=0.1,
+    surrogate=trained_neural_ode,
+)
+```
+
+The sampled `sigma_y` stays a concentration-space quantity, so the credible bands and predictions read the same way as a standard fit. See [Observation Noise Models](error-models.mdx) for the available choices and for guidance on avoiding divergences.
+
 ### Compatibility with PreModel and PostModel
 
 Surrogate HMC maintains full compatibility with advanced MCMC features:

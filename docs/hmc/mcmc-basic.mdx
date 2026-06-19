@@ -168,9 +168,13 @@ hmc = cmc.HMC(
     max_tree_depth=12,           # Allow longer trajectories
     dense_mass=True,             # Full mass matrix adaptation
     thinning=2,                  # Keep every 2nd sample
+    target_accept_prob=0.95,     # Smaller steps for difficult geometry
+    error_model=cmc.error.LogNormal(sigma=0.7),  # Observation noise model
     verbose=1
 )
 ```
+
+The `error_model` sets how the measurement noise is distributed and is covered in [Observation Noise Models](error-models.mdx). The `target_accept_prob` controls the sampler step size, where higher values reduce divergences at the cost of more work per sample.
 
 ### Step 4: Results Analysis and Diagnostics
 
@@ -259,6 +263,25 @@ When you plot with a fitted model that contains HDI information, Catalax automat
 - **Experimental data**: Your actual measurements for comparison
 
 This visualization immediately shows which aspects of system behavior are well-constrained by the data and which remain uncertain, providing crucial insights for experimental design and model interpretation.
+
+### Posterior Predictive Bands from the Full Posterior
+
+The fitted model above draws its bands from the marginal credible interval of each parameter. For a band that reflects the full joint posterior, pass the results object itself as the predictor. Catalax integrates the model across the posterior draws and takes the credible interval in trajectory space, which respects the correlations between parameters.
+
+```python
+# Pass the results object to draw a posterior predictive band
+dataset.plot(predictor=results, show=True)
+
+# Use individual posterior draws instead of a shaded band
+dataset.plot(predictor=results, bands=False, show=True)
+```
+
+The `bands` argument controls how the uncertainty is drawn:
+
+- **`bands=True`** (the default) shades the 50 percent and 95 percent credible regions.
+- **`bands=False`** overlays the individual posterior trajectories as light lines, which is useful for seeing the spread of sampled solutions directly.
+
+The band combines parameter uncertainty with the measurement noise from the [error model](error-models.mdx), so it shows the range you would expect new measurements to fall in.
 
 ## Best Practices for Bayesian Inference
 
