@@ -60,7 +60,11 @@ def plot_corner(
         title_kwargs={"fontsize": 12},
         divergences=True,
         use_math_text=False,
-        var_names=[var for var in mcmc.get_samples().keys() if var != "sigma"],
+        var_names=[
+            var
+            for var in mcmc.get_samples().keys()
+            if var not in ("sigma", "sigma_y")
+        ],
     )
 
     fig.tight_layout()
@@ -375,12 +379,18 @@ def _select_measurements(
     return list(measurements)
 
 
-def _panel_title(pointwise: "LooPointwise", m: int) -> str:
-    """Concise per-measurement title (initial conditions, else short id)."""
-    label = pointwise.measurement_labels[m]
-    if label:
-        return label
-    return str(pointwise.measurement_ids[m])[:8]
+def _panel_title(pointwise: "LooPointwise", m: int) -> Tuple[str, int]:
+    """Per-measurement ``(title, fontsize)`` in the shared library style.
+
+    Renders the initial conditions exactly as :class:`Measurement` plots do
+    (bold keys, two-decimal values), falling back to a short measurement id.
+    """
+    from catalax.dataset.measurement import format_initial_conditions_title
+
+    ics = pointwise.measurement_initial_conditions[m]
+    if ics:
+        return format_initial_conditions_title(ics)
+    return str(pointwise.measurement_ids[m])[:8], 12
 
 
 def _time_ticklabels(times) -> List[str]:
@@ -440,7 +450,10 @@ def plot_loo_influence(
     wmax = wmax if wmax > 0 else 1.0
 
     def marker_area(w):
-        return min_marker + (max_marker - min_marker) * (w / wmax)
+        # Clamp to ``wmax`` so reference values never extrapolate past the
+        # largest marker actually drawn (keeps the legend swatches readable).
+        frac = np.clip(w / wmax, 0.0, 1.0)
+        return min_marker + (max_marker - min_marker) * frac
 
     meas_idx = _select_measurements(pointwise, measurements)
     ncols = min(ncols, len(meas_idx))
@@ -462,7 +475,7 @@ def plot_loo_influence(
             if not finite.any():
                 continue
             label = f"${_species_label(model, species[j])}$"
-            ax.plot(t[finite], y[finite], "-", color=color, alpha=0.35, lw=1.0)
+            ax.plot(t[finite], y[finite], "-", color=color, alpha=0.5, linewidth=1.5)
 
             w = wpos[m, :, j]
             scored = finite & np.isfinite(w)
@@ -482,32 +495,62 @@ def plot_loo_influence(
                 zorder=3,
             )
 
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Concentration")
-        ax.set_title(_panel_title(pointwise, m), fontsize="medium")
-        ax.grid(True, which="both", linestyle="--", alpha=0.3)
-        ax.legend(loc="best", fontsize="small")
+        title, title_fontsize = _panel_title(pointwise, m)
+        ax.set_xlabel("Time", fontsize=12)
+        ax.set_ylabel("Concentration", fontsize=12)
+        ax.set_title(title, fontsize=title_fontsize)
+        ax.grid(True, which="both", linestyle="--")
+        ax.grid(True, which="minor", alpha=0.3)
+        ax.minorticks_on()
 
     for ax in axs[len(meas_idx) :]:
         ax.set_visible(False)
 
-    # Size legend: representative influence values -> marker areas.
-    ref = [v for v in (0.5, k_threshold, 1.0, 2.0) if v <= max(wmax, 2.0)]
-    handles = [
-        plt.scatter([], [], s=marker_area(v), color="grey", alpha=0.6, label=f"{v:g}")
+    # Species legend: one per rightmost panel, anchored outside the axes -- the
+    # same placement the data plots use (``Dataset._format_legends``).
+    _format_loo_legends(axs, meas_idx, ncols)
+
+    # Pareto-k marker-size reference: a single, compact horizontal legend along
+    # the bottom of the figure, so the swatches never collide with panel titles
+    # or the species legends. Only show reference values that actually occur
+    # (<= wmax) so no swatch is larger than a marker drawn on the data.
+    ref = [v for v in (0.5, k_threshold, 1.0, 2.0) if v <= wmax]
+    if not ref:
+        ref = [round(float(wmax), 2)]
+    size_handles = [
+        plt.scatter([], [], s=marker_area(v), facecolor="grey", alpha=0.6, label=f"{v:g}")
         for v in ref
     ]
-    if handles:
-        fig.legend(
-            handles=handles,
-            title=wlabel,
-            loc="center right",
-            bbox_to_anchor=(1.0, 0.5),
-            labelspacing=1.4,
-            frameon=True,
-        )
-    fig.tight_layout(rect=(0, 0, 0.9, 1))
+
+    # Reserve a bottom margin for the size legend, then place it there.
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    fig.legend(
+        handles=size_handles,
+        title=wlabel,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.0),
+        ncol=len(size_handles),
+        columnspacing=2.5,
+        handletextpad=1.0,
+        frameon=True,
+    )
     return fig
+
+
+def _format_loo_legends(axs, meas_idx, ncols):
+    """Place per-panel species legends outside the rightmost column.
+
+    Mirrors :meth:`Dataset._format_legends`: only the rightmost panel in each
+    row carries a legend, anchored to the right of the axes.
+    """
+    n = len(meas_idx)
+    for panel in range(n):
+        is_rightmost = (panel % ncols == ncols - 1) or (panel == n - 1)
+        if not is_rightmost:
+            continue
+        ax = axs[panel]
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5))
 
 
 def plot_loo_heatmap(
@@ -621,7 +664,8 @@ def plot_loo_heatmap(
         ax.set_yticks(range(len(sp_idx)))
         ax.set_yticklabels(sp_labels)
         ax.set_xlabel("Time")
-        ax.set_title(_panel_title(pointwise, m), fontsize="medium")
+        title, title_fontsize = _panel_title(pointwise, m)
+        ax.set_title(title, fontsize=title_fontsize)
 
         kk = karr[m][:, sp_idx].T
         ys, xs = np.where(np.isfinite(kk) & (kk > k_threshold))

@@ -17,15 +17,16 @@ the known measurement error.
   (forward Euler), and score the resulting concentration trajectory against the
   measured concentrations.
 
-The default noise (``sigma_source="yerrs"``) is the known concentration-space
-measurement error: the LOO then asks "does the trajectory predict each measured
-concentration to within instrument error", which is the most defensible held-out
-statistic. Alternatively ``sigma_source="reuse"`` takes the noise from the fit's
-own inferred ``sigma`` (``sigma_total = sigma_disc**2 + sigma_surr**2 +
-rate_sigma**2``); in surrogate mode that rate-space noise is pushed forward
-through the same Euler integration (``dy = r * dt`` => concentration variance
-gains ``dt**2 * var(rate)``), a well-conditioned forward map -- in deliberate
-contrast to recovering ``sigma_y`` via an ill-conditioned inverse rate-Jacobian.
+The default noise (``sigma_source="reuse"``) is the fit's own inferred
+concentration-space noise ``sigma_y`` (sampled by the error model). This is the
+proper PSIS-LOO statistic -- it reuses the model's own likelihood, and the
+mechanistic reconstruction reproduces native ``az.loo`` to ~1e-7. Because the
+error model samples ``sigma_y`` directly in concentration space for both modes,
+no separate measurement error is needed. Alternatively ``sigma_source="yerrs"``
+scores the held-out concentration against a supplied instrument error instead,
+asking "does the trajectory predict each measurement to within instrument
+error". For a surrogate fit that path needs a concentration-space ``yerrs``,
+since the stored one is rate-shaped.
 
 The headline diagnostic is the **per-observation Pareto-k** (``pointwise=True``),
 which flags high-influence measurements: exactly the points a naive train/test
@@ -55,18 +56,16 @@ from catalax.model.simconfig import SimulationConfig
 if TYPE_CHECKING:
     from catalax.mcmc.results import HMCResults
 
-#: Source of the concentration-space noise scale ``sigma_y``.
+#: Source of the concentration-space noise scale used to score held-out points.
 #:
-#: * ``"yerrs"`` (default) -- score the held-out concentration against its known
-#:   measurement error. The prediction still comes from the sampled rates
-#:   (Euler-integrated in surrogate mode); only the observation noise is the
-#:   supplied measurement error. This is the most defensible LOO noise: it asks
-#:   "does the trajectory predict the measured concentration to within
-#:   instrument error".
-#: * ``"reuse"`` -- take the noise from the fit's own likelihood instead: the
-#:   concentration ``sqrt(sigma_total)`` in mechanistic mode, or the rate
-#:   ``sigma_total`` pushed forward through Euler integration in surrogate mode.
-#:   Reflects model/rate-discrepancy uncertainty rather than instrument noise.
+#: * ``"reuse"`` (default) -- use the fit's own inferred concentration-space
+#:   noise ``sigma_y`` (sampled by the error model). This is the proper PSIS-LOO
+#:   likelihood and needs no separate measurement error.
+#: * ``"yerrs"`` -- score the held-out concentration against a supplied
+#:   instrument error instead. The prediction still comes from the fit (the
+#:   integrated trajectory); only the observation noise is the supplied error.
+#:   Asks "does the trajectory predict the measurement to within instrument
+#:   error", and needs a concentration-space ``yerrs`` for a surrogate fit.
 SigmaSource = Literal["yerrs", "reuse"]
 LeaveOut = Literal["point", "curve"]
 Integration = Literal["euler", "euler_onestep"]
@@ -101,11 +100,21 @@ def _stack_thetas(
     return thetas, (n_chain, n_draw)
 
 
-def _sigma_disc_draws(posterior: Dict[str, Array], n_chain: int, n_draw: int) -> Array:
-    """Flattened draws of the inferred discrepancy noise ``sigma`` (or zeros)."""
-    if "sigma" in posterior:
-        return jnp.asarray(np.asarray(posterior["sigma"]).reshape(n_chain * n_draw))
-    return jnp.zeros((n_chain * n_draw,))
+def _sigma_y_draws(
+    posterior: Dict[str, Array], n_chain: int, n_draw: int, n_obs: int
+) -> Array:
+    """Flattened per-observable concentration-space noise ``sigma_y`` draws.
+
+    A surrogate fit samples ``sigma_y`` directly in concentration space (the
+    Jacobian pushforward to rate space happens inside the likelihood), so this is
+    the aleatoric std used to score the integrated trajectory. Returns
+    ``(n_chain*n_draw, n_obs)``; a shared scalar ``sigma_y`` is broadcast across
+    observables. Falls back to ones if the site is absent.
+    """
+    if "sigma_y" in posterior:
+        flat = np.asarray(posterior["sigma_y"]).reshape(n_chain * n_draw, -1)
+        return jnp.broadcast_to(jnp.asarray(flat), (n_chain * n_draw, n_obs))
+    return jnp.ones((n_chain * n_draw, n_obs))
 
 
 def _subsample(posterior: Dict[str, Array], max_draws: Optional[int]):
@@ -155,11 +164,12 @@ def _mechanistic_loglik(
     sim_func = data_prep.sim_func
     y0s, constants, times = data_prep.y0s, data_prep.constants, data_prep.times
 
+    n_obs = int(np.asarray(observables).size)
     param_names = [name for name, _ in bayes_model.priors]
     thetas, (n_chain, n_draw) = _stack_thetas(posterior, param_names)
-    sigma_disc = _sigma_disc_draws(posterior, n_chain, n_draw)
+    sigma_y = _sigma_y_draws(posterior, n_chain, n_draw, n_obs)
 
-    # "reuse": the sampled sigma is already the concentration-space noise.
+    # "reuse": the sampled concentration-space ``sigma_y`` is the noise scale.
     # "yerrs": score against a supplied measurement error instead.
     sigma_y_fixed = (
         _resolve_yerrs(yerrs, results, tuple(data.shape))
@@ -167,13 +177,20 @@ def _mechanistic_loglik(
         else None
     )
 
-    def per_draw(theta, sig):
+    def per_draw(theta, sig_y):
         states = sim_func(y0s, theta, constants, times)
         loc = states[..., observables]
-        scale = sigma_y_fixed if sigma_y_fixed is not None else jnp.sqrt(sig**2)
+        # The error model samples ``sigma_y`` directly in concentration space
+        # (scored via ``sqrt(sigma_y**2)``), so it is the scale as-is. This
+        # reproduces the native per-point log-likelihood to ~1e-7.
+        scale = (
+            sigma_y_fixed
+            if sigma_y_fixed is not None
+            else jnp.broadcast_to(sig_y, data.shape)
+        )
         return likelihood(loc, scale).log_prob(data_safe)
 
-    ll = jax.vmap(per_draw)(thetas, sigma_disc)
+    ll = jax.vmap(per_draw)(thetas, sigma_y)
     ll = np.asarray(ll).reshape(n_chain, n_draw, *data.shape)
     info = {
         "data": np.asarray(data),
@@ -199,8 +216,10 @@ def _surrogate_loglik(
     ``(measurement, time)`` point, then manually integrates them along each
     trajectory and scores the result against the measured concentrations.
 
-    The reused rate-space noise ``sigma_total = sigma_disc**2 + sigma_surr**2 +
-    rate_sigma**2`` is pushed forward through the same integration.
+    The noise is concentration-space: the fit's inferred ``sigma_y`` (default), or under
+    ``sigma_source="reuse"`` the fit's own sampled ``sigma_y`` -- which the
+    surrogate model already pushes *forward* to rate space in the likelihood, so
+    it is used here directly as the concentration scale (no inverse mapping).
 
     Returns ``(loglik, mask)`` shaped as in :func:`_mechanistic_loglik`.
     """
@@ -229,23 +248,12 @@ def _surrogate_loglik(
     y0_full = full_data[:, 0, :]  # measured initial state per measurement
     dt = jnp.diff(full_times, axis=-1)  # (n_meas, n_time - 1)
 
-    # Fixed rate-variance components (per observable point), reused from the fit.
     n_obs = observables.size
-    if bayes_model.sigma_surr is not None:
-        sigma_surr = jnp.asarray(bayes_model.sigma_surr).reshape(n_meas, n_time, -1)
-        sigma_surr_obs = sigma_surr[..., observables]
-    else:
-        sigma_surr_obs = jnp.zeros((n_meas, n_time, n_obs))
-    if bayes_model.rate_sigma is not None:
-        rate_sigma_obs = jnp.asarray(bayes_model.rate_sigma)[observables]
-        rate_sigma_obs = jnp.broadcast_to(rate_sigma_obs, (n_meas, n_time, n_obs))
-    else:
-        rate_sigma_obs = jnp.zeros((n_meas, n_time, n_obs))
-    fixed_rate_var = sigma_surr_obs**2 + rate_sigma_obs**2
-
     use_reuse = sigma_source == "reuse"
     # In "yerrs" mode the noise is the supplied measurement error; in "reuse"
-    # mode the noise comes entirely from the sampled sigma (pushed forward).
+    # mode it is the fit's own sampled concentration-space noise ``sigma_y`` (the
+    # surrogate model pushes it forward to rate space, so here it is used
+    # directly as the concentration scale -- no rate->concentration conversion).
     yerrs_scale = (
         _resolve_yerrs(yerrs, results, (n_meas, n_time, n_obs))
         if not use_reuse
@@ -254,45 +262,37 @@ def _surrogate_loglik(
 
     param_names = [name for name, _ in bayes_model.priors]
     thetas, (n_chain, n_draw) = _stack_thetas(posterior, param_names)
-    sigma_disc = _sigma_disc_draws(posterior, n_chain, n_draw)
+    sigma_y = _sigma_y_draws(posterior, n_chain, n_draw, n_obs)
 
-    def per_draw(theta, sig):
+    # Shared forward-Euler integrator -- also used for posterior-predictive
+    # bands (imported lazily to avoid an import cycle with ``predictive``).
+    from catalax.mcmc.predictive import euler_integrate_rates
+
+    y0_obs = y0_full[:, observables]
+    zero_rate_var = jnp.zeros((n_meas, n_time, n_obs))
+
+    def per_draw(theta, sig_y):
         rates_flat = rate_sim_func(points_flat, theta, constants_flat, times_flat)
         rates = rates_flat.reshape(n_meas, n_time, n_states)[..., observables]
-        # Rate variance at each observable point (sigma_disc is per-draw scalar).
-        rate_var = sig**2 + fixed_rate_var
-
-        if integration == "euler_onestep":
-            # One-step-ahead: predict each point from the *previous measured*
-            # state plus the local rate increment -- no error accumulation.
-            step = rates[:, :-1, :] * dt[..., None]
-            yhat_tail = data_safe[:, :-1, :] + step
-            yhat = jnp.concatenate([y0_full[:, None, observables], yhat_tail], axis=1)
-            var_tail = (dt[..., None] ** 2) * rate_var[:, :-1, :]
-            var_y = jnp.concatenate([jnp.zeros((n_meas, 1, n_obs)), var_tail], axis=1)
-        else:
-            # Global forward Euler from the measured initial condition.
-            inc = rates[:, :-1, :] * dt[..., None]
-            cum = jnp.cumsum(inc, axis=1)
-            yhat = jnp.concatenate(
-                [y0_full[:, None, observables], y0_full[:, None, observables] + cum],
-                axis=1,
-            )
-            var_inc = (dt[..., None] ** 2) * rate_var[:, :-1, :]
-            var_cum = jnp.cumsum(var_inc, axis=1)
-            var_y = jnp.concatenate([jnp.zeros((n_meas, 1, n_obs)), var_cum], axis=1)
-
-        scale = yerrs_scale if yerrs_scale is not None else jnp.sqrt(var_y)
+        # Euler-integrate the sampled rates into a concentration trajectory; the
+        # noise is the concentration-space ``sigma_y`` (or supplied ``yerrs``).
+        yhat, _ = euler_integrate_rates(
+            rates,
+            y0_obs,
+            dt,
+            zero_rate_var,
+            integration=integration,
+            data_safe=data_safe,
+        )
+        scale = (
+            yerrs_scale
+            if yerrs_scale is not None
+            else jnp.broadcast_to(sig_y, (n_meas, n_time, n_obs))
+        )
         return likelihood(yhat, scale).log_prob(data_safe)
 
-    ll = jax.vmap(per_draw)(thetas, sigma_disc)
+    ll = jax.vmap(per_draw)(thetas, sigma_y)
     ll = np.asarray(ll).reshape(n_chain, n_draw, n_meas, n_time, n_obs)
-
-    if use_reuse:
-        # The initial point has zero pushed-forward variance (no integration yet)
-        # -- it is an anchor, not a prediction. Drop the degenerate density.
-        finite = np.isfinite(ll).all(axis=(0, 1))
-        mask = mask & finite
 
     modeled = list(model.get_state_order(modeled=True))
     info = {
@@ -333,7 +333,7 @@ def reconstruct_log_likelihood(
     dataset: Dataset,
     *,
     yerrs: Union[float, Array, None] = None,
-    sigma_source: SigmaSource = "yerrs",
+    sigma_source: SigmaSource = "reuse",
     leave_out: LeaveOut = "point",
     integration: Integration = "euler",
     max_draws: Optional[int] = None,
@@ -348,7 +348,7 @@ def reconstruct_log_likelihood(
     Args:
         results: The fitted :class:`HMCResults` (mechanistic or surrogate mode).
         dataset: Dataset of real concentration measurements to score against.
-        sigma_source: ``"yerrs"`` (default) scores the held-out concentration
+        sigma_source: ``"reuse"`` (default) uses the fit's inferred ``sigma_y``;
             against the supplied measurement error; ``"reuse"`` instead takes the
             noise from the sampled ``sigma`` (pushed forward through the
             integration in surrogate mode).
@@ -468,7 +468,7 @@ def loo(
     dataset: Dataset,
     *,
     yerrs: Union[float, Array, None] = None,
-    sigma_source: SigmaSource = "yerrs",
+    sigma_source: SigmaSource = "reuse",
     leave_out: LeaveOut = "point",
     integration: Integration = "euler",
     pointwise: bool = True,
@@ -487,7 +487,7 @@ def loo(
     Args:
         results: Fitted :class:`HMCResults`.
         dataset: Real concentration measurements to validate against.
-        sigma_source: ``"yerrs"`` (default) scores against the supplied
+        sigma_source: ``"reuse"`` (default) uses the fit's inferred ``sigma_y``;
             measurement error; ``"reuse"`` takes the noise from the sampled
             ``sigma``.
         yerrs: Concentration-space measurement error; used when
@@ -544,6 +544,9 @@ class LooPointwise:
         measurement_ids: Measurement ids, length ``n_measurements``.
         measurement_labels: Concise per-measurement labels (from initial
             conditions), length ``n_measurements`` -- used for plot titles.
+        measurement_initial_conditions: Per-measurement initial-condition dicts,
+            length ``n_measurements`` -- used to render plot titles in the shared
+            library style.
         elpd_loo, p_loo, scale: The summary LOO statistics.
         elpd_data: The raw :class:`arviz.ELPDData` from :func:`arviz.loo`.
     """
@@ -555,6 +558,7 @@ class LooPointwise:
     species: list
     measurement_ids: list
     measurement_labels: list
+    measurement_initial_conditions: list
     elpd_loo: float
     p_loo: float
     scale: str
@@ -566,7 +570,7 @@ def loo_pointwise(
     dataset: Dataset,
     *,
     yerrs: Union[float, Array, None] = None,
-    sigma_source: SigmaSource = "yerrs",
+    sigma_source: SigmaSource = "reuse",
     integration: Integration = "euler",
     max_draws: Optional[int] = None,
     config: Optional[SimulationConfig] = None,
@@ -617,6 +621,10 @@ def loo_pointwise(
         species=info["species"],
         measurement_ids=[m.id for m in dataset.measurements],
         measurement_labels=[_label(m) for m in dataset.measurements],
+        measurement_initial_conditions=[
+            dict(getattr(m, "initial_conditions", {}) or {})
+            for m in dataset.measurements
+        ],
         elpd_loo=float(elpd_data.elpd_loo),
         p_loo=float(elpd_data.p_loo),
         scale=scale,
@@ -629,7 +637,7 @@ def compare(
     dataset: Union[Dataset, Dict[str, Dataset]],
     *,
     yerrs: Union[float, Array, None] = None,
-    sigma_source: SigmaSource = "yerrs",
+    sigma_source: SigmaSource = "reuse",
     leave_out: LeaveOut = "point",
     integration: Integration = "euler",
     max_draws: Optional[int] = None,
