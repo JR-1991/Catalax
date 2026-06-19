@@ -27,6 +27,8 @@ from .protocols import (
 )
 from . import priors
 from . import models
+from . import error
+from .error import ErrorModel
 
 import arviz as az  # noqa: F401
 
@@ -42,6 +44,8 @@ __all__ = [
     "summary",
     "priors",
     "models",
+    "error",
+    "ErrorModel",
     "MCMCConfig",
     "BayesianModel",
     "HMC",
