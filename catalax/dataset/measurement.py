@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyenzyme as pe
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from pydantic import (
     BaseModel,
@@ -430,7 +431,8 @@ class Measurement(BaseModel):
                 in the canonical time array (i.e., it is not a subset).
         """
         non_empty = [
-            sp for sp in measurement.species_data
+            sp
+            for sp in measurement.species_data
             if sp.data is not None and len(sp.data) > 0
         ]
 
@@ -551,52 +553,7 @@ class Measurement(BaseModel):
             - 4-6 entries: Two lines, font size 10
             - >6 entries: Three lines, font size 9
         """
-
-        def format_value(value: float) -> str:
-            """Format a value with scientific notation for very small or very large numbers."""
-            if value == 0.0:
-                return f"{value:.2f}"
-            elif abs(value) < 0.1 or abs(value) >= 1000:
-                # Convert to scientific notation in LaTeX format
-                exp_str = f"{value:.2e}"
-                mantissa, exponent = exp_str.split("e")
-                exponent = int(exponent)
-                return f"{float(mantissa):.2f}\\cdot10^{{{exponent}}}"
-            else:
-                return f"{value:.2f}"
-
-        init_conditions_list = [
-            f"$\\mathbf{{{self._latexify_key(key)}}}$: ${format_value(value)}$"
-            for key, value in initial_conditions.items()
-        ]
-        num_entries = len(init_conditions_list)
-
-        # Calculate consistent spacing - use fixed width for better alignment
-        if num_entries <= 3:
-            # Few entries: single line with generous spacing
-            title = "    ".join(init_conditions_list)
-            fontsize = 12
-        elif num_entries <= 6:
-            # Medium entries: break into 2 lines with 3 columns each
-            mid_point = (num_entries + 2) // 2  # Round up for first line
-            line1_items = init_conditions_list[:mid_point]
-            line2_items = init_conditions_list[mid_point:]
-
-            # Ensure consistent spacing within each line
-            line1 = "    ".join(line1_items)
-            line2 = "    ".join(line2_items)
-            title = f"{line1}\n{line2}"
-            fontsize = 10
-        else:
-            # Many entries: break into rows of 3 columns with consistent spacing
-            lines = []
-            for i in range(0, num_entries, 3):
-                row_items = init_conditions_list[i : i + 3]
-                lines.append("    ".join(row_items))
-            title = "\n".join(lines)
-            fontsize = 9
-
-        return title, fontsize
+        return format_initial_conditions_title(initial_conditions)
 
     def plot(
         self,
@@ -608,6 +565,9 @@ class Measurement(BaseModel):
         _upper_95: Optional[Measurement] = None,
         _lower_50: Optional[Measurement] = None,
         _upper_50: Optional[Measurement] = None,
+        bands: bool = True,
+        _draws: Optional[Tuple] = None,
+        draw_alpha: float = 0.05,
         **kwargs,
     ) -> None:
         """Plot the measurement data with optional model fit comparison.
@@ -621,6 +581,12 @@ class Measurement(BaseModel):
             _upper_95: Optional[Measurement]: Upper 95% HDI data. Internally used for MCMC.
             _lower_50: Optional[Measurement]: Lower 50% HDI data. Internally used for MCMC.
             _upper_50: Optional[Measurement]: Upper 50% HDI data. Internally used for MCMC.
+            bands (bool): When True (default) render HDIs as translucent low-alpha
+                fills; when False render the interval edges as full-alpha lines.
+            _draws: Optional ``(time, values, states)`` posterior-predictive draw
+                ensemble (``values`` shaped ``(n_draws, n_time, n_states)``) drawn
+                as a low-alpha spaghetti. Internally used for MCMC.
+            draw_alpha (float): Per-line alpha for the draw spaghetti.
             **kwargs: Additional arguments to pass to plot functions.
         """
         is_subplot = ax is not None
@@ -639,6 +605,15 @@ class Measurement(BaseModel):
 
         has_95_hdi = _lower_95 and _upper_95
         has_50_hdi = _lower_50 and _upper_50
+
+        # Per-draw spaghetti: map each observable state to its (time, lines).
+        draw_lookup = None
+        if _draws is not None:
+            d_time, d_values, d_states = _draws
+            d_values = np.asarray(d_values)
+            draw_lookup = {
+                state: (d_time, d_values[:, :, k]) for k, state in enumerate(d_states)
+            }
 
         if has_95_hdi:
             assert _lower_95 and _upper_95, "Lower and upper 95% HDI must be provided"
@@ -679,25 +654,61 @@ class Measurement(BaseModel):
                     **kwargs,
                 )
 
+            if draw_lookup is not None and species in draw_lookup:
+                d_time, lines = draw_lookup[species]
+                ax.plot(d_time, lines.T, color=color, alpha=draw_alpha, linewidth=0.7)
+
             if has_95_hdi:
-                ax.fill_between(
-                    lower_95_meas["time"],
-                    lower_95_meas[species],
-                    upper_95_meas[species],
-                    color=color,
-                    alpha=HDI_95_ALPHA,
-                    edgecolor="none",
-                )
+                if bands:
+                    ax.fill_between(
+                        lower_95_meas["time"],
+                        lower_95_meas[species],
+                        upper_95_meas[species],
+                        color=color,
+                        alpha=HDI_95_ALPHA,
+                        edgecolor="none",
+                    )
+                else:
+                    ax.plot(
+                        lower_95_meas["time"],
+                        lower_95_meas[species],
+                        color=color,
+                        linestyle=":",
+                        linewidth=1,
+                    )
+                    ax.plot(
+                        upper_95_meas["time"],
+                        upper_95_meas[species],
+                        color=color,
+                        linestyle=":",
+                        linewidth=1,
+                    )
 
             if has_50_hdi:
-                ax.fill_between(
-                    lower_50_meas["time"],
-                    lower_50_meas[species],
-                    upper_50_meas[species],
-                    color=color,
-                    alpha=HDI_50_ALPHA,
-                    edgecolor="none",
-                )
+                if bands:
+                    ax.fill_between(
+                        lower_50_meas["time"],
+                        lower_50_meas[species],
+                        upper_50_meas[species],
+                        color=color,
+                        alpha=HDI_50_ALPHA,
+                        edgecolor="none",
+                    )
+                else:
+                    ax.plot(
+                        lower_50_meas["time"],
+                        lower_50_meas[species],
+                        color=color,
+                        linestyle="--",
+                        linewidth=1,
+                    )
+                    ax.plot(
+                        upper_50_meas["time"],
+                        upper_50_meas[species],
+                        color=color,
+                        linestyle="--",
+                        linewidth=1,
+                    )
 
         ax.grid(True, which="both", linestyle="--")
         ax.grid(True, which="minor", alpha=0.3)
@@ -721,13 +732,24 @@ class Measurement(BaseModel):
         # Create custom legend with HDI handles
         handles, labels = ax.get_legend_handles_labels()
 
-        # Add HDI patches to legend if they exist
+        # Add HDI handles to legend if they exist
         if has_95_hdi:
-            handles.append(Patch(facecolor="gray", alpha=HDI_95_ALPHA))
+            if bands:
+                handles.append(Patch(facecolor="gray", alpha=HDI_95_ALPHA))
+            else:
+                handles.append(Line2D([], [], color="gray", linestyle=":", linewidth=1))
             labels.append("95% HDI")
         if has_50_hdi:
-            handles.append(Patch(facecolor="gray", alpha=HDI_50_ALPHA))
+            if bands:
+                handles.append(Patch(facecolor="gray", alpha=HDI_50_ALPHA))
+            else:
+                handles.append(
+                    Line2D([], [], color="gray", linestyle="--", linewidth=1)
+                )
             labels.append("50% HDI")
+        if draw_lookup is not None:
+            handles.append(Line2D([], [], color="gray", linewidth=0.7))
+            labels.append("posterior draws")
 
         ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5))
 
@@ -799,8 +821,63 @@ class Measurement(BaseModel):
     @staticmethod
     def _latexify_key(key: str) -> str:
         """Convert a key to a LaTeX-friendly string."""
-        # Split on underscore and wrap everything after first underscore in braces
-        parts = key.split("_", 1)
-        if len(parts) > 1:
-            return f"{parts[0]}_{{{parts[1]}}}"
-        return key
+        return latexify_key(key)
+
+
+def latexify_key(key: str) -> str:
+    """Convert a key to a LaTeX-friendly string (subscript after first ``_``)."""
+    parts = key.split("_", 1)
+    if len(parts) > 1:
+        return f"{parts[0]}_{{{parts[1]}}}"
+    return key
+
+
+def format_initial_conditions_title(
+    initial_conditions: Dict[str, float],
+) -> Tuple[str, int]:
+    """Format initial conditions into a multi-line title with a matching font size.
+
+    Shared title style used across the library so every panel (data plots, MCMC
+    diagnostics, LOO plots) renders initial conditions identically:
+
+    - ≤3 entries: single line, font size 12
+    - 4-6 entries: two lines, font size 10
+    - >6 entries: rows of three columns, font size 9
+    """
+
+    def format_value(value: float) -> str:
+        """Format with LaTeX scientific notation for very small/large numbers."""
+        if value == 0.0:
+            return f"{value:.2f}"
+        elif abs(value) < 0.1 or abs(value) >= 1000:
+            exp_str = f"{value:.2e}"
+            mantissa, exponent = exp_str.split("e")
+            exponent = int(exponent)
+            return f"{float(mantissa):.2f}\\cdot10^{{{exponent}}}"
+        else:
+            return f"{value:.2f}"
+
+    init_conditions_list = [
+        f"$\\mathbf{{{latexify_key(key)}}}$: ${format_value(value)}$"
+        for key, value in initial_conditions.items()
+    ]
+    num_entries = len(init_conditions_list)
+
+    if num_entries <= 3:
+        title = "    ".join(init_conditions_list)
+        fontsize = 12
+    elif num_entries <= 6:
+        mid_point = (num_entries + 2) // 2
+        line1 = "    ".join(init_conditions_list[:mid_point])
+        line2 = "    ".join(init_conditions_list[mid_point:])
+        title = f"{line1}\n{line2}"
+        fontsize = 10
+    else:
+        lines = [
+            "    ".join(init_conditions_list[i : i + 3])
+            for i in range(0, num_entries, 3)
+        ]
+        title = "\n".join(lines)
+        fontsize = 9
+
+    return title, fontsize

@@ -903,6 +903,7 @@ class Dataset(BaseModel):
         predictor: Optional[Predictor] = None,
         n_steps: int = 100,
         xlim: Optional[Tuple[float, float | None]] = (0, None),
+        bands: bool = True,
         **kwargs,
     ) -> None: ...
 
@@ -917,6 +918,7 @@ class Dataset(BaseModel):
         predictor: Optional[Predictor] = None,
         n_steps: int = 100,
         xlim: Optional[Tuple[float, float | None]] = (0, None),
+        bands: bool = True,
         **kwargs,
     ) -> Figure: ...
 
@@ -930,6 +932,7 @@ class Dataset(BaseModel):
         predictor: Optional[Predictor] = None,
         n_steps: int = 100,
         xlim: Optional[Tuple[float, float | None]] = (0, None),
+        bands: bool = True,
         **kwargs,
     ) -> Optional[Figure]:
         """Plot all measurements in the dataset.
@@ -968,7 +971,17 @@ class Dataset(BaseModel):
             else None
         )
 
-        if predictor and isinstance(predictor, Model) and predictor.has_hdi():
+        lower_95 = upper_95 = lower_50 = upper_50 = None
+        draws = None
+
+        # When ``bands=False`` and the predictor can supply per-draw trajectories
+        # (i.e. an HMCResults posterior), render a low-alpha spaghetti of draws
+        # instead of shaded HDI bands.
+        if not bands and predictor is not None and hasattr(
+            predictor, "posterior_predictive_ensemble"
+        ):
+            draws = predictor.posterior_predictive_ensemble(self, n_steps=n_steps)
+        elif predictor and isinstance(predictor, Model) and predictor.has_hdi():
             lower_95 = self._simulate_model_data(predictor, n_steps, "lower")
             upper_95 = self._simulate_model_data(predictor, n_steps, "upper")
             lower_50 = self._simulate_model_data(predictor, n_steps, "lower_50")
@@ -978,11 +991,6 @@ class Dataset(BaseModel):
             upper_95 = self._predict_model_data(predictor, n_steps, "upper")
             lower_50 = self._predict_model_data(predictor, n_steps, "lower_50")
             upper_50 = self._predict_model_data(predictor, n_steps, "upper_50")
-        else:
-            lower_95 = None
-            upper_95 = None
-            lower_50 = None
-            upper_50 = None
 
         # Plot measurements
         self._plot_measurements(
@@ -995,6 +1003,8 @@ class Dataset(BaseModel):
             upper_95=upper_95,
             lower_50=lower_50,
             upper_50=upper_50,
+            bands=bands,
+            draws=draws,
         )
 
         # Format legends
@@ -1089,6 +1099,8 @@ class Dataset(BaseModel):
         upper_95: Optional[Dataset] = None,
         lower_50: Optional[Dataset] = None,
         upper_50: Optional[Dataset] = None,
+        bands: bool = True,
+        draws: Optional[Tuple[Any, Any, List[str]]] = None,
     ):
         """Plot each measurement on its corresponding axis."""
         index = 0
@@ -1102,6 +1114,13 @@ class Dataset(BaseModel):
             lower_50_meas = lower_50.measurements[i] if lower_50 else None
             upper_50_meas = upper_50.measurements[i] if upper_50 else None
 
+            # Slice the per-draw ensemble for this measurement: (times_i,
+            # values_i (n_draws, n_time, n_obs), obs_states).
+            draws_meas = None
+            if draws is not None:
+                d_times, d_values, d_states = draws
+                draws_meas = (d_times[i], d_values[:, i], d_states)
+
             meas.plot(
                 ax=axs[index],
                 model_data=sim_meas,
@@ -1109,6 +1128,8 @@ class Dataset(BaseModel):
                 _upper_95=upper_95_meas,
                 _lower_50=lower_50_meas,
                 _upper_50=upper_50_meas,
+                bands=bands,
+                _draws=draws_meas,
                 **kwargs,
                 xlim=xlim,
             )
@@ -1117,14 +1138,30 @@ class Dataset(BaseModel):
 
     def _format_legends(self, axs, ncols, measurement_ids):
         """Format legends for each subplot."""
+
+        def _reposition(ax):
+            # Preserve any custom handles (HDI bands, posterior-draw spaghetti)
+            # that ``Measurement.plot`` already attached, rather than rebuilding
+            # the legend from auto-detected artists only.
+            existing = ax.get_legend()
+            if existing is not None:
+                handles = list(getattr(existing, "legend_handles", []))
+                labels = [t.get_text() for t in existing.get_texts()]
+                if handles:
+                    ax.legend(
+                        handles, labels, loc="center left", bbox_to_anchor=(1, 0.5)
+                    )
+                    return
+            ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
         # Place legends only on rightmost plots in each row
         if len(axs) == 1:
-            axs[0].legend(loc="center left", bbox_to_anchor=(1, 0.5))
+            _reposition(axs[0])
             return
 
         for i, ax in enumerate(axs):
             if i % ncols == ncols - 1:
-                ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+                _reposition(ax)
             else:
                 ax.legend().set_visible(False)
 
