@@ -3,6 +3,7 @@ import random
 import jax.numpy as jnp
 import numpy as np
 import optax
+import pytest
 
 import catalax.mcmc as cmc
 import catalax.mcmc as cmm
@@ -98,7 +99,11 @@ class TestMCMC:
     def test_loo_consistency_check(self, generate_data):
         """Eval-model reconstruction must match ArviZ native LOO (mechanistic)."""
         model, dataset = generate_data
-        config = cmm.MCMCConfig(num_warmup=50, num_samples=100, num_chains=2, verbose=0)
+        # Add observation noise so the discrepancy ``sigma`` is identifiable; on
+        # noiseless data it collapses toward zero and the reuse reconstruction
+        # divides a tiny re-integration residual by a near-zero scale.
+        dataset = dataset.augment(n_augmentations=8, sigma=1e-2)
+        config = cmm.MCMCConfig(num_warmup=100, num_samples=200, num_chains=2, verbose=0)
         results = cmm.run_mcmc(model=model, dataset=dataset, config=config, yerrs=1e-2)
 
         check = results.loo_consistency_check(dataset, yerrs=1e-2)
@@ -187,6 +192,138 @@ class TestMCMC:
         assert (
             results.plot_loo_heatmap(dataset, metric="pareto_k", yerrs=0.5) is not None
         )
+
+    @pytest.mark.parametrize(
+        "error_model",
+        [
+            cmm.error.HalfNormal(),
+            cmm.error.LogNormal(sigma=0.7),
+            cmm.error.Gamma(concentration=2.0),
+        ],
+        ids=["halfnormal", "lognormal", "gamma"],
+    )
+    def test_error_model_samples_sigma_y(self, generate_data, error_model):
+        """Every error model samples a positive concentration-space ``sigma_y``."""
+        model, dataset = generate_data
+        config = cmm.MCMCConfig(
+            num_warmup=50, num_samples=100, verbose=0, error_model=error_model
+        )
+        results = cmm.run_mcmc(
+            model=model, dataset=dataset, config=config, yerrs=1e-2
+        )
+
+        samples = results.get_samples()
+        assert "sigma_y" in samples
+        sigma_y = np.asarray(samples["sigma_y"])
+        # One std per observable (per-species default), drawn for every sample.
+        n_obs = len(model.get_observable_state_order())
+        assert sigma_y.shape == (config.num_samples, n_obs)
+        assert np.all(np.isfinite(sigma_y))
+        assert np.all(sigma_y > 0.0)
+
+    def test_error_model_fixed_is_deterministic(self, generate_data):
+        """``Fixed`` records the supplied noise as a constant deterministic site."""
+        model, dataset = generate_data
+        config = cmm.MCMCConfig(
+            num_warmup=30,
+            num_samples=60,
+            verbose=0,
+            error_model=cmm.error.Fixed(sigma_y=0.05),
+        )
+        results = cmm.run_mcmc(
+            model=model, dataset=dataset, config=config, yerrs=1e-2
+        )
+
+        sigma_y = np.asarray(results.get_samples()["sigma_y"])
+        # Constant across every draw -- it is not sampled, just recorded.
+        assert np.allclose(sigma_y, 0.05)
+
+    def test_error_model_shared_collapses_to_scalar(self, generate_data):
+        """``shared=True`` broadcasts a single scalar std across observables."""
+        model, dataset = generate_data
+        config = cmm.MCMCConfig(
+            num_warmup=30,
+            num_samples=60,
+            verbose=0,
+            error_model=cmm.error.LogNormal(sigma=0.5, shared=True),
+        )
+        results = cmm.run_mcmc(
+            model=model, dataset=dataset, config=config, yerrs=1e-2
+        )
+
+        # A shared site has no per-observable axis (scalar event shape).
+        sigma_y = np.asarray(results.get_samples()["sigma_y"])
+        assert sigma_y.shape == (config.num_samples,)
+
+    def _stack_band(self, model, band_dataset):
+        """Stack an observable band/trajectory Dataset to ``(n_meas, n_time, n_obs)``."""
+        obs_states = model.get_observable_state_order()
+        return np.stack(
+            [
+                np.stack(
+                    [np.asarray(m.data[s]) for s in obs_states], axis=-1
+                )
+                for m in band_dataset.measurements
+            ]
+        )
+
+    def test_predict_band_ordering_and_noise(self, generate_data):
+        """Bands nest correctly and the predictive interval contains the epistemic one."""
+        model, dataset = generate_data
+        config = cmm.MCMCConfig(num_warmup=50, num_samples=100, verbose=0)
+        results = cmm.run_mcmc(
+            model=model, dataset=dataset, config=config, yerrs=1e-2
+        )
+
+        n_meas = len(dataset.measurements)
+        n_obs = len(model.get_observable_state_order())
+
+        # Median trajectory is a plottable Dataset over the observable states.
+        median = results.predict(dataset, hdi=None, n_steps=40)
+        median_arr = self._stack_band(model, median)
+        assert median_arr.shape == (n_meas, 40, n_obs)
+        assert np.all(np.isfinite(median_arr))
+
+        # Epistemic-only band: lower <= upper everywhere.
+        lo = self._stack_band(
+            model, results.predict(dataset, hdi="lower", n_steps=40, include_noise=False)
+        )
+        hi = self._stack_band(
+            model, results.predict(dataset, hdi="upper", n_steps=40, include_noise=False)
+        )
+        assert np.all(hi - lo >= -1e-8)
+
+        # Folding in aleatoric noise can only widen the interval.
+        lo_pred = self._stack_band(
+            model, results.predict(dataset, hdi="lower", n_steps=40, include_noise=True)
+        )
+        hi_pred = self._stack_band(
+            model, results.predict(dataset, hdi="upper", n_steps=40, include_noise=True)
+        )
+        epistemic_width = float(np.mean(hi - lo))
+        predictive_width = float(np.mean(hi_pred - lo_pred))
+        assert predictive_width >= epistemic_width - 1e-8
+
+    def test_posterior_predictive_ensemble_shapes(self, generate_data):
+        """The raw draw ensemble has one trajectory per (subsampled) posterior draw."""
+        model, dataset = generate_data
+        config = cmm.MCMCConfig(num_warmup=50, num_samples=100, verbose=0)
+        results = cmm.run_mcmc(
+            model=model, dataset=dataset, config=config, yerrs=1e-2
+        )
+
+        n_meas = len(dataset.measurements)
+        n_obs = len(model.get_observable_state_order())
+        times, values, obs_states = results.posterior_predictive_ensemble(
+            dataset, n_steps=30, max_draws=25
+        )
+
+        assert times.shape == (n_meas, 30)
+        n_draws = values.shape[0]
+        assert 0 < n_draws <= 25
+        assert values.shape == (n_draws, n_meas, 30, n_obs)
+        assert obs_states == list(model.get_observable_state_order())
+        assert np.all(np.isfinite(values))
 
     def test_initial_estimator(self):
         # Create a simple Michaelis-Menten model
