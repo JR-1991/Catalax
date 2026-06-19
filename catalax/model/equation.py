@@ -23,7 +23,7 @@ class Equation(CatalaxBase):
     )
 
     equation: AnnotatedExpr
-    inits: set[str] = Field(default_factory=set)
+    inits: frozenset[str] = Field(default_factory=frozenset, exclude=True)
     parameters: Dict[Union[str, Expr], Parameter] = Field(
         default_factory=DottedDict,
         exclude=True,
@@ -69,7 +69,7 @@ class Equation(CatalaxBase):
                         f"State '{state}' not found in the model for initial value statement '{symbol}'"
                     )
 
-                self.inits.add(state)
+                self.inits = self.inits | {state}
                 continue
             elif str(symbol) in self._model.constants:
                 # Skip constants
