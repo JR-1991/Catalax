@@ -25,6 +25,7 @@ from jax.random import PRNGKey
 from numpyro.infer import MCMC, NUTS
 
 from catalax.dataset.dataset import Dataset
+from catalax.mcmc.error import DEFAULT_ERROR_MODEL, ErrorModel
 from catalax.mcmc.protocols import PostModel, PreModel, Shapes
 from catalax.mcmc.results import HMCResults
 from catalax.model.simconfig import SimulationConfig
@@ -67,6 +68,7 @@ class MCMCConfig:
     max_steps: int = 64**4
     solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5
     target_accept_prob: float = 0.8
+    error_model: Optional["ErrorModel"] = None
 
     def to_simulation_config(self) -> SimulationConfig:
         return SimulationConfig(
@@ -126,6 +128,8 @@ class HMC:
         verbose: int = 1,
         max_steps: int = 64**4,
         solver: Type[diffrax.AbstractSolver] = diffrax.Tsit5,
+        target_accept_prob: float = 0.8,
+        error_model: Optional[ErrorModel] = None,
     ):
         """Initialize HMC sampler.
 
@@ -158,6 +162,8 @@ class HMC:
             seed=seed,
             verbose=verbose,
             max_steps=max_steps,
+            target_accept_prob=target_accept_prob,
+            error_model=error_model,
         )
         self.likelihood = likelihood
 
@@ -224,6 +230,22 @@ class HMC:
             sigma_surr = None
             rate_sigma = None
 
+        # Precompute the surrogate rate-Jacobian J = d(rate)/dy at every measured
+        # point. The aleatoric noise is sampled in concentration space and pushed
+        # *forward* to rate space through J inside the likelihood (well-conditioned,
+        # no inverse), so the sampled sigma_y is directly the concentration noise.
+        if surrogate is not None:
+            rate_jac = _surrogate_rate_jacobian(surrogate, dataset)
+            # Identifiability check: sigma_y is informed via the mean Jacobian
+            # row-norm per state. Near-zero => that state's noise is unidentified.
+            mean_rownorm = jnp.mean(jnp.sqrt(jnp.sum(rate_jac**2, axis=-1)), axis=0)
+            print(
+                "Surrogate mean |J| row-norm per state "
+                f"(sigma_y identifiable where >> 0): {mean_rownorm.tolist()}"
+            )
+        else:
+            rate_jac = None
+
         if isinstance(yerrs, float):
             # If yerrs is a scalar, we broadcast it to the shape of the data
             yerrs_ = jnp.broadcast_to(
@@ -248,6 +270,8 @@ class HMC:
             config=config,
             sigma_surr=sigma_surr,
             rate_sigma=rate_sigma,
+            rate_jac=rate_jac,
+            error_model=self.config.error_model,
         )
 
         # Initialize and run MCMC
@@ -276,24 +300,17 @@ class HMC:
     def from_config(cls, config: MCMCConfig) -> HMC:
         """Create HMC instance from configuration.
 
+        Preserves the *exact* config object (rather than rebuilding it from
+        scalar fields), so every setting -- including ``error_model`` and
+        ``target_accept_prob`` -- is carried through unchanged.
+
         Args:
             config: MCMC configuration parameters
         """
-        return cls(
-            num_warmup=config.num_warmup,
-            num_samples=config.num_samples,
-            likelihood=config.likelihood,
-            dense_mass=config.dense_mass,
-            thinning=config.thinning,
-            max_tree_depth=config.max_tree_depth,
-            chain_method=config.chain_method,
-            num_chains=config.num_chains,
-            seed=config.seed,
-            verbose=config.verbose,
-            max_steps=config.max_steps,
-            dt0=config.dt0,
-            solver=config.solver,
-        )
+        instance = cls.__new__(cls)
+        instance.config = config
+        instance.likelihood = config.likelihood
+        return instance
 
 
 class BayesianModel:
@@ -315,6 +332,8 @@ class BayesianModel:
         config: SimulationConfig,
         sigma_surr: Optional[Array] = None,
         rate_sigma: Optional[Array] = None,
+        rate_jac: Optional[Array] = None,
+        error_model: Optional[ErrorModel] = None,
         pre_model: Optional[PreModel] = None,
         post_model: Optional[PostModel] = None,
     ):
@@ -344,6 +363,7 @@ class BayesianModel:
         self.dt0 = config.dt0
         self.sigma_surr = sigma_surr
         self.rate_sigma = rate_sigma
+        self.error_model = error_model or DEFAULT_ERROR_MODEL
 
         # Pre-compute priors and observables
         self.priors = [
@@ -357,6 +377,14 @@ class BayesianModel:
         self.observables = jnp.array(
             model.get_state_order(as_indices=True, modeled=True)
         )
+
+        # Observable block of the per-point surrogate rate-Jacobian, used to push
+        # the sampled concentration noise sigma_y forward to rate space.
+        if rate_jac is not None:
+            obs = self.observables
+            self.rate_jac_obs = rate_jac[:, obs, :][:, :, obs]  # (n_points, n_obs, n_obs)
+        else:
+            self.rate_jac_obs = None
 
     def __call__(
         self,
@@ -414,26 +442,34 @@ class BayesianModel:
                 pre_output=pre_output,
             )
 
-        # Sample noise parameter
-        # Expand yerrs to match shape of states
-        sigma_disc = numpyro.sample(
-            "sigma",
-            dist.HalfNormal(jnp.mean(self.yerrs[..., self.observables])),
-        )  # type: ignore
+        loc = states[..., self.observables]
 
-        sigma_total = sigma_disc
+        # Sample the concentration-space noise std from the user-set error model
+        # (same site/object for both modes; the pushforward below is internal).
+        n_obs = int(self.observables.shape[0])
+        sigma_y = self.error_model.sample(n_obs, jnp.mean(self.yerrs))
 
-        if self.sigma_surr is not None:
-            sigma_total = self.sigma_surr[..., self.observables] ** 2 + sigma_total
-
-        if self.rate_sigma is not None:
-            sigma_total = self.rate_sigma[None, self.observables] ** 2 + sigma_total
+        if self.mode == Modes.SURROGATE:
+            # Push the concentration noise *forward* to rate space via the (fixed)
+            # surrogate rate-Jacobian (per point, well-conditioned, no inverse):
+            # sigma_r[p, j]^2 = sum_k J[p, j, k]^2 * sigma_y[k]^2.
+            sigma_total = jnp.einsum("pjk,k->pj", self.rate_jac_obs**2, sigma_y**2)
+            if self.sigma_surr is not None:
+                sigma_total = sigma_total + self.sigma_surr[..., self.observables] ** 2
+            if self.rate_sigma is not None:
+                sigma_total = sigma_total + self.rate_sigma[None, self.observables] ** 2
+            # Tiny floor for numerical safety only (keeps the scale strictly
+            # positive if sigma_y -> 0); not a competing noise source.
+            sigma_total = sigma_total + 1e-8
+        else:
+            # Integrated mode: the concentration noise is the likelihood scale.
+            sigma_total = sigma_y**2
 
         # Compare simulation to observed data
         with numpyro.handlers.mask(mask=mask):
             numpyro.sample(
                 "y",
-                self.likelihood(states[..., self.observables], jnp.sqrt(sigma_total)),  # type: ignore
+                self.likelihood(loc, jnp.sqrt(sigma_total)),  # type: ignore
                 obs=data,
             )
 
@@ -561,6 +597,7 @@ def _run_mcmc_simulation(
         times=data_prep.times,
         constants=data_prep.constants,
         mask=data_prep.mask,
+        extra_fields=("diverging",),
     )
 
     if config.verbose > 1:
@@ -806,3 +843,35 @@ def _configure_simulation_function(
         sim_func, _ = simulation_setup._prepare_func(in_axes=(0, None, 0, 0))
 
     return sim_func, data, y0s, times, constants  # type: ignore
+
+
+def _surrogate_rate_jacobian(surrogate: "Surrogate", dataset: Dataset) -> Array:
+    """Precompute ``J = d(surrogate rate)/dy`` at every measured state point.
+
+    The surrogate is trained and fixed during MCMC, so this is computed once.
+    The aleatoric noise is sampled in concentration space and pushed *forward*
+    to rate space through ``J`` inside the likelihood -- a well-conditioned
+    forward delta method (no inverse).
+
+    Uses the public ``rates`` API, so it works for a single ``NeuralODE`` and for
+    a ``NeuralODEEnsemble`` -- the latter returns the ensemble-mean rate, so this
+    yields the mean Jacobian over members.
+
+    Returns:
+        Array of shape ``(n_points, n_states, n_states)`` with
+        ``J[p, i, k] = d rate_i / d y_k`` at measured point ``p`` (points are the
+        flattened ``(measurement, time)`` states, matching ``predict_rates``).
+    """
+    data, times, _ = dataset.to_jax_arrays(surrogate.state_order)
+    n_states = data.shape[-1]
+    states_flat = data.reshape(-1, n_states)
+    times_flat = times.ravel()
+
+    def rate_at_point(t, y):
+        # rates() expects batched (n_points,) / (n_points, n_states) inputs.
+        return surrogate.rates(t.reshape(1), y.reshape(1, -1), None)[0]
+
+    def jac_at_point(t, y):
+        return jax.jacfwd(lambda yi: rate_at_point(t, yi))(y)
+
+    return jax.vmap(jac_at_point)(times_flat, states_flat)
