@@ -7,15 +7,18 @@ import matplotlib.pyplot as plt
 import numpyro
 import pandas as pd
 import xarray
+import jax.numpy as jnp
 from jax import Array
 
 from catalax.mcmc.mcmc import MCMC
 from catalax.mcmc.plotting import plot_corner, plot_ess, plot_mcse, plot_posterior
+from catalax.predictor import Predictor
 
 if TYPE_CHECKING:
     from catalax.dataset.dataset import Dataset
     from catalax.mcmc import BayesianModel
     from catalax.mcmc.loo import Integration, LeaveOut, SigmaSource
+    from catalax.mcmc.predictive import HDILevel
     from catalax.model.model import Model
     from catalax.model.simconfig import SimulationConfig
 
@@ -29,7 +32,7 @@ except ImportError:
     WIDGETS_AVAILABLE = False
 
 
-class HMCResults:
+class HMCResults(Predictor):
     """Results container for HMC sampling with integrated visualization methods.
 
     This class provides a comprehensive interface for analyzing and visualizing
@@ -64,6 +67,201 @@ class HMCResults:
         self.mcmc = mcmc
         self.bayesian_model = bayesian_model
         self.model = model
+
+        # Defaults for posterior-predictive plotting via the Predictor interface.
+        # Tunable on the instance, e.g. ``results.predictive_include_noise = False``
+        # for an epistemic-only (parameter-uncertainty) band.
+        self.predictive_max_draws: Optional[int] = 200
+        self.predictive_integration: "Integration" = "euler"
+        self.predictive_include_noise: bool = True
+        self._ensemble_cache: Dict = {}
+
+    @property
+    def divergences(self) -> Array:
+        """Boolean mask of diverging HMC transitions, shape ``(n_chains, n_draws)``.
+
+        ``True`` marks draws where NUTS reported a divergence (a sign the sampler
+        could not faithfully integrate the posterior geometry there). Sum it for
+        the total, or use :attr:`num_divergences`. Empty array if the sampler was
+        run without collecting the ``diverging`` field.
+        """
+        extra = self.mcmc.get_extra_fields(group_by_chain=True)
+        diverging = extra.get("diverging")
+        if diverging is None:
+            return jnp.zeros((0,), dtype=bool)
+        return diverging
+
+    @property
+    def num_divergences(self) -> int:
+        """Total number of diverging transitions across all chains."""
+        return int(jnp.sum(self.divergences))
+
+    @property
+    def diverging_samples(self) -> pd.DataFrame:
+        """Parameter values at the diverging draws only, as a DataFrame.
+
+        One row per diverging transition, with ``chain``/``draw`` indices and a
+        column per parameter (vector sites are expanded to ``name[0]``,
+        ``name[1]`` ...). This pinpoints *where* in parameter space the sampler
+        diverged -- e.g. a noise scale collapsing toward 0. Empty if there were
+        no divergences (or the field was not collected).
+        """
+        import numpy as np
+
+        diverging = np.asarray(self.divergences)
+        samples = self.mcmc.get_samples(group_by_chain=True)
+        if diverging.size == 0 or not diverging.any():
+            return pd.DataFrame()
+
+        chain_idx, draw_idx = np.nonzero(diverging)
+        columns: Dict[str, Array] = {"chain": chain_idx, "draw": draw_idx}
+        for name, arr in samples.items():
+            selected = np.asarray(arr)[diverging]  # (n_div, *event_shape)
+            if selected.ndim == 1:
+                columns[name] = selected
+            else:
+                flat = selected.reshape(selected.shape[0], -1)
+                for k in range(flat.shape[1]):
+                    columns[f"{name}[{k}]"] = flat[:, k]
+        return pd.DataFrame(columns)
+
+    # ------------------------------------------------------------------ #
+    # Predictor interface -- lets an HMCResults be passed anywhere a
+    # Predictor is accepted (e.g. ``dataset.plot(predictor=results)``),
+    # producing an honest posterior-predictive band: the full joint
+    # posterior pushed through the model, quantiled in trajectory space.
+    # ------------------------------------------------------------------ #
+    def get_state_order(self) -> List[str]:
+        """Return the model's state order (see :meth:`Model.get_state_order`)."""
+        return self.model.get_state_order()
+
+    def get_species_order(self) -> List[str]:
+        """Deprecated alias for :meth:`get_state_order`."""
+        return self.model.get_state_order()
+
+    def n_parameters(self) -> int:
+        """Number of model parameters carried by the posterior."""
+        return self.model.n_parameters()
+
+    def has_hdi(self) -> bool:
+        """Always ``True`` -- the posterior draws are always available."""
+        return True
+
+    def predict(
+        self,
+        dataset: "Dataset",
+        config: Optional["SimulationConfig"] = None,
+        n_steps: int = 100,
+        use_times: bool = False,
+        hdi: Optional["HDILevel"] = None,
+        max_draws: Optional[int] = ...,  # type: ignore[assignment]
+        integration: Optional["Integration"] = None,
+        include_noise: Optional[bool] = None,
+    ) -> "Dataset":
+        """Posterior-predictive trajectory (``hdi=None``) or credible band.
+
+        Pushes the full joint posterior through the model and takes per
+        ``(state, time)`` quantiles in trajectory space -- never the
+        marginal-corner shortcut. With ``include_noise`` the band is a true
+        predictive interval (aleatoric noise folded in): the fit's concentration
+        ``sigma`` in mechanistic mode, or the rate-space noise forward-propagated
+        through the Euler integrator in surrogate (rate-matching) mode.
+
+        The expensive per-draw integration is cached, so the five calls
+        :meth:`Dataset.plot` makes (median + four HDI bands) integrate the
+        posterior only once.
+
+        Args:
+            dataset: Provides the initial conditions / measurement times.
+            config: Accepted for interface compatibility; unused.
+            n_steps: Dense time-grid resolution (mechanistic mode; surrogate mode
+                is fixed to the measurement times).
+            use_times: Accepted for interface compatibility; the grid is always
+                dense (mechanistic) or the measurement times (surrogate).
+            hdi: Band selector (``None`` -> median trajectory).
+            max_draws: Posterior subsample size; defaults to
+                ``self.predictive_max_draws``.
+            integration: Surrogate-mode integrator; defaults to
+                ``self.predictive_integration``.
+            include_noise: Predictive (``True``) vs epistemic-only band; defaults
+                to ``self.predictive_include_noise``.
+
+        Returns:
+            Dataset of the requested trajectory/band over the observable states.
+        """
+        from catalax.mcmc.predictive import band_from_ensemble, compute_ensemble
+
+        if max_draws is ...:
+            max_draws = self.predictive_max_draws
+        if integration is None:
+            integration = self.predictive_integration
+        if include_noise is None:
+            include_noise = self.predictive_include_noise
+
+        # Cache the (expensive) ensemble so repeated band slices are cheap.
+        cache_key = (id(dataset), n_steps, max_draws, integration)
+        if cache_key not in self._ensemble_cache:
+            self._ensemble_cache[cache_key] = compute_ensemble(
+                self,
+                dataset,
+                n_steps=n_steps,
+                max_draws=max_draws,
+                integration=integration,
+            )
+        times, yhat_ens, var_ens = self._ensemble_cache[cache_key]
+
+        return band_from_ensemble(
+            self,
+            dataset,
+            times,
+            yhat_ens,
+            var_ens,
+            hdi=hdi,
+            include_noise=include_noise,
+        )
+
+    def posterior_predictive_ensemble(
+        self,
+        dataset: "Dataset",
+        n_steps: int = 100,
+        max_draws: Optional[int] = ...,  # type: ignore[assignment]
+        integration: Optional["Integration"] = None,
+    ):
+        """Raw posterior-predictive trajectories, one per draw (for spaghetti plots).
+
+        Shares the cache with :meth:`predict`, so requesting bands and the draw
+        ensemble of the same fit integrates the posterior only once.
+
+        Returns:
+            ``(times, values, obs_states)`` with ``times`` of shape ``(n_meas,
+            n_time)``, ``values`` (the integrated trajectories, no aleatoric
+            noise) of shape ``(n_draws, n_meas, n_time, n_obs)`` and
+            ``obs_states`` the observable state names.
+        """
+        import numpy as np
+
+        from catalax.mcmc.predictive import compute_ensemble
+
+        if max_draws is ...:
+            max_draws = self.predictive_max_draws
+        if integration is None:
+            integration = self.predictive_integration
+
+        cache_key = (id(dataset), n_steps, max_draws, integration)
+        if cache_key not in self._ensemble_cache:
+            self._ensemble_cache[cache_key] = compute_ensemble(
+                self,
+                dataset,
+                n_steps=n_steps,
+                max_draws=max_draws,
+                integration=integration,
+            )
+        times, yhat_ens, _ = self._ensemble_cache[cache_key]
+        return (
+            np.asarray(times),
+            np.asarray(yhat_ens),
+            list(self.model.get_observable_state_order()),
+        )
 
     def get_fitted_model(
         self,
@@ -458,7 +656,7 @@ class HMCResults:
         dataset: "Dataset",
         *,
         yerrs: Optional[Union[float, Array]] = None,
-        sigma_source: "SigmaSource" = "yerrs",
+        sigma_source: "SigmaSource" = "reuse",
         leave_out: "LeaveOut" = "point",
         integration: "Integration" = "euler",
         pointwise: bool = True,
@@ -483,7 +681,7 @@ class HMCResults:
 
         Args:
             dataset: Real concentration measurements to validate against.
-            sigma_source: ``"yerrs"`` (default) scores the held-out concentration
+            sigma_source: ``"reuse"`` (default) uses the fit's inferred ``sigma_y``;
                 against the supplied measurement error (the prediction still
                 comes from the sampled rates); ``"reuse"`` instead takes the noise
                 from the sampled ``sigma`` (pushed forward through the
@@ -529,7 +727,7 @@ class HMCResults:
         dataset: "Union[Dataset, Dict[str, Dataset]]",
         *,
         yerrs: Optional[Union[float, Array]] = None,
-        sigma_source: "SigmaSource" = "yerrs",
+        sigma_source: "SigmaSource" = "reuse",
         leave_out: "LeaveOut" = "point",
         integration: "Integration" = "euler",
         max_draws: Optional[int] = None,
@@ -612,7 +810,7 @@ class HMCResults:
         dataset: "Dataset",
         *,
         yerrs: Optional[Union[float, Array]] = None,
-        sigma_source: "SigmaSource" = "yerrs",
+        sigma_source: "SigmaSource" = "reuse",
         integration: "Integration" = "euler",
         max_draws: Optional[int] = None,
         config: Optional["SimulationConfig"] = None,
@@ -649,7 +847,7 @@ class HMCResults:
         ncols: int = 2,
         figsize: Tuple[float, float] = (5.0, 3.5),
         yerrs: Optional[Union[float, Array]] = None,
-        sigma_source: "SigmaSource" = "yerrs",
+        sigma_source: "SigmaSource" = "reuse",
         integration: "Integration" = "euler",
         max_draws: Optional[int] = None,
         show: bool = False,
@@ -713,7 +911,7 @@ class HMCResults:
         figsize: Tuple[float, float] = (6.0, 2.6),
         cmap: Optional[str] = None,
         yerrs: Optional[Union[float, Array]] = None,
-        sigma_source: "SigmaSource" = "yerrs",
+        sigma_source: "SigmaSource" = "reuse",
         integration: "Integration" = "euler",
         max_draws: Optional[int] = None,
         show: bool = False,
