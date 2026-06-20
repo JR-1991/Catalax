@@ -255,6 +255,31 @@ class TestMCMC:
         sigma_y = np.asarray(results.get_samples()["sigma_y"])
         assert sigma_y.shape == (config.num_samples,)
 
+    def test_per_species_yerrs_array(self, generate_data):
+        """A per-species ``yerrs`` array runs end-to-end and yields per-obs sigma_y.
+
+        The per-species means set the default ``sigma_y`` prior scale, and the
+        array form is accepted by ``run_mcmc``, producing one positive std per
+        observable.
+        """
+        model, dataset = generate_data
+        n_obs = len(model.get_observable_state_order())
+        yerrs = jnp.array([1e-2 * (i + 1) for i in range(n_obs)])
+
+        config = cmm.MCMCConfig(
+            num_warmup=30,
+            num_samples=60,
+            verbose=0,
+            error_model=cmm.error.LogNormal(sigma=0.7),
+        )
+        results = cmm.run_mcmc(
+            model=model, dataset=dataset, config=config, yerrs=yerrs
+        )
+
+        sigma_y = np.asarray(results.get_samples()["sigma_y"])
+        assert sigma_y.shape == (config.num_samples, n_obs)
+        assert np.all(sigma_y > 0.0)
+
     def _stack_band(self, model, band_dataset):
         """Stack an observable band/trajectory Dataset to ``(n_meas, n_time, n_obs)``."""
         obs_states = model.get_observable_state_order()
