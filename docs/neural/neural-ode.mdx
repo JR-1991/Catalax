@@ -391,6 +391,24 @@ print(metrics)
 - **Akaike Information Criterion**: Model selection criterion
 - **Bayesian Information Criterion**: Model selection criterion
 
+## Step 7: Quantifying Prediction Uncertainty
+
+A trained Neural ODE returns a single deterministic trajectory for each initial condition. It does not, on its own, report how much that trajectory should be trusted. For research applications this distinction matters, because a model can be accurate inside the region it learned from and quietly unreliable outside it. Catalax provides several ways to attach calibrated uncertainty to a Neural ODE, all of which plug directly into `Dataset.plot`.
+
+The simplest route for a single trained model is GAPA (Gaussian Process Activations). It wraps the model you just trained and adds distance-aware epistemic bands without retraining and without sampling, leaving the prediction itself unchanged.
+
+```python
+from catalax.uncertainty import GAPA
+
+# Post-hoc uncertainty on the trained model, no retraining required
+gapa = GAPA.from_model(trained, dataset, variant="variational")
+f = dataset.plot(predictor=gapa, bands=True)
+```
+
+If you train several models, a Neural ODE Ensemble turns their disagreement into an epistemic band. If you instead infer parameters with `catalax.mcmc`, the HMC posterior predictive provides bands that also fold in measurement noise.
+
+See the [Uncertainty Quantification](/uncertainty/overview) section for a full treatment, including [GAPA](/uncertainty/gapa) and [Neural ODE Ensembles](/uncertainty/ensembles).
+
 ## Model Persistence
 
 Proper model persistence is crucial for reproducible research and future scientific applications:

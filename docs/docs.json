@@ -64,6 +64,15 @@
               "neural/rateflow-ode",
               "neural/neural-regularization"
             ]
+          },
+          {
+            "group": "Uncertainty Quantification",
+            "icon": "chart-area",
+            "pages": [
+              "uncertainty/overview",
+              "uncertainty/ensembles",
+              "uncertainty/gapa"
+            ]
           }
         ],
         "tab": "Documentation"

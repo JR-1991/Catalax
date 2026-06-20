@@ -1,0 +1,59 @@
+---
+title: "Uncertainty Quantification"
+---
+
+This page introduces how Catalax quantifies uncertainty in dynamical predictions and how the different methods fit together. A point prediction tells you what the model expects. An uncertainty estimate tells you how much that expectation should be trusted, which is essential for experimental design, risk-sensitive decisions, and honest reporting of model limitations.
+
+## Two Kinds of Uncertainty
+
+Biochemical predictions carry two distinct sources of uncertainty, and separating them is central to interpreting any band Catalax produces.
+
+**Epistemic uncertainty** reflects the model's ignorance. It is large where the data were sparse or absent and small where the data constrained the dynamics. Epistemic uncertainty is reducible, since collecting more informative data shrinks it. This is the uncertainty that should grow when a trajectory drifts into regions the model never saw.
+
+**Aleatoric uncertainty** reflects irreducible measurement noise. It is the scatter around the true trajectory caused by pipetting error, instrument drift, and biological variability. Collecting more data does not remove it, although it does pin down its magnitude.
+
+A trustworthy predictive band accounts for both. Catalax keeps them conceptually separate so that you can inspect the epistemic component on its own (the honest measure of extrapolation risk) and fold in the aleatoric component when you need a full predictive interval that covers the data scatter.
+
+## A Common Interface for Every Method
+
+Every uncertainty method in Catalax exposes the same outputs, so they are interchangeable in plotting and analysis. This is formalised by the `UncertaintyPredictor` base class in `catalax.uncertainty`, which extends the standard `Predictor` interface with a single additional method, `predict_distribution`, that returns a `PredictiveDistribution`.
+
+A `PredictiveDistribution` can be backed in one of two ways:
+
+1. **Sample-backed**: an ensemble of trajectories, one per ensemble member or posterior draw. Bands are empirical percentiles across the samples.
+2. **Moment-backed**: a mean trajectory and a predictive standard deviation. Bands are Gaussian quantiles around the mean.
+
+Both representations expose identical Highest Density Interval (HDI) bands, so downstream code does not need to know which method produced them. The HDI selectors match the rest of Catalax:
+
+- `hdi="lower"` and `hdi="upper"` bound the 95% interval
+- `hdi="lower_50"` and `hdi="upper_50"` bound the 50% interval
+- `hdi=None` returns the central trajectory
+
+Because an `UncertaintyPredictor` is a `Predictor`, it slots straight into `Dataset.plot`. Passing any uncertainty method as the `predictor` argument renders the mean line together with shaded HDI bands, with no special handling required.
+
+```python
+# Any uncertainty method plots the same way
+fig = dataset.plot(predictor=uncertainty_method, bands=True)
+```
+
+## The Methods
+
+Catalax provides three complementary routes to uncertainty, each suited to a different situation.
+
+**Neural ODE Ensembles** train several models independently and treat their disagreement as epistemic uncertainty. Ensembles are sample-backed and require no special inference machinery beyond training multiple models. They are the natural choice when you already train Neural ODEs and want robust predictions with confidence bands. See [Neural ODE Ensembles](/uncertainty/ensembles).
+
+**GAPA (Gaussian Process Activations)** wraps a single trained Neural ODE and adds post-hoc epistemic uncertainty without retraining or sampling. It attaches a Gaussian process to the activations of one layer, reads a closed-form variance that grows with distance from the training data, and propagates it along the trajectory. GAPA is moment-backed and mean-preserving, so it never changes the underlying prediction. It is the natural choice when you have one trained model and want calibrated extrapolation bands cheaply. See [GAPA](/uncertainty/gapa).
+
+**HMC posterior predictive** comes from Bayesian inference over a mechanistic or surrogate model. The full posterior is pushed through the model and quantiled in trajectory space, giving bands that reflect both parameter uncertainty and measurement noise. It is the natural choice when you fit parameters with `catalax.mcmc` and want a principled predictive interval. See the [Bayesian Inference](/hmc/mcmc-basic) guides.
+
+## Choosing a Method
+
+The table below summarises when each method applies.
+
+| Method | Backed by | Captures | Cost | Use when |
+| --- | --- | --- | --- | --- |
+| Ensembles | Samples | Epistemic | Train N models | You already train Neural ODEs |
+| GAPA | Moments | Epistemic | One model, post-hoc | You have one trained model |
+| HMC | Samples | Epistemic and aleatoric | Run a sampler | You fit parameters with MCMC |
+
+All three produce the same band outputs, so you can start with whichever fits your workflow and switch later without changing your plotting or analysis code.

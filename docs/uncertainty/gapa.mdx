@@ -1,0 +1,179 @@
+---
+title: "GAPA: Gaussian Process Activations"
+---
+
+This guide demonstrates how to add post-hoc epistemic uncertainty to a trained Neural ODE using GAPA (Gaussian Process Activations). GAPA wraps an already trained model and equips it with calibrated, distance-aware uncertainty bands without retraining, without sampling, and without changing the model's predictions. It is the lightweight route to uncertainty when you have a single Neural ODE and want to know where it can be trusted.
+
+## Introduction and Research Context
+
+A trained Neural ODE produces one deterministic trajectory for each initial condition. That trajectory may be excellent inside the region the model learned from and quietly unreliable outside it. The model itself gives no signal about which regime it is in. For deployment in research settings, what we want is a band that stays tight where the data constrained the dynamics and widens honestly when the integrator drives the state into territory the model never saw.
+
+Established uncertainty methods each carry a cost. Ensembles require training several models. Bayesian neural networks and Laplace approximations are computationally demanding and can underfit. GAPA takes a different route, introduced by [Bui et al. (2025)](https://arxiv.org/abs/2502.20966). Instead of placing uncertainty on the network weights, it places uncertainty on the activations, in a way that is post-hoc, cheap, and mean-preserving.
+
+Three properties make GAPA attractive for biochemical modeling:
+
+1. **Post-hoc**: GAPA works on a frozen, already trained Neural ODE. No retraining and no fine-tuning are needed.
+2. **Mean-preserving**: the trajectory mean is unchanged by construction, so adding uncertainty never degrades the prediction you already trust.
+3. **Distance-aware**: the uncertainty is near zero where the model saw data and grows as the state moves away from the training region, which is exactly the behaviour required for honest extrapolation.
+
+## How GAPA Works
+
+GAPA shifts the Bayesian treatment from the network weights to its activations, then carries the resulting variance along the trajectory.
+
+### A Gaussian Process on the Activations
+
+Choose one hidden layer of the network, by default the first. For each neuron in that layer, GAPA replaces the deterministic activation $\phi$ with a one-dimensional Gaussian process whose prior mean is set equal to $\phi$ itself. The process is conditioned on the pre-activations the network actually visited on the training data, which are cached once during setup.
+
+Because the prior mean is the activation, the posterior mean is also exactly the activation. This is the mean-preservation property. The network's forward pass, and therefore the Neural ODE trajectory, is unchanged. The Gaussian process contributes only its posterior variance, which behaves as we want:
+
+- **Close to the training activations**, the posterior variance collapses toward zero. The model is certain where it has seen data.
+- **Far from the training activations**, the posterior variance rises toward the prior signal variance. The model reverts to its prior ignorance where it has no data.
+
+### From Activation Variance to a Trajectory Band
+
+The per-neuron variance lives in activation space. GAPA turns it into a band on the state in two steps.
+
+First, it pushes the activation variance through the rest of the network using a first-order (delta-method) Jacobian, giving a state-dependent covariance $Q(z)$ on the instantaneous rate. This covariance is large where the activations are off the training manifold and near zero in-distribution.
+
+Second, it integrates that rate covariance along the trajectory. The state mean follows the original field, and the state covariance $P(t)$ follows a Lyapunov differential equation driven by the field Jacobian and the injected rate covariance:
+
+$$
+\dot{\bar z}(t) = f_\theta(\bar z(t)), \qquad
+\dot P(t) = J_f P + P J_f^\top + Q(\bar z).
+$$
+
+The mean and covariance are integrated together as a single augmented system, so one solve yields the full mean trajectory and the marginal predictive variance $\mathrm{diag}\,P(t)$. The band is then $\bar z_i(t) \pm \kappa \sqrt{P_{ii}(t) + r_i}$, where $r_i$ is optional measurement noise and $\kappa$ is the coverage multiplier.
+
+A consequence worth keeping in mind is that the dynamics shape the band. Where the learned flow is contracting, the transport term shrinks existing uncertainty. Where it is expanding, the band grows. This is correct behaviour, and it means a dissipative system can re-absorb uncertainty as a trajectory relaxes back into a familiar region.
+
+## The Two Variants
+
+GAPA offers two ways to set the Gaussian process hyperparameters, both available through the `variant` argument.
+
+**GAPA-Free** (`variant="empirical"`) sets the kernel hyperparameters directly from the cached training activations using robust heuristics. There is no optimisation, so construction is essentially instant. This variant gives the cleanest distance-aware behaviour and is an excellent default.
+
+**GAPA-Variational** (`variant="variational"`) refines the epistemic magnitude by gradient descent. It calibrates the per-neuron signal variance against a held-out one-step-ahead prediction, which tunes the band scale to the data while leaving the distance metric and the mean untouched. The lengthscale stays at the empirical heuristic so that the in-distribution variance remains near zero and only the off-distribution magnitude is adjusted.
+
+A note on what calibration can and cannot do. The in-distribution data carry no information about how wrong the model will be far away from them. The out-of-distribution band magnitude is therefore a prior choice, set through `signal_var_floor`, and the variational step refines the in-distribution fit rather than inventing an extrapolation scale from data it never saw.
+
+## Step 1: Train a Neural ODE
+
+GAPA starts from a trained model. Any `NeuralODE` works. See [Neural ODE Training](/neural/neural-ode) for the full workflow. A compact version on a Michaelis-Menten system looks like this.
+
+```python
+import catalax as ctx
+import catalax.neural as ctn
+
+# Michaelis-Menten substrate depletion
+model = ctx.Model(name="Michaelis-Menten")
+model.add_state(s1="Substrate")
+model.add_constant(e="Enzyme")
+model.add_ode("s1", "-kcat * e * s1 / (k_m + s1)")
+model.parameters["kcat"].value = 3.0
+model.parameters["k_m"].value = 80.0
+
+# Training data from the LOW substrate range, then a chunk of noise
+train = ctx.Dataset.from_model(model)
+for s0 in (40.0, 80.0, 120.0):
+    train.add_initial(s1=s0, e=1.0)
+config = ctx.SimulationConfig(nsteps=30, t0=0.0, t1=100.0)
+train = model.simulate(dataset=train, config=config)
+train_noisy = train.augment(n_augmentations=8, sigma=5.0)
+
+# Train the Neural ODE
+neural_ode = ctn.NeuralODE.from_model(model, width_size=16, depth=2)
+strategy = ctn.Strategy()
+strategy.add_step(lr=1e-3, steps=600, batch_size=8)
+strategy.add_step(lr=2e-4, steps=400, batch_size=8)
+neural_ode = neural_ode.train(dataset=train_noisy, strategy=strategy)
+```
+
+## Step 2: Fit GAPA
+
+`GAPA.from_model` caches the training activations, sets up the Gaussian process, and, for the variational variant, runs the calibration. The wrapped model is frozen throughout.
+
+```python
+from catalax.uncertainty import GAPA
+
+# The defaults need no tuning. The signal variance follows the paper heuristic
+# max(1, Var(activations)) and the observation noise is estimated from the
+# model's training residuals.
+gapa = GAPA.from_model(neural_ode, train_noisy, variant="variational")
+```
+
+The returned object is itself a `Predictor`, so it behaves exactly like the underlying Neural ODE for prediction while additionally reporting uncertainty.
+
+## Step 3: Predict In-Distribution and Out-of-Distribution
+
+GAPA is mean-preserving, so `gapa.predict(dataset)` returns the same trajectory as the wrapped model, now with an attached band. The HDI selectors return the band edges.
+
+```python
+# An in-distribution and an out-of-distribution initial condition
+eval_ds = ctx.Dataset.from_model(model)
+eval_ds.add_initial(s1=80.0, e=1.0)    # in-distribution
+eval_ds.add_initial(s1=300.0, e=1.0)   # out-of-distribution
+eval_ds = model.simulate(dataset=eval_ds, config=config)
+
+# Central trajectory and 95% band edges
+mean = gapa.predict(eval_ds, n_steps=30)
+lower = gapa.predict(eval_ds, n_steps=30, hdi="lower")
+upper = gapa.predict(eval_ds, n_steps=30, hdi="upper")
+```
+
+Because GAPA is an `UncertaintyPredictor`, you can pass it straight to `Dataset.plot` to render the mean and shaded bands in one call. This is the recommended way to inspect the result.
+
+```python
+fig = eval_ds.plot(predictor=gapa, bands=True, show=False)
+fig.savefig("gapa_uncertainty.png", dpi=120, bbox_inches="tight")
+```
+
+In the in-distribution panel the band hugs the trajectory, since the model is confident on the substrate range it was trained on. In the out-of-distribution panel the band balloons in the unseen high-substrate regime and narrows again as the trajectory decays back into the familiar range, a direct visual readout of the model's extrapolation risk.
+
+## Step 4: Rate-Space Uncertainty
+
+GAPA also exposes the epistemic uncertainty on the instantaneous rate through the `Surrogate` interface. This is useful for diagnosing where in state space the model becomes uncertain, independent of any particular trajectory.
+
+```python
+# Per-point rate standard deviation, larger out-of-distribution
+rate_std = gapa.rate_uncertainty(eval_ds)
+```
+
+## Key Parameters
+
+| Parameter | Role |
+| --- | --- |
+| `variant` | `"empirical"` for GAPA-Free, `"variational"` for calibrated GAPA-Variational |
+| `gp_layer` | Hidden layer the Gaussian process attaches to (`0` is the first hidden layer, the recommended placement for detecting state-space novelty) |
+| `n_inducing` | Number of inducing points per neuron, trading cost for resolution of the variance |
+| `signal_var_floor` | Floor on the prior epistemic scale, the variance the band approaches far from the data. Defaults to the paper heuristic `max(1, Var(activations))`. Raise it for wider extrapolation bands |
+| `obs_noise` | Measurement-noise variance added to the band to form a full predictive interval. Estimated from the training residuals when left as `None`. Set to zero for an epistemic-only band |
+| `n_iter`, `lr` | Optimisation budget for the variational calibration |
+
+## Interpreting the Bands
+
+A few principles help read GAPA bands correctly.
+
+**In-distribution width is near zero by construction.** Where the trajectory passes through states the model saw, the epistemic band collapses. A non-trivial in-distribution band usually comes from the `obs_noise` floor rather than from epistemic uncertainty.
+
+**Out-of-distribution width is governed by the prior.** The band magnitude far from the data is set by `signal_var_floor`, not learned from the training set, because in-distribution data contain no out-of-distribution residuals. Choose this value to express how uncertain the model should be when extrapolating.
+
+**The dynamics modulate the band.** Contracting (dissipative) dynamics shrink the band as a trajectory relaxes toward a familiar region, while expanding dynamics amplify it. A band that grows and then narrows is the expected signature of a trajectory that leaves and re-enters the training region.
+
+## Structured Fields
+
+GAPA works with any `NeuralBase` model, not only `NeuralODE`. It relies on a small interface every model exposes: `get_mlp` returns the network and `mlp_output_to_rate` describes how the network output becomes the state derivative. GAPA differentiates through that map, so the structure of the field is respected automatically and no model-specific code is needed.
+
+For a `RateFlowODE`, the network predicts reaction fluxes and the stoichiometry matrix maps them to state derivatives. The injected uncertainty therefore lives in the column space of the stoichiometry matrix and obeys the same conservation laws as the mean. In a two-species conversion the substrate and product uncertainties are perfectly anti-correlated, mirroring mass balance.
+
+For a `UniversalODE`, the field is a fixed mechanistic part plus a gated neural correction. The mechanistic part does not depend on the network, so GAPA assigns it no epistemic uncertainty. The band widens only through the genuinely learned correction, which concentrates the uncertainty on the parts of the dynamics the mechanism does not already explain.
+
+## Summary
+
+GAPA equips a single trained Neural ODE with post-hoc, mean-preserving epistemic uncertainty:
+
+- **Post-hoc and cheap**: works on a frozen model with one extra integration, no retraining and no sampling
+- **Mean-preserving**: the prediction is unchanged, since the Gaussian process prior mean is the activation itself
+- **Distance-aware**: bands are near zero in-distribution and widen as the state leaves the training region
+- **Plot-ready**: as an `UncertaintyPredictor`, GAPA renders bands directly through `Dataset.plot`
+
+For a complete, runnable example see `run.py` at the repository root, which trains a Neural ODE on a noisy Michaelis-Menten dataset and plots GAPA bands for in-distribution and out-of-distribution initial conditions.
