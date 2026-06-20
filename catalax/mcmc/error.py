@@ -47,8 +47,10 @@ class ErrorModel(abc.ABC):
 
         Args:
             n_obs: Number of observable states.
-            scale_hint: A sensible default scale (Catalax passes ``mean(yerrs)``),
-                used when the model's own scale is left unset.
+            scale_hint: A sensible default scale, used when the model's own scale
+                is left unset. Catalax passes the per-observable mean of ``yerrs``
+                (a length-``n_obs`` vector); ``shared`` models collapse it to its
+                mean. A scalar is accepted and broadcast across observables.
 
         Returns:
             Array of shape ``(n_obs,)`` -- the concentration-space noise std.
@@ -56,6 +58,15 @@ class ErrorModel(abc.ABC):
 
     def _event_shape(self, n_obs: int) -> tuple:
         return () if self.shared else (n_obs,)
+
+    def _resolve_hint(self, scale_hint: Array, n_obs: int) -> Array:
+        """Resolve a (possibly per-observable) scale hint to the event shape.
+
+        Per-observable hints are used as-is so each species gets its own default
+        scale; ``shared=True`` collapses them to a single scalar (their mean).
+        """
+        hint = jnp.broadcast_to(jnp.asarray(scale_hint, dtype=float), (n_obs,))
+        return jnp.mean(hint) if self.shared else hint
 
 
 class HalfNormal(ErrorModel):
@@ -74,7 +85,11 @@ class HalfNormal(ErrorModel):
         self.shared = shared
 
     def sample(self, n_obs: int, scale_hint: Array) -> Array:
-        scale = self.scale if self.scale is not None else jnp.mean(scale_hint)
+        scale = (
+            self.scale
+            if self.scale is not None
+            else self._resolve_hint(scale_hint, n_obs)
+        )
         sigma_y = numpyro.sample(
             SITE, dist.HalfNormal(scale * jnp.ones(self._event_shape(n_obs)))
         )
@@ -103,7 +118,11 @@ class LogNormal(ErrorModel):
         self.shared = shared
 
     def sample(self, n_obs: int, scale_hint: Array) -> Array:
-        median = self.median if self.median is not None else jnp.mean(scale_hint)
+        median = (
+            self.median
+            if self.median is not None
+            else self._resolve_hint(scale_hint, n_obs)
+        )
         loc = jnp.log(median) * jnp.ones(self._event_shape(n_obs))
         sigma_y = numpyro.sample(SITE, dist.LogNormal(loc, self.sigma))
         return jnp.broadcast_to(sigma_y, (n_obs,))
@@ -132,7 +151,7 @@ class Gamma(ErrorModel):
         rate = (
             self.rate
             if self.rate is not None
-            else self.concentration / jnp.mean(scale_hint)
+            else self.concentration / self._resolve_hint(scale_hint, n_obs)
         )
         conc = self.concentration * jnp.ones(self._event_shape(n_obs))
         sigma_y = numpyro.sample(SITE, dist.Gamma(conc, rate))

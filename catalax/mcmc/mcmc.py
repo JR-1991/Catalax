@@ -313,6 +313,22 @@ class HMC:
         return instance
 
 
+def _per_species_scale_hint(yerrs: Array, n_obs: int) -> Array:
+    """Reduce ``yerrs`` to a per-species default noise scale of shape ``(n_obs,)``.
+
+    ``yerrs`` is observable-aligned on its last axis (a scalar was broadcast to
+    the data shape upstream). Averaging over every leading axis therefore yields
+    the per-species mean: a scalar ``yerrs`` gives the same value for every
+    species, while a per-species array keeps its per-species means. If the
+    trailing axis doesn't line up with the observables, fall back to the global
+    mean broadcast across species.
+    """
+    yerrs_arr = jnp.asarray(yerrs, dtype=float)
+    if yerrs_arr.ndim >= 1 and yerrs_arr.shape[-1] == n_obs:
+        return jnp.mean(yerrs_arr.reshape(-1, n_obs), axis=0)
+    return jnp.broadcast_to(jnp.mean(yerrs_arr), (n_obs,))
+
+
 class BayesianModel:
     """Bayesian model for MCMC parameter inference.
 
@@ -447,7 +463,8 @@ class BayesianModel:
         # Sample the concentration-space noise std from the user-set error model
         # (same site/object for both modes; the pushforward below is internal).
         n_obs = int(self.observables.shape[0])
-        sigma_y = self.error_model.sample(n_obs, jnp.mean(self.yerrs))
+        scale_hint = _per_species_scale_hint(self.yerrs, n_obs)
+        sigma_y = self.error_model.sample(n_obs, scale_hint)
 
         if self.mode == Modes.SURROGATE:
             # Push the concentration noise *forward* to rate space via the (fixed)

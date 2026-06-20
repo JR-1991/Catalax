@@ -3,16 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import arviz as az
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpyro
 import pandas as pd
 import xarray
-import jax.numpy as jnp
 from jax import Array
 
 from catalax.mcmc.mcmc import MCMC
 from catalax.mcmc.plotting import plot_corner, plot_ess, plot_mcse, plot_posterior
-from catalax.predictor import Predictor
+from catalax.uncertainty.base import PredictiveDistribution, UncertaintyPredictor
 
 if TYPE_CHECKING:
     from catalax.dataset.dataset import Dataset
@@ -32,7 +32,7 @@ except ImportError:
     WIDGETS_AVAILABLE = False
 
 
-class HMCResults(Predictor):
+class HMCResults(UncertaintyPredictor):
     """Results container for HMC sampling with integrated visualization methods.
 
     This class provides a comprehensive interface for analyzing and visualizing
@@ -261,6 +261,34 @@ class HMCResults(Predictor):
             np.asarray(times),
             np.asarray(yhat_ens),
             list(self.model.get_observable_state_order()),
+        )
+
+    def predict_distribution(
+        self,
+        dataset: "Dataset",
+        config: Optional["SimulationConfig"] = None,
+        n_steps: int = 100,
+        use_times: bool = False,
+        **kwargs,
+    ) -> PredictiveDistribution:
+        """Sample-backed (epistemic) posterior-predictive distribution.
+
+        Wraps the per-draw trajectory ensemble in the shared
+        :class:`PredictiveDistribution`. This is the epistemic-only view (no
+        aleatoric noise); :meth:`predict` remains the canonical band path and
+        folds in the measurement noise via the posterior-predictive pooling.
+        """
+
+        times, yhat_ens, obs_states = self.posterior_predictive_ensemble(
+            dataset, n_steps=n_steps
+        )
+        samples = jnp.asarray(yhat_ens)
+        y0s = jnp.nanmean(samples, axis=0)[:, 0, :]
+        return PredictiveDistribution.from_samples(
+            state_order=list(obs_states),
+            times=jnp.asarray(times),
+            y0s=y0s,
+            samples=samples,
         )
 
     def get_fitted_model(
