@@ -343,6 +343,33 @@ class NeuralBase(eqx.Module, Predictor, Surrogate):
         rates = self.rates(times, ins, None)
         return rates.reshape(dataset_size * time_size, -1)
 
+    def get_mlp(self) -> MLP:
+        """Return the multilayer perceptron at the heart of the vector field.
+
+        Every ``NeuralBase`` parameterises its field with a single MLP
+        (``self.func``). Exposing it through a common accessor lets post-hoc
+        tools such as GAPA attach to the network without knowing the concrete
+        subclass.
+        """
+        return self.func
+
+    def mlp_output_to_rate(
+        self,
+        mlp_output: jax.Array,
+        t: jax.Array,
+        y: jax.Array,
+    ) -> jax.Array:
+        """Map a raw MLP output to the integrated state derivative.
+
+        This is the post-network half of the vector field. The base model feeds
+        the MLP output straight through, so the rate equals the MLP output.
+        Structured models override this to apply their stoichiometry or
+        mechanistic terms. Together with :meth:`get_mlp` it fully describes the
+        field, which is the interface GAPA differentiates through when it
+        propagates activation uncertainty to the state.
+        """
+        return mlp_output
+
     def loss(self, dataset: Dataset, loss: Callable = optax.log_cosh) -> jax.Array:
         """Calculate the loss of the model on the given dataset.
 

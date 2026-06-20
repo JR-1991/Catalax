@@ -2,7 +2,7 @@
 title: "Neural ODE Ensembles"
 ---
 
-This guide demonstrates how to create and use Neural ODE Ensembles in Catalax for robust predictions and uncertainty quantification. Ensembles combine multiple independently trained Neural ODE models to provide more reliable predictions and quantify epistemic uncertainty—the uncertainty arising from limited data and model structure rather than measurement noise.
+This guide demonstrates how to create and use Neural ODE Ensembles in Catalax for robust predictions and uncertainty quantification. Ensembles combine multiple independently trained Neural ODE models to provide more reliable predictions and quantify epistemic uncertainty, the uncertainty arising from limited data and model structure rather than measurement noise.
 
 ## Introduction and Research Context
 
@@ -19,7 +19,7 @@ When modeling biochemical systems with Neural ODEs, researchers face a fundament
 
 Neural ODE Ensembles address these challenges by training multiple models independently and aggregating their predictions. This approach, inspired by Bayesian methods and ensemble learning, provides several key advantages:
 
-**Epistemic Uncertainty Quantification**: Ensembles naturally capture epistemic uncertainty—the uncertainty about which model best represents the true biochemical dynamics. When ensemble members disagree, this indicates regions where the model is less certain due to limited data or ambiguous patterns.
+**Epistemic Uncertainty Quantification**: Ensembles naturally capture epistemic uncertainty, the uncertainty about which model best represents the true biochemical dynamics. When ensemble members disagree, this indicates regions where the model is less certain due to limited data or ambiguous patterns.
 
 **Robust Predictions**: By averaging predictions across multiple models, ensembles typically provide more stable and reliable predictions than individual models, reducing sensitivity to initialization and training variations.
 
@@ -92,7 +92,7 @@ for i in range(5):  # Create 5 ensemble members
 - **Different random initializations**: Each model starts from different random weights
 - **Different architectures**: Varying network width, depth, or activation functions
 - **Different training strategies**: Using different learning rates, regularization strengths, or training durations
-- **Different temporal dropout levels**: Vary `temporal_dropout_p` across members to diversify temporal sensitivity (see [Temporal Dropout for Irregular-Time Robustness](./neural-regularization#temporal-dropout-for-irregular-time-robustness))
+- **Different temporal dropout levels**: Vary `temporal_dropout_p` across members to diversify temporal sensitivity (see [Temporal Dropout for Irregular-Time Robustness](/neural/neural-regularization#temporal-dropout-for-irregular-time-robustness))
 - **Data subsampling**: Training each model on different subsets of the data (bootstrap aggregating)
 
 **Computational considerations**: Training multiple models requires more computational resources, but predictions remain efficient since they can be parallelized across ensemble members.

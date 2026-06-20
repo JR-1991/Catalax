@@ -87,6 +87,16 @@ class RateFlowODE(NeuralBase):
     def stoich_func(self, t, y, args):
         return self.stoich_matrix @ jax.nn.relu(self.func(t, y, args))
 
+    def mlp_output_to_rate(self, mlp_output, t, y):
+        """Apply the stoichiometry, mirroring :meth:`stoich_func`.
+
+        The MLP predicts non-negative reaction fluxes and the stoichiometry
+        matrix maps them to state derivatives, so the injected uncertainty
+        lives in the column space of ``stoich_matrix`` and respects the same
+        conservation laws as the mean.
+        """
+        return self.stoich_matrix @ jax.nn.relu(mlp_output)
+
     def __call__(
         self,
         ts,

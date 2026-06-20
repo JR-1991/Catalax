@@ -23,14 +23,14 @@ import rich
 
 from catalax.dataset import Dataset
 from catalax.neural.neuralbase import NeuralBase
-from catalax.predictor import Predictor
 from catalax.surrogate import Surrogate
+from catalax.uncertainty.base import PredictiveDistribution, UncertaintyPredictor
 
 if TYPE_CHECKING:
     from catalax.model.model import SimulationConfig
 
 
-class NeuralODEEnsemble(eqx.Module, Predictor, Surrogate):
+class NeuralODEEnsemble(eqx.Module, UncertaintyPredictor, Surrogate):
     """Ensemble of neural ODE models for robust predictions and uncertainty quantification.
 
     This class combines multiple neural ODE models into an ensemble that can provide
@@ -209,6 +209,33 @@ class NeuralODEEnsemble(eqx.Module, Predictor, Surrogate):
                 time=times,
                 y0s=y0s_array,
             )
+
+    def predict_distribution(
+        self,
+        dataset: Dataset,
+        config: Optional["SimulationConfig"] = None,
+        n_steps: int = 100,
+        use_times: bool = False,
+        **kwargs,
+    ) -> PredictiveDistribution:
+        """Sample-backed predictive distribution from the per-model trajectories.
+
+        Each ensemble member contributes one trajectory; the HDI bands are then
+        the empirical percentiles across members (see :class:`PredictiveDistribution`).
+        """
+        all_predictions, times, y0s = self.predict(
+            dataset,
+            config=config,
+            n_steps=n_steps,
+            use_times=use_times,
+            return_individual=True,
+        )
+        return PredictiveDistribution.from_samples(
+            state_order=self.state_order,
+            times=times,
+            y0s=y0s,
+            samples=all_predictions,
+        )
 
     def rates(
         self,

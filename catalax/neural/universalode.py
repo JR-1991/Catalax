@@ -100,6 +100,21 @@ class UniversalODE(NeuralBase):
 
         return mech_rates + self._corrective_term(t, y, args)
 
+    def mlp_output_to_rate(self, mlp_output, t, y):
+        """Add the neural correction to the mechanistic field, mirroring
+        :meth:`_combined_term`.
+
+        The mechanistic part does not depend on the MLP output, so GAPA assigns
+        it no epistemic uncertainty. The injected variance flows only through
+        the gated neural correction, the genuinely learned component.
+        """
+        mech_rates = self.vector_field(t, y, (self.parameters, None))
+        if not self.use_gate:
+            return mech_rates + mlp_output
+        gate = jax.nn.sigmoid(10 * (self.gate_matrix @ y))
+        alpha_residual = jax.nn.softplus(self.alpha_residual)
+        return mech_rates + alpha_residual * gate * mlp_output
+
     def __call__(
         self,
         ts,
