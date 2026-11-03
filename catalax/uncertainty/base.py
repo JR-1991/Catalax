@@ -59,7 +59,7 @@ _PERCENTILE: dict[str, float] = {
 # content id but has a new address) nor a reused address (which carries a new
 # content id) collides. Only the same live object hits. Bounded to cap memory.
 _DISTRIBUTION_CACHE_MAX = 64
-_DISTRIBUTION_CACHE: "OrderedDict[tuple, PredictiveDistribution]" = OrderedDict()
+_DISTRIBUTION_CACHE: "OrderedDict[tuple, tuple]" = OrderedDict()
 
 
 @dataclass
@@ -164,14 +164,17 @@ class UncertaintyPredictor(Predictor, abc.ABC):
         **kwargs,
     ) -> PredictiveDistribution:
         key = (id(self), id(dataset), dataset.id, n_steps, bool(use_times), id(config))
-        cached = _DISTRIBUTION_CACHE.get(key)
-        if cached is None:
-            cached = self.predict_distribution(
-                dataset, config=config, n_steps=n_steps, use_times=use_times, **kwargs
-            )
-            _DISTRIBUTION_CACHE[key] = cached
-            if len(_DISTRIBUTION_CACHE) > _DISTRIBUTION_CACHE_MAX:
-                _DISTRIBUTION_CACHE.popitem(last=False)
+        entry = _DISTRIBUTION_CACHE.get(key)
+        # The entry keeps strong references to the predictor and config, so
+        # their addresses cannot be reused by new objects while it is cached.
+        if entry is not None and entry[0] is self and entry[1] is config:
+            return entry[2]
+        cached = self.predict_distribution(
+            dataset, config=config, n_steps=n_steps, use_times=use_times, **kwargs
+        )
+        _DISTRIBUTION_CACHE[key] = (self, config, cached)
+        if len(_DISTRIBUTION_CACHE) > _DISTRIBUTION_CACHE_MAX:
+            _DISTRIBUTION_CACHE.popitem(last=False)
         return cached
 
     def predict(
